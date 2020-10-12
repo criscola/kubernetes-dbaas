@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kubernetes-dbaas-leader-election-rolebinding
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kubernetes-dbaas-leader-election-role
+subjects:
+  - kind: ServiceAccount
+    name:  {{ .Values.managerSaName }}
+    namespace: {{ .Release.Namespace }}

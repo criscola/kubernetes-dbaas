@@ -1,0 +1,39 @@
+domain: dbaas.bedag.ch
+layout: go.kubebuilder.io/v3
+multigroup: true
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: kubernetes-dbaas
+repo: github.com/bedag/kubernetes-dbaas
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: dbaas.bedag.ch
+  group: database
+  kind: Database
+  path: github.com/bedag/kubernetes-dbaas/apis/database/v1
+  version: v1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+  controller: true
+  domain: dbaas.bedag.ch
+  group: databaseclass
+  kind: DatabaseClass
+  path: github.com/bedag/kubernetes-dbaas/apis/databaseclass/v1
+  version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: dbaas.bedag.ch
+  group: config
+  kind: OperatorConfig
+  path: github.com/bedag/kubernetes-dbaas/apis/config/v1
+  version: v1
+version: "3"

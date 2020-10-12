@@ -1,0 +1,16 @@
+apiVersion: config.dbaas.bedag.ch/v1
+kind: OperatorConfig
+health:
+  healthProbeBindAddress: :8081
+metrics:
+  bindAddress: 127.0.0.1:8080
+webhook:
+  port: 9443
+leaderElection:
+  leaderElect: true
+  resourceName: bfa62c96.dbaas.bedag.ch
+dbms:
+  - databaseClassName: "databaseclass-sample"
+    endpoints:
+      - name: "us-sqlserver-test"
+        dsn: "sqlserver://sa:Password&1@192.168.49.1:1433"
