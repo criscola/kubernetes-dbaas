@@ -1,0 +1,7 @@
+domain: bedag.ch
+layout: go.kubebuilder.io/v2
+projectName: temp
+repo: github.com/bedag/kubernetes-dbaas
+version: 3-alpha
+plugins:
+  go.sdk.operatorframework.io/v2-alpha: {}
