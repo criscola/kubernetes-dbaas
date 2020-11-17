@@ -1,7 +1,0 @@
-apiVersion: dbaas.bedag.ch/v1alpha1
-kind: KubernetesDbaas
-metadata:
-  name: kubernetesdbaas-sample
-spec:
-  # Add fields here
-  foo: bar
