@@ -62,6 +62,7 @@ func main() {
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "bfa62c96.bedag.ch",
 	})
+
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)

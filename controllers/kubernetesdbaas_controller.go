@@ -18,6 +18,10 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -25,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dbaasv1alpha1 "github.com/bedag/kubernetes-dbaas/api/v1alpha1"
+	"github.com/bedag/kubernetes-dbaas/pkg/service"
 )
 
 // KubernetesDbaasReconciler reconciles a KubernetesDbaas object
@@ -38,10 +43,67 @@ type KubernetesDbaasReconciler struct {
 // +kubebuilder:rbac:groups=dbaas.bedag.ch,resources=kubernetesdbaas/status,verbs=get;update;patch
 
 func (r *KubernetesDbaasReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("kubernetesdbaas", req.NamespacedName)
+	ctx := context.Background()
+	logger := r.Log.WithValues("kubernetesdbaas", req.NamespacedName)
+	dbaasResource := &dbaasv1alpha1.KubernetesDbaas{}
+	err := r.Get(ctx, req.NamespacedName, dbaasResource)
 
-	// your logic here
+	if err != nil {
+		// Delete
+		if errors.IsNotFound(err) {
+			// TODO: Encapsulate
+			logger.Info("Deleting " + req.String() + "...")
+			dbConn, err := service.Open(dbaasResource.Spec.DbmsType)
+			// Request object not found, could have been deleted after reconcile request.
+			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+			// Return and don't requeue
+			if err != nil {
+				logger.Error(err, "Failed to establish a DBMS connection")
+				return ctrl.Result{}, err
+			}
+
+			err = dbConn.DeleteDb()
+			if err != nil {
+				logger.Error(err, "Failed to delete DB from DBMS")
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{}, nil
+		}
+		logger.Error(err, "Failed to get KubernetesDbaas object")
+		return ctrl.Result{}, err
+	}
+
+	// Create
+	// TODO: Encapsulate
+	logger.Info("Creating " + req.String() + "...")
+	logger.Info("dbname: " + dbaasResource.Spec.DbName)
+	logger.Info("dbstage: " + dbaasResource.Spec.DbStage)
+	logger.Info("dbmstype: " + dbaasResource.Spec.DbmsType)
+
+	if !validateDbmsType(dbaasResource.Spec.DbmsType) {
+		return ctrl.Result{}, fmt.Errorf("the following DBMS type: \"%s\" is not supported", dbaasResource.Spec.DbmsType)
+	}
+
+	dbConn, err := service.Open(dbaasResource.Spec.DbmsType)
+	if err != nil {
+		logger.Error(err, "Failed to establish a DBMS connection")
+		return ctrl.Result{}, err
+	}
+	outParams, err := dbConn.CreateDb(dbaasResource.Spec.DbName, dbaasResource.Spec.DbStage)
+	if err != nil {
+		logger.Error(err, "Failed to create DB instance")
+		return ctrl.Result{}, err
+	}
+	// TODO: Refactor out params
+	username := outParams[0]
+	password := outParams[1]
+
+	logger.Info("Creating secret...")
+
+	err = r.createSecret(username, password)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -50,4 +112,28 @@ func (r *KubernetesDbaasReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dbaasv1alpha1.KubernetesDbaas{}).
 		Complete(r)
+}
+
+func validateDbmsType(s string) bool {
+	for _, supportedDb := range service.GetSupportedDbms() {
+		if supportedDb == s {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *KubernetesDbaasReconciler) createSecret(username, password string) error {
+	err := r.Client.Create(context.Background(), &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "default", // TODO: Set namespace where the CR is created
+		},
+		StringData: map[string]string{
+			"username": username,
+			"password": password,
+		},
+	})
+
+	return err
 }

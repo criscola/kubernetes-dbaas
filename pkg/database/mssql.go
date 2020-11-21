@@ -18,7 +18,7 @@ func NewMssqlConn() (*MssqlConn, error) {
 	return &conn, nil
 }
 
-func (c *MssqlConn) CreateDb(params ...string) ([]string, error) {
+func (c *MssqlConn) CreateDb(name, stage string) ([]string, error) {
 	rows, err := c.c.Query("CALL ...")
 
 	if err != nil {

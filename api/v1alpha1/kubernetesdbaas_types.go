@@ -28,8 +28,12 @@ type KubernetesDbaasSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of KubernetesDbaas. Edit KubernetesDbaas_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// DbName is the name of the database
+	DbName string `json:"dbname,omitempty"`
+	// DbStage is the stage of the database (e.g. test, prod)
+	DbStage string `json:"dbstage,omitempty"`
+	// DbmsType is the type of DBMS (e.g. mssql, psql...)
+	DbmsType string `json:"dbtype,omitempty"`
 }
 
 // KubernetesDbaasStatus defines the observed state of KubernetesDbaas

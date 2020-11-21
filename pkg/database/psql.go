@@ -20,7 +20,7 @@ func NewPsqlConn() (*MssqlConn, error) {
 	return &conn, nil
 }
 
-func (c *PsqlConn) CreateDb(params ...string) ([]string, error) {
+func (c *PsqlConn) CreateDb(name, stage string) ([]string, error) {
 	rows, err := c.c.Query("CALL ...")
 
 	if err != nil {

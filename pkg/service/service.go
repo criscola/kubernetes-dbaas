@@ -1,10 +1,11 @@
 package service
 
-import "github.com/bedag/kubernetes-dbaas/pkg/database"
+import (
+	"github.com/bedag/kubernetes-dbaas/pkg/database"
+)
 
 type DbService interface {
-	// TODO pass "enum"
-	CreateDb(params ...string) ([]string, error)
+	CreateDb(name, stage string) ([]string, error)
 	DeleteDb() error
 }
 
@@ -13,6 +14,7 @@ type DbmsConn struct {
 	DbService
 }
 
+// TODO: Add "stage"
 func Open(driver string) (*DbmsConn, error) {
 	var dbmsConn *DbmsConn
 
@@ -22,8 +24,7 @@ func Open(driver string) (*DbmsConn, error) {
 			return nil, err
 		}
 		dbmsConn = &DbmsConn{mssqlConn}
-	}
-	if driver == "psql" {
+	} else if driver == "psql" {
 		psqlConn, err := database.NewPsqlConn()
 		if err != nil {
 			return nil, err
@@ -31,4 +32,8 @@ func Open(driver string) (*DbmsConn, error) {
 		dbmsConn = &DbmsConn{psqlConn}
 	}
 	return dbmsConn, nil
+}
+
+func GetSupportedDbms() []string {
+	return []string{"mssql", "psql"}
 }
