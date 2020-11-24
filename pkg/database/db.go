@@ -1,8 +1,4 @@
-package service
-
-import (
-	"github.com/bedag/kubernetes-dbaas/pkg/database"
-)
+package database
 
 type DbService interface {
 	CreateDb(name, stage string) ([]string, error)
@@ -15,17 +11,17 @@ type DbmsConn struct {
 }
 
 // TODO: Add "stage"
-func Open(driver string) (*DbmsConn, error) {
+func New(driver string) (*DbmsConn, error) {
 	var dbmsConn *DbmsConn
 
 	if driver == "mssql" {
-		mssqlConn, err := database.NewMssqlConn()
+		mssqlConn, err := NewMssqlConn()
 		if err != nil {
 			return nil, err
 		}
 		dbmsConn = &DbmsConn{mssqlConn}
 	} else if driver == "psql" {
-		psqlConn, err := database.NewPsqlConn()
+		psqlConn, err := NewPsqlConn()
 		if err != nil {
 			return nil, err
 		}
