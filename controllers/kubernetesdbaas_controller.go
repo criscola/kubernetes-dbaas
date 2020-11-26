@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/bedag/kubernetes-dbaas/pkg/database"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dbaasv1alpha1 "github.com/bedag/kubernetes-dbaas/api/v1alpha1"
-	"github.com/bedag/kubernetes-dbaas/pkg/service"
 )
 
 // KubernetesDbaasReconciler reconciles a KubernetesDbaas object
@@ -53,7 +53,7 @@ func (r *KubernetesDbaasReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		if errors.IsNotFound(err) {
 			// TODO: Encapsulate
 			logger.Info("Deleting " + req.String() + "...")
-			dbConn, err := service.Open(dbaasResource.Spec.DbmsType)
+			dbConn, err := database.New(dbaasResource.Spec.DbmsType)
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -84,7 +84,7 @@ func (r *KubernetesDbaasReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		return ctrl.Result{}, fmt.Errorf("the following DBMS type: \"%s\" is not supported", dbaasResource.Spec.DbmsType)
 	}
 
-	dbConn, err := service.Open(dbaasResource.Spec.DbmsType)
+	dbConn, err := database.New(dbaasResource.Spec.DbmsType)
 	if err != nil {
 		logger.Error(err, "Failed to establish a DBMS connection")
 		return ctrl.Result{}, err
@@ -100,7 +100,7 @@ func (r *KubernetesDbaasReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 
 	logger.Info("Creating secret...")
 
-	err = r.createSecret(username, password)
+	err = r.createSecret(username, password, req.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -115,7 +115,7 @@ func (r *KubernetesDbaasReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func validateDbmsType(s string) bool {
-	for _, supportedDb := range service.GetSupportedDbms() {
+	for _, supportedDb := range database.GetSupportedDbms() {
 		if supportedDb == s {
 			return true
 		}
@@ -123,11 +123,11 @@ func validateDbmsType(s string) bool {
 	return false
 }
 
-func (r *KubernetesDbaasReconciler) createSecret(username, password string) error {
+func (r *KubernetesDbaasReconciler) createSecret(username, password, namespace string) error {
 	err := r.Client.Create(context.Background(), &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
-			Namespace: "default", // TODO: Set namespace where the CR is created
+			Namespace: namespace, // TODO: Set namespace where the CR is created
 		},
 		StringData: map[string]string{
 			"username": username,
