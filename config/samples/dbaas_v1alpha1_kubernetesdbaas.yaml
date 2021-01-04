@@ -4,4 +4,5 @@ metadata:
   name: kubernetesdbaas-sample
 spec:
   # Add fields here
-  foo: bar
+  provisioner: sqlserver
+  endpoint: sqlserver-test

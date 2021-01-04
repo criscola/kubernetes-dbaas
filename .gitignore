@@ -24,3 +24,6 @@ vendor/
 *.swo
 *~
 *.iml
+
+# avoid pushing your config file
+config.yaml

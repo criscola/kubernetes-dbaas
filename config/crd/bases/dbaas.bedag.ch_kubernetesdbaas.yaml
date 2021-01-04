@@ -34,20 +34,40 @@ spec:
         metadata:
           type: object
         spec:
-          description: KubernetesDbaasSpec defines the desired state of KubernetesDbaas
+          description: "KubernetesDbaasSpec defines the desired state of KubernetesDbaas.
+            \n Important: Run \"make\" to regenerate code after modifying this file.
+            Json tags are required."
           properties:
-            dbname:
-              description: DbName is the name of the database
+            endpoint:
+              description: Endpoint associates this resource with a particular endpoint
+                (must be already configured on the operator side)
               type: string
-            dbstage:
-              description: DbStage is the stage of the database (e.g. test, prod)
-              type: string
-            dbtype:
-              description: DbmsType is the type of DBMS (e.g. mssql, psql...)
+            provisioner:
+              description: Provisioner identifies the type of system responsible for
+                provisioning resources (must be supported)
               type: string
           type: object
         status:
-          description: KubernetesDbaasStatus defines the observed state of KubernetesDbaas
+          description: KubernetesDbaasStatus defines the observed state of KubernetesDbaas.
+          properties:
+            lastError:
+              description: LastError if not nil, the resource in an error state
+              type: string
+            lastErrorUpdateCount:
+              description: LastErrorUpdateCount specifies how many times the LastError
+                field has been updated
+              type: integer
+            lastUpdate:
+              description: LastErrorTime specifies the last time the Status field
+                has been updated
+              format: date-time
+              type: string
+            unrecoverable:
+              description: "If Unrecoverable is set to true, the controller was unable
+                to fix the issue by itself \n TODO: Do something like 'kubectl get
+                pods', i.e. create a set of state and enable users to print column
+                with the current state"
+              type: boolean
           type: object
       type: object
   version: v1alpha1

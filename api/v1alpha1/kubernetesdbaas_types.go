@@ -20,26 +20,28 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
-// KubernetesDbaasSpec defines the desired state of KubernetesDbaas
+// KubernetesDbaasSpec defines the desired state of KubernetesDbaas.
+//
+// Important: Run "make" to regenerate code after modifying this file. Json tags are required.
 type KubernetesDbaasSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// DbName is the name of the database
-	DbName string `json:"dbname,omitempty"`
-	// DbStage is the stage of the database (e.g. test, prod)
-	DbStage string `json:"dbstage,omitempty"`
-	// DbmsType is the type of DBMS (e.g. mssql, psql...)
-	DbmsType string `json:"dbtype,omitempty"`
+	// Provisioner identifies the type of system responsible for provisioning resources (must be supported)
+	Provisioner string `json:"provisioner,omitempty"`
+	// Endpoint associates this resource with a particular endpoint (must be already configured on the operator side)
+	Endpoint string `json:"endpoint,omitempty"`
 }
 
-// KubernetesDbaasStatus defines the observed state of KubernetesDbaas
+// KubernetesDbaasStatus defines the observed state of KubernetesDbaas.
 type KubernetesDbaasStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// LastError if not nil, the resource in an error state
+	LastError string `json:"lastError,omitempty"`
+	// LastErrorTime specifies the last time the Status field has been updated
+	LastUpdate metav1.Time `json:"lastUpdate,omitempty"`
+	// LastErrorUpdateCount specifies how many times the LastError field has been updated
+	LastErrorUpdateCount int `json:"lastErrorUpdateCount,omitempty"`
+	// If Unrecoverable is set to true, the controller was unable to fix the issue by itself
+	//
+	// TODO: Do something like 'kubectl get pods', i.e. create a set of state and enable users to print column with the current state
+	Unrecoverable bool `json:"unrecoverable,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -1,0 +1,20 @@
+---
+dbms:
+  - driver: sqlserver
+    endpoints:
+      - name: us-sqlserver-prod-ha
+        dsn: "sqlserver://sa:Password&1@localhost"
+      - name: us-sqlserver-test
+        # dsn missing
+    operations:
+      create:
+        name: "sp_create"
+        inputs:
+          k8sName: k8sName
+        outputs:
+          password: password
+          username: username
+      delete:
+        name: "sp_delete"
+        inputs:
+          k8sName: k8sName

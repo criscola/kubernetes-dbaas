@@ -2,33 +2,55 @@ package database
 
 import (
 	"database/sql"
-	"fmt"
+	_ "github.com/denisenkom/go-mssqldb"
 )
 
 type MssqlConn struct {
-	c *sql.DB
+	c          *sql.DB
+	operations map[string]Operation
 }
 
-func NewMssqlConn() (*MssqlConn, error) {
-	dbConn, err := sql.Open("mssql", "...")
+func NewMssqlConn(dsn Dsn, ops map[string]Operation) (*MssqlConn, error) {
+	dbConn, err := sql.Open("sqlserver", dsn.String())
 	if err != nil {
-		// TODO: Handle error
+		return nil, err
 	}
-	conn := MssqlConn{dbConn}
+
+	conn := MssqlConn{dbConn, ops}
 	return &conn, nil
 }
 
-func (c *MssqlConn) CreateDb(name, stage string) ([]string, error) {
-	rows, err := c.c.Query("CALL ...")
+func (c *MssqlConn) CreateDb(name string) QueryOutput {
+	var username string
+	var password string
+	var dbName string
 
+	operation := c.operations[CreateMapKey]
+
+	_, err := c.c.Exec(operation.Name,
+		sql.Named(operation.Inputs[K8sMapKey], name),
+		sql.Named(operation.Outputs[UserMapKey], sql.Out{Dest: &username}),
+		sql.Named(operation.Outputs[PassMapKey], sql.Out{Dest: &password}),
+		sql.Named(operation.Outputs[DbNameMapKey], sql.Out{Dest: &dbName}),
+	)
 	if err != nil {
-		// TODO: Handle error
+		return QueryOutput{nil, err}
 	}
-	fmt.Print(rows)
-	return nil, nil
+	return QueryOutput{[]string{username, password, dbName}, nil}
 }
 
-func (c *MssqlConn) DeleteDb() error {
-	// TODO: Implement
-	return nil
+func (c *MssqlConn) DeleteDb(name string) QueryOutput {
+	operation := c.operations[DeleteMapKey]
+
+	_, err := c.c.Exec(operation.Name,
+		sql.Named(operation.Inputs[K8sMapKey], name),
+	)
+	if err != nil {
+		return QueryOutput{nil, err}
+	}
+	return QueryOutput{nil, nil}
+}
+
+func (c *MssqlConn) Ping() error {
+	return c.c.Ping()
 }
