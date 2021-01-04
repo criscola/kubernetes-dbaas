@@ -19,6 +19,7 @@ const (
 	SqlServerDriver = "sqlserver"
 )
 
+// SetupSingleSqlServerContainer provisions a single sql server container
 func SetupSingleSqlServerContainer() (database.Dsn, *sql.DB, *dockertest.Resource, error) {
 	var dockerPool *dockertest.Pool
 	var sqlserverDsn database.Dsn
@@ -47,6 +48,7 @@ func SetupSingleSqlServerContainer() (database.Dsn, *sql.DB, *dockertest.Resourc
 	return sqlserverDsn, db, resource, err
 }
 
+// RunSqlServerContainer creates a new docker container running on dockerPool.
 func RunSqlServerContainer(dockerPool *dockertest.Pool) (database.Dsn, *sql.DB, *dockertest.Resource, error) {
 	var dsn database.Dsn
 	var db *sql.DB
@@ -74,6 +76,7 @@ func RunSqlServerContainer(dockerPool *dockertest.Pool) (database.Dsn, *sql.DB, 
 	return dsn, db, resource, nil
 }
 
+// TeardownContainer purges a container and linked volumes from docker.
 func TeardownContainer(resource *dockertest.Resource) error {
 	dockerPool, err := GetDockerPool()
 	if err != nil {

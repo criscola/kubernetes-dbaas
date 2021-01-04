@@ -20,7 +20,7 @@ func NewMssqlConn(dsn Dsn, ops map[string]Operation) (*MssqlConn, error) {
 	return &conn, nil
 }
 
-func (c *MssqlConn) CreateDb(name string) QueryOutput {
+func (c *MssqlConn) CreateDb(name string) OpOutput {
 	var username string
 	var password string
 	var dbName string
@@ -34,21 +34,21 @@ func (c *MssqlConn) CreateDb(name string) QueryOutput {
 		sql.Named(operation.Outputs[DbNameMapKey], sql.Out{Dest: &dbName}),
 	)
 	if err != nil {
-		return QueryOutput{nil, err}
+		return OpOutput{nil, err}
 	}
-	return QueryOutput{[]string{username, password, dbName}, nil}
+	return OpOutput{[]string{username, password, dbName}, nil}
 }
 
-func (c *MssqlConn) DeleteDb(name string) QueryOutput {
+func (c *MssqlConn) DeleteDb(name string) OpOutput {
 	operation := c.operations[DeleteMapKey]
 
 	_, err := c.c.Exec(operation.Name,
 		sql.Named(operation.Inputs[K8sMapKey], name),
 	)
 	if err != nil {
-		return QueryOutput{nil, err}
+		return OpOutput{nil, err}
 	}
-	return QueryOutput{nil, nil}
+	return OpOutput{nil, nil}
 }
 
 func (c *MssqlConn) Ping() error {

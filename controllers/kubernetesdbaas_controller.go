@@ -275,7 +275,7 @@ func (r *KubernetesDbaasReconciler) deleteDb(dbaasResource *KubernetesDbaas) err
 }
 
 // createSecret creates a new K8s secret owned by owner with the data contained in output and dsn.
-func (r *KubernetesDbaasReconciler) createSecret(owner *KubernetesDbaas, output database.QueryOutput, dsn database.Dsn) error {
+func (r *KubernetesDbaasReconciler) createSecret(owner *KubernetesDbaas, output database.OpOutput, dsn database.Dsn) error {
 	var ownerRefs []metav1.OwnerReference
 
 	ownerRefs = append(ownerRefs, metav1.OwnerReference{

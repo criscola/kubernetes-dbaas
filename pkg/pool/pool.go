@@ -12,11 +12,13 @@ var pool dbmsPool
 // Pool of DBMS connection pools where the key is the driver and the value is a slice of dbmsPoolEntry
 type dbmsPool map[string][]dbmsPoolEntry
 
+//
 type dbmsPoolEntry struct {
 	dbmsConn   *database.DbmsConn
 	dbmsConfig database.Endpoint
 }
 
+// Register registers a new database.Dbms in the pool
 func Register(dbms database.Dbms) error {
 	// Register dbms endpoints
 	driver := dbms.Driver
@@ -48,10 +50,6 @@ func GetDsnByDriverAndEndpointName(driver, endpointName string) (database.Dsn, e
 		}
 	}
 	return "", fmt.Errorf("entry '%s' with driver '%s' not found in dbms pool", endpointName, driver)
-}
-
-func Size() int {
-	return len(pool)
 }
 
 func SizeOf(driver string) int {
