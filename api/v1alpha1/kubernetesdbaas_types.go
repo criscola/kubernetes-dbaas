@@ -34,8 +34,8 @@ type KubernetesDbaasSpec struct {
 type KubernetesDbaasStatus struct {
 	// LastError if not nil, the resource in an error state
 	LastError string `json:"lastError,omitempty"`
-	// LastErrorTime specifies the last time the Status field has been updated
-	LastUpdate metav1.Time `json:"lastUpdate,omitempty"`
+	// LastUpdate specifies the last time the Status field has been updated
+	LastUpdate string `json:"lastUpdate,omitempty"`
 	// LastErrorUpdateCount specifies how many times the LastError field has been updated
 	LastErrorUpdateCount int `json:"lastErrorUpdateCount,omitempty"`
 	// If Unrecoverable is set to true, the controller was unable to fix the issue by itself

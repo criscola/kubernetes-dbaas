@@ -27,7 +27,6 @@ import (
 	k8sError "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"math"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -46,6 +45,7 @@ const (
 	dbaasResourceFinalizer = "finalizer.kubernetesdbaas.bedag.ch"
 	// maxRequeueAfterDuration specifies the max wait time between two error retries
 	maxRequeueAfterDuration = 6 * time.Hour
+	DateTimeLayout          = time.UnixDate
 )
 
 // +kubebuilder:rbac:groups=dbaas.bedag.ch,resources=kubernetesdbaas,verbs=get;list;watch;create;update;patch;delete
@@ -59,7 +59,6 @@ func (r *KubernetesDbaasReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	logger := r.Log.WithValues("kubernetesdbaas", req.NamespacedName)
 	logger.Info("Reconcile called.")
 	dbaasResource := &KubernetesDbaas{}
-
 	err := r.Get(ctx, req.NamespacedName, dbaasResource)
 
 	if err != nil {
@@ -82,7 +81,7 @@ func (r *KubernetesDbaasReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		}
 	}
 
-	// Check if the Memcached instance is marked to be deleted, which is
+	// Check if the KubernetesDbaas instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
 	isDbaasResourceMarkedToBeDeleted := dbaasResource.GetDeletionTimestamp() != nil
 	if isDbaasResourceMarkedToBeDeleted {
@@ -126,7 +125,7 @@ func (r *KubernetesDbaasReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	}
 
 	logger.Info("Reached end of Reconcile")
-	return reconcile.Result{Requeue: false}, nil
+	return r.ManageSuccess(dbaasResource)
 }
 
 // SetupWithManager creates the controller responsible for KubernetesDbaas resources by means of a ctrl.Manager.
@@ -139,11 +138,21 @@ func (r *KubernetesDbaasReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // ManageSuccess manages a successful reconciliation.
 func (r *KubernetesDbaasReconciler) ManageSuccess(obj *KubernetesDbaas) (reconcile.Result, error) {
+	err := r.Get(context.Background(), client.ObjectKey{Namespace: obj.Namespace, Name: obj.Name}, obj)
+	if err != nil {
+		return r.ManageError(obj, err)
+	}
+
+	// If the object is marked unrecoverable, ignore
+	if obj.Status.Unrecoverable {
+		return reconcile.Result{}, nil
+	}
+
 	obj.Status.LastError = ""
-	obj.Status.LastUpdate = metav1.Now()
+	obj.Status.LastUpdate = metav1.Now().Format(DateTimeLayout)
 	obj.Status.LastErrorUpdateCount = 0
 
-	err := r.Client.Status().Update(context.Background(), obj)
+	err = r.Status().Update(context.Background(), obj)
 	if err != nil {
 		// TODO: Implement conditions pre-update checks
 		if k8sError.IsConflict(err) {
@@ -160,31 +169,38 @@ func (r *KubernetesDbaasReconciler) ManageError(obj *KubernetesDbaas, issue erro
 	if issue == nil {
 		return r.ManageSuccess(obj)
 	}
-
-	// Set/Update error fields
-	obj.Status.LastError = issue.Error()
-	obj.Status.LastUpdate = metav1.Now()
-	obj.Status.LastErrorUpdateCount++
-
-	if obj.Status.LastErrorUpdateCount == 1 {
-		// First iteration: wait just one second
-		return reconcile.Result{RequeueAfter: time.Second}, issue
-	} else if obj.Status.LastErrorUpdateCount > 14 {
-		// 14 is calculated as 2^n = 21600[s] so at the 14th retry, the wait time will be approximately 6 hours
-		// The controller was unable to fix the error by itself
-		obj.Status.Unrecoverable = true
+	// If error is unrecoverable, ignore
+	if obj.Status.Unrecoverable {
 		return reconcile.Result{}, nil
 	}
 
-	// If the number of retries is at its maximum, the error is deemed unrecoverable
-	tSinceLastRequeue := metav1.Now().Sub(obj.Status.LastUpdate.Time).Round(time.Second)
+	// If 3 seconds haven't passed since last requeue, don't do anything
+	t, _ := time.Parse(DateTimeLayout, obj.Status.LastUpdate)
+	timeSinceLastRequeue := time.Now().Sub(t)
+	if timeSinceLastRequeue <= 3*time.Second {
+		return reconcile.Result{}, nil
+	}
 
-	// Double the wait time
-	return reconcile.Result{
-		// We just make sure the wait time between retries doesn't get too large by setting
-		// maxRequeueAfterDuration as max wait time for a retry wait
-		RequeueAfter: time.Duration(math.Min(float64(tSinceLastRequeue)*2, float64(maxRequeueAfterDuration))),
-	}, issue
+	// Set/Update error fields
+	obj.Status.LastError = issue.Error()
+	obj.Status.LastUpdate = metav1.Now().Format(DateTimeLayout)
+	obj.Status.LastErrorUpdateCount++
+
+	if err := r.Status().Update(context.Background(), obj); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if obj.Status.LastErrorUpdateCount < 14 {
+		return reconcile.Result{RequeueAfter: 3 * time.Second}, nil
+	}
+
+	// The controller couldn't fix the problem itself
+	obj.Status.Unrecoverable = true
+	r.Log.Error(issue, "resource is in unrecoverable state")
+	if err := r.Status().Update(context.Background(), obj); err != nil {
+		return reconcile.Result{}, err
+	}
+	return reconcile.Result{}, nil
 }
 
 // finalizeDbaasResource cleans up resources not owned by dbaasResource.
@@ -193,7 +209,7 @@ func (r *KubernetesDbaasReconciler) finalizeDbaasResource(logger logr.Logger, db
 	// needs to do before the CR can be deleted. Examples
 	// of finalizers include performing backups and deleting
 	// resources that are not owned by this CR, like a PVC.
-	logger.Info("debug", "resource UID: %s", string(dbaasResource.UID))
+	logger.Info("Debug", "resource UID: %s", string(dbaasResource.UID))
 
 	err := r.deleteDb(dbaasResource)
 	if err != nil {
@@ -219,7 +235,7 @@ func (r *KubernetesDbaasReconciler) addFinalizer(dbaasResource *KubernetesDbaas)
 
 // createDb creates a new database instance on the external provisioner based on the dbaasResource data.
 func (r *KubernetesDbaasReconciler) createDb(dbaasResource *KubernetesDbaas) error {
-	r.Log.Info("Creating database instance for: %s", dbaasResource.UID)
+	r.Log.Info(fmt.Sprintf("Creating database instance for: %s", dbaasResource.UID))
 	conn, err := pool.GetConnByDriverAndEndpointName(dbaasResource.Spec.Provisioner, dbaasResource.Spec.Endpoint)
 	if err != nil {
 		return err
@@ -246,7 +262,7 @@ func (r *KubernetesDbaasReconciler) createDb(dbaasResource *KubernetesDbaas) err
 
 // deleteDb deletes the database instance on the external provisioner based on the dbaasResource data.
 func (r *KubernetesDbaasReconciler) deleteDb(dbaasResource *KubernetesDbaas) error {
-	r.Log.Info("Deleting database instance for: %s", dbaasResource.UID)
+	r.Log.Info(fmt.Sprintf("Deleting database instance for: %s", dbaasResource.UID))
 	conn, err := pool.GetConnByDriverAndEndpointName(dbaasResource.Spec.Provisioner, dbaasResource.Spec.Endpoint)
 	if err != nil {
 		return err

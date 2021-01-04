@@ -58,9 +58,8 @@ spec:
                 field has been updated
               type: integer
             lastUpdate:
-              description: LastErrorTime specifies the last time the Status field
-                has been updated
-              format: date-time
+              description: LastUpdate specifies the last time the Status field has
+                been updated
               type: string
             unrecoverable:
               description: "If Unrecoverable is set to true, the controller was unable
