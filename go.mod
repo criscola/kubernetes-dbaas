@@ -3,7 +3,6 @@ module github.com/bedag/kubernetes-dbaas
 go 1.15
 
 require (
-	github.com/DATA-DOG/go-txdb v0.1.3 // indirect
 	github.com/denisenkom/go-mssqldb v0.9.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.1.0
@@ -20,3 +19,4 @@ require (
 	k8s.io/client-go v0.18.6
 	sigs.k8s.io/controller-runtime v0.6.3
 )
+
