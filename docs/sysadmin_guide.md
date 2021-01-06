@@ -1,0 +1,41 @@
+# System administrator guide
+
+## Prerequisites
+
+In order to work with the Operator, your DBMS must:
+
+- Be supported by the Operator. See supported DBMS.
+- Be available and ready to accept connections from the Operator.
+- Contain an **idempotent** stored procedure for database creation.
+  - As **input** parameters, there must be at least one parameter which is the ID associated with the database. At the moment, we provide the K8s resource UID as ID because it is guaranteed to be unique and it's easy to use for debugging purposes if something goes wrong. 
+  - As **output** parameter, there must be at least two parameters which are username and password used to connect to the generated DB instance.
+  - If the same ID of a **preexisting** DB is provided to the create stored procedure, it should always return the same username and password associated with the DB instance.
+- Contain an **idempotent** stored procedure for database deletion.
+  - As **input** parameter, there must be at least one parameter which is the ID associated with the database. 	 
+  - If the ID of a non-existing database is provided, the delete stored procedure should return an error.
+
+Consequently, stored procedures are responsible for:
+
+- Retaining the binding between DB IDs and their real DB name used for db creation and deletion.
+- Retaining the binding between DB IDs and their own username and password. 
+
+Stored procedures inputs and outputs are treated as strings.
+
+Other ad-hoc functionalities inside the stored procedures can be customized as needed if they don't break the prerequisites shown before.
+
+## Steps
+
+1. Rename "config.example.yaml" to "config.yaml".
+2. Modify the configuration to suit your needs, the provided example contains the minimal configuration required to run the Operator.
+   1. Add a dbms entry for each driver you want to support, e.g. one for sqlserver and another for postgresql.
+   2. Add your endpoints under "endpoint". End-users will use the endpoint "name" to associate their DB with a specific DBMS.
+   3. Specify a DSN for your endpoint. See DSN docs for more information.
+   4. Under "operations", describe the create and delete stored procedures. 
+      1. "name" is the name of the stored procedure as is in your DBMS.
+      2. "inputs" contains an attribute called "k8sName" which is the ID associated with a DB instance. You can define your own name if you need.
+      3. "outputs" contains "username" and "password" attributes, you can define your own naming if you need.
+      4. "delete" contains "k8sName" as well.
+
+## DSN docs
+
+- sqlserver: https://github.com/go-sql-driver/mysql#dsn-data-source-name
