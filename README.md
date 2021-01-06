@@ -9,7 +9,7 @@ The Operator watches for new API Objects and tells the target DBMS to trigger a 
 
 ## Motivation
 
-There are many cases where a company can't or doesn't want to host their precious data in cloud or distributed environments and simply desire a way to bridge the gap between their K8s clusters and DBMS solutions. Imagine an organization composed by developers and system administrators, the former want their database provisioned ASAP while the latter want to have as much control as possible on the procedure needed to provision databases while still automating repetitive tasks. If this sounds interesting, keep reading.
+There are many cases where a company can't or doesn't want to host their precious data in cloud or distributed environments and simply desire a way to bridge the gap between their K8s clusters and DBMS solutions. Imagine an organization composed by developers and system administrators, the former want their database provisioned ASAP whereas the latter want to have as much control as possible on the procedure needed to provision databases while still automating repetitive tasks. If this sounds interesting, keep reading.
 
 ## Main technologies
 
@@ -53,9 +53,26 @@ Those who wish to contribute to the code should read the contributor guide.
 
 The operator doesn't support encrypted DBMS connections yet.
 
+## Quickstart
+
+To try out the Operator on your local development machine, follow these steps:
+
+1. Install Go 1.15+ https://golang.org/doc/install
+2. Install kubectl v1.19+ https://kubernetes.io/docs/tasks/tools/install-kubectl/
+3. Install minikube v1.16+ https://minikube.sigs.k8s.io/docs/start/
+4. Install the operator-sdk and its prerequisites: https://sdk.operatorframework.io/docs/installation/
+5. Configure the Operator by following the [System administrator guide](docs/sysadmin_guide.md)
+6. `chmod +x start.sh`
+7. `./start.sh`
+8. Create and delete a custom resource by following the [End-user guide](docs/enduser_guide.md)
+
+You can also use the supplied Dockerfile to compile your own Docker image. 
+
+For more information about the operator-sdk and the enclosed Makefile, consult: https://sdk.operatorframework.io/docs/building-operators/golang/tutorial/
+
 ## Code reference
 
-To be done (godoc present on the code)
+To be done (godoc present on the code).
 
 ## Tests
 
