@@ -20,11 +20,11 @@ There are many cases where a company can't or doesn't want to host their preciou
 
 ### Create database 
 
-![k8s_dbaas_bedag_create](https://raw.githubusercontent.com/bedag/kubernetes-dbaas/develop/docs/resources/k8s_dbaas_bedag_create.png)
+![k8s_dbaas_bedag_create](docs/resources/k8s_dbaas_bedag_create.png)
 
 ### Delete database
 
-![k8s_dbaas_bedag_delete](https://raw.githubusercontent.com/bedag/kubernetes-dbaas/develop/docs/resources/k8s_dbaas_bedag_delete.png)
+![k8s_dbaas_bedag_delete](docs/resources/k8s_dbaas_bedag_delete.png)
 
 ### To-do
 
@@ -39,9 +39,9 @@ Please setup the Operator using the Sysadmin guide. After that, End-users or tes
 
 Those who wish to contribute to the code should read the contributor guide.
 
-- Sysadmin/DevOps guide
-- End-user guide
-- Contributor guide
+- [System administrator guide](docs/sysadmin_guide.md)
+- [End-user guide](docs/enduser_guide.md)
+- [Contributor guide](docs/contributor_guide.md)
 
 ## Supported DBMS
 

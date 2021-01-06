@@ -4,7 +4,7 @@
 
 In order to work with the Operator, your DBMS must:
 
-- Be supported by the Operator. See supported DBMS.
+- Be supported by the Operator. See [supported DBMS](../README.md#supported-dbms).
 - Be available and ready to accept connections from the Operator.
 - Contain an **idempotent** stored procedure for database creation.
   - As **input** parameters, there must be at least one parameter which is the ID associated with the database. At the moment, we provide the K8s resource UID as ID because it is guaranteed to be unique and it's easy to use for debugging purposes if something goes wrong. 
@@ -38,4 +38,4 @@ Other ad-hoc functionalities inside the stored procedures can be customized as n
 
 ## DSN docs
 
-- sqlserver: https://github.com/go-sql-driver/mysql#dsn-data-source-name
+- SQL Server: https://github.com/go-sql-driver/mysql#dsn-data-source-name
