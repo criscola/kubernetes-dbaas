@@ -37,6 +37,11 @@ func Register(dbms database.Dbms) error {
 func GetConnByDriverAndEndpointName(driver, endpointName string) (*database.DbmsConn, error) {
 	for _, v := range pool[driver] {
 		if v.dbmsConfig.Name == endpointName {
+			// Extra check in case the connection has gone down, probably unnecessary because database/sql reopens
+			// db connections when necessary
+			if err := v.dbmsConn.Ping(); err != nil {
+				return nil, err
+			}
 			return v.dbmsConn, nil
 		}
 	}
