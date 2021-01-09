@@ -21,7 +21,8 @@ spec:
 ```
 
 - "provisioner" tells the Operator which driver to use
-- "endpoint" tells the Operator where to create the operator. Your endpoint names are configured on an Operator configuration level and should be properly documented inside of your organization.
+- "endpoint" tells the Operator where to create the operator. Your endpoint names are configured in the Operator 
+configuration and should be properly documented inside of your organization.
 
 2. Apply the configuration in your cluster:
 
