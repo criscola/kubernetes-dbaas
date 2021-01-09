@@ -1,4 +1,4 @@
-# System administrator guide
+ System administrator guide
 
 ## Prerequisites
 
@@ -39,3 +39,17 @@ Other ad-hoc functionalities inside the stored procedures can be customized as n
 ## DSN docs
 
 - SQL Server: https://github.com/go-sql-driver/mysql#dsn-data-source-name
+
+## Helm chart deployment
+
+The operator can be deployed using the convenient Helm chart attached. As a minimum, you will have to:
+1. Follow the steps shown before
+2. Build your own Docker image
+3. Reference the Docker image inside the Helm values.yaml file
+4. Install the Helm chart
+
+Example of installation:
+
+```
+helm install --generate-name kubernetes-dbaas --namespace kubedbaas-system --create-namespace
+```
