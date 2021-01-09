@@ -48,15 +48,5 @@ Selector labels
 {{- define "kubernetes-dbaas.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "kubernetes-dbaas.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
-{{- end }}
-
-{{/*
-Create the name of the service account to use
-*/}}
-{{- define "kubernetes-dbaas.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "kubernetes-dbaas.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
-{{- end }}
+control-plane: controller-manager
 {{- end }}

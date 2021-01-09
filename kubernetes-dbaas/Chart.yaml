@@ -1,0 +1,9 @@
+apiVersion: v2
+name: kubernetes-dbaas
+description: A Helm chart for the Kubernetes-DbaaS operator. See https://github.com/bedag/kubernetes-dbaas
+
+type: application
+
+version: 0.1.0
+
+appVersion: 0.1.0
