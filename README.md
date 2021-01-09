@@ -13,8 +13,10 @@ There are many cases where a company can't or doesn't want to host their preciou
 
 ## Main technologies
 
-- Go 1.15
-- operator-sdk v1.2.0 
+- Go 1.15 or newer
+- operator-sdk v1.2.x 
+- Kubernetes v1.19.0 or newer
+- Helm v3
 
 ## Features
 
@@ -30,8 +32,10 @@ There are many cases where a company can't or doesn't want to host their preciou
 
 - Implement additional DBMS drivers (see supported DBMS)
 - Test the controller with [KUTTL](https://github.com/kudobuilder/kuttl)
-- Helm chart with appropriate RBAC and monitoring
+- Tests refactoring
+- Extend the Helm chart for a larger number of use cases
 - Support db connections encryption
+- Maybe convert the current config.yaml to ConfigMap and Secrets
 
 ## Manuals
 
