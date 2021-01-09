@@ -1,4 +1,4 @@
- System administrator guide
+# System administrator guide
 
 ## Prerequisites
 
@@ -52,4 +52,4 @@ Example of installation:
 
 ```
 helm install --generate-name kubernetes-dbaas --namespace kubedbaas-system --create-namespace
-```
+``` 
