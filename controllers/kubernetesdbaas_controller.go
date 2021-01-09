@@ -138,9 +138,12 @@ func (r *KubernetesDbaasReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // ManageSuccess manages a successful reconciliation.
 func (r *KubernetesDbaasReconciler) ManageSuccess(obj *KubernetesDbaas) (reconcile.Result, error) {
-	err := r.Get(context.Background(), client.ObjectKey{Namespace: obj.Namespace, Name: obj.Name}, obj)
-	if err != nil {
-		return r.ManageError(obj, err)
+	r.Log.Info("ManageSuccess called.")
+
+	// If the object is nil,
+	if obj == nil {
+		r.Log.Info("ManageSuccess called on nil resource, ignoring.")
+		return reconcile.Result{}, nil
 	}
 
 	// If the object is marked unrecoverable, ignore
@@ -152,7 +155,7 @@ func (r *KubernetesDbaasReconciler) ManageSuccess(obj *KubernetesDbaas) (reconci
 	obj.Status.LastUpdate = metav1.Now().Format(DateTimeLayout)
 	obj.Status.LastErrorUpdateCount = 0
 
-	err = r.Status().Update(context.Background(), obj)
+	err := r.Status().Update(context.Background(), obj)
 	if err != nil {
 		// TODO: Implement conditions pre-update checks
 		if k8sError.IsConflict(err) {
@@ -166,9 +169,10 @@ func (r *KubernetesDbaasReconciler) ManageSuccess(obj *KubernetesDbaas) (reconci
 // ManageSuccess manages a failed reconciliation.
 func (r *KubernetesDbaasReconciler) ManageError(obj *KubernetesDbaas, issue error) (reconcile.Result, error) {
 	r.Log.Info("ManageError called.")
-	if issue == nil {
+	if issue == nil || obj == nil {
 		return r.ManageSuccess(obj)
 	}
+
 	// If error is unrecoverable, ignore
 	if obj.Status.Unrecoverable {
 		return reconcile.Result{}, nil
