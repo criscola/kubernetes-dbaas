@@ -1,5 +1,3 @@
-
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -18,6 +16,14 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+    - dbaas.bedag.ch
+  resources:
+    - kubernetesdbaas/status
+  verbs:
+    - get
+    - patch
+    - update
 - apiGroups:
   - ""
   resources:
