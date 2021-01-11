@@ -77,7 +77,7 @@ You can also use the supplied Dockerfile to compile your own Docker image.
 For more information about the operator-sdk and the enclosed Makefile, consult: https://sdk.operatorframework.io/docs/building-operators/golang/tutorial/
 
 ## CLI arguments
-- `--config-path <path>` defines the configuration file path. If no path is supplied, the Operator will search in the same folder of the manager binary for a file called`config.yaml`.
+- `--config-path <path>` defines the configuration file path. If no path is supplied, the Operator will search in the same folder of the manager binary for a file called `config.yaml`.
 
 ## Code reference
 
