@@ -47,3 +47,5 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      serviceAccountName: {{ .Values.serviceAccountName }}
+      automountServiceAccountToken: {{ .Values.automountServiceAccountToken }}

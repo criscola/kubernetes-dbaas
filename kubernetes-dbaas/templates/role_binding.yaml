@@ -8,5 +8,5 @@ roleRef:
   name: manager-role
 subjects:
   - kind: ServiceAccount
-    name: {{ .Values.serviceAccountOverride | default "default"}}
+    name: {{ .Values.serviceAccountName }}
     namespace: {{ .Release.Namespace }}

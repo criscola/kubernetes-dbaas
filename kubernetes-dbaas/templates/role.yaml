@@ -4,35 +4,29 @@ metadata:
   creationTimestamp: null
   name: manager-role
 rules:
-- apiGroups:
-  - dbaas.bedag.ch
-  resources:
-  - kubernetesdbaas
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-    - dbaas.bedag.ch
-  resources:
-    - kubernetesdbaas/status
-  verbs:
-    - get
-    - patch
+  - apiGroups:
+      - dbaas.bedag.ch
+    resources:
+      - kubernetesdbaas
+    verbs:
+      - list
+      - watch
+      - update
+  - apiGroups:
+      - dbaas.bedag.ch
+    resources:
+      - kubernetesdbaas/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+    - ""
+    resources:
+    - secrets
+    verbs:
+    - list
+    - create
+    - delete
     - update
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - get
-  - list
-  - create
-  - delete
-  - update
-  - patch
-  - watch
+    - watch
