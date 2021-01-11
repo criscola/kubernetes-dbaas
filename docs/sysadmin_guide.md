@@ -26,13 +26,13 @@ Other ad-hoc functionalities inside the stored procedures can be customized as n
 ## Steps
 1. Modify the DBMS configuration to suit your needs, the provided example contains the minimal configuration required to run the Operator.
     1. Add a dbms entry for each driver you want to support, e.g. one for sqlserver and another for postgresql. Don't modify the top-level attribute `dbms`.
-    2. Add your endpoints under "endpoint". End-users will use the endpoint "name" to associate their DB with a specific DBMS.
+    2. Add your endpoints under `endpoint`. End-users will use the endpoint `name` to associate their DB with a specific DBMS.
     3. Specify a DSN for your endpoint. See DSN docs for more information.
-    4. Under "operations", describe the create and delete stored procedures.
-        1. "name" is the name of the stored procedure as is in your DBMS.
-        2. "inputs" contains an attribute called "k8sName" which is the ID associated with a DB instance. You can define your own parameter name if you need.
-        3. "outputs" contains attributes called "username" and "password", you can define your own naming if you need.
-        4. "delete" contains the attribute "k8sName" as well, to reference which DB instance should be deleted.
+    4. Under `operations`, describe the create and delete stored procedures.
+        1. `name` is the name of the stored procedure as is in your DBMS.
+        2. `inputs` contains an attribute called `k8sName` which is the ID associated with a DB instance. You can define your own parameter name if you need.
+        3. `outputs` contains attributes called `username` and `password`, you can define your own naming if you need.
+        4. `delete` contains the attribute `k8sName` as well, to reference which DB instance should be deleted.
 
 ## DSN docs
 
