@@ -22,6 +22,7 @@ import (
 var (
 	metricsAddr          string
 	enableLeaderElection bool
+	configFilepath       string
 
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
@@ -102,8 +103,13 @@ func StartOperator() {
 // See config.ReadOperatorConfig for details.
 func LoadConfig() {
 	// Set Viper configuration
-	viper.SetConfigFile(ConfigFileName)
 	viper.AddConfigPath(".") // search for config file in the root directory of the project
+	viper.SetConfigName(ConfigFileName)
+	viper.SetConfigType("yaml")
+
+	if configFilepath != "" {
+		viper.SetConfigFile(configFilepath)
+	}
 
 	// Load config
 	if err := viper.ReadInConfig(); err != nil {
@@ -133,6 +139,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active "+
 			"controller manager.")
+	rootCmd.PersistentFlags().StringVar(&configFilepath, "load-config", ".", "Loads the config file from path")
 
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(dbaasv1alpha1.AddToScheme(scheme))

@@ -30,10 +30,19 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          volumeMounts:
+            - name: operator-config
+              mountPath: {{ .Values.operatorConfigPath }}
+              readOnly: true
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+          {{- toYaml .Values.resources | nindent 12 }}
           command:
             - /manager
+          args: ["--load-config", {{ keys .Values.operatorConfig | first | print .Values.operatorConfigPath "/" | quote }} ]
+      volumes:
+        - name: operator-config
+          secret:
+            secretName: controller-manager
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

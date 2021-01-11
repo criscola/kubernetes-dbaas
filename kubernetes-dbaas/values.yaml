@@ -50,6 +50,30 @@ terminationGracePeriodSeconds: 10
 # role.yaml and role_binding.yaml to find out more.
 serviceAccountName: controller-manager
 
-# Should the ServiceAccount of the manager Pod automount the SA Account Token? Leave blank if 'true', specify 'false'
+# Should the ServiceAccount of the manager Pod automount the SA Account Token?
 # otherwise
-automountServiceAccountToken:
+automountServiceAccountToken: true
+
+# Path of the operator configuration which will be mounted in the manager Pod
+operatorConfigPath: "/var/kubedbaas"
+
+# Operator configuration. The first key is the name of Secret file mounted in the manager Pod. Consult the System administrator guide to learn more.
+operatorConfig:
+  config.yaml: |
+    dbms:
+      - driver: sqlserver
+        endpoints:
+          - name: us-sqlserver-test
+            dsn: sqlserver://sa:Password&1@localhost
+        operations:
+          create:
+            name: sp_create
+            inputs:
+              k8sName: k8sName
+            outputs:
+              password: password
+              username: username
+          delete:
+            name: sp_delete
+            inputs:
+              k8sName: k8sName
