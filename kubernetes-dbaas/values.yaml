@@ -47,7 +47,7 @@ affinity: {}
 terminationGracePeriodSeconds: 10
 
 # Overrides the ServiceAccount subject to receive the access rights needed to run the manager Pod correctly. Look at
-# role.yaml and role_binding.yaml to find out more. By default it's the "default" ServiceAccount.
+# role.yaml and role_binding.yaml to find out more.
 serviceAccountName: controller-manager
 
 # Should the ServiceAccount of the manager Pod automount the SA Account Token? Leave blank if 'true', specify 'false'
