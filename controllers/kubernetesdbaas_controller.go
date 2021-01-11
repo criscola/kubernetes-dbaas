@@ -43,17 +43,12 @@ type KubernetesDbaasReconciler struct {
 
 const (
 	dbaasResourceFinalizer = "finalizer.kubernetesdbaas.bedag.ch"
-	// maxRequeueAfterDuration specifies the max wait time between two error retries
-	maxRequeueAfterDuration = 6 * time.Hour
 	DateTimeLayout          = time.UnixDate
 )
 
-// +kubebuilder:rbac:groups=dbaas.bedag.ch,resources=kubernetesdbaas,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=dbaas.bedag.ch,resources=kubernetesdbaas,verbs=list;watch;update
 // +kubebuilder:rbac:groups=dbaas.bedag.ch,resources=kubernetesdbaas/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=dbaas.bedag.ch,resources=kubernetesdbaas/finalizers,verbs=update
-// +kubebuilder:rbac:groups="dbaas.bedag.ch",resources=secrets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=list;watch;create;update;delete
 func (r *KubernetesDbaasReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	logger := r.Log.WithValues("kubernetesdbaas", req.NamespacedName)
