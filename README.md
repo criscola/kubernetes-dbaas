@@ -79,6 +79,9 @@ For more information about the operator-sdk and the enclosed Makefile, consult: 
 ## CLI arguments
 - `--config-path <path>` defines the configuration file path. If no path is supplied, the Operator will search in the same folder of the manager binary for a file called `config.yaml`.
 
+## Known problems
+- Given that all errors are written in the resources' `LastError` status field, some things that should stay hidden, might leak to unauthorized personnel. There should be a way to hide the details from the End-users, while still logging them.
+
 ## Code reference
 
 To be done (godoc present on the code).
