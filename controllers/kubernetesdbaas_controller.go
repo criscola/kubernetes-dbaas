@@ -19,19 +19,21 @@ package controllers
 import (
 	"context"
 	"fmt"
-	. "github.com/bedag/kubernetes-dbaas/api/v1alpha1"
 	"github.com/bedag/kubernetes-dbaas/pkg/database"
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
-	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
-	k8sError "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"time"
+
+	"github.com/go-logr/logr"
+	k8sError "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	. "github.com/bedag/kubernetes-dbaas/api/v1"
 )
 
 // KubernetesDbaasReconciler reconciles a KubernetesDbaas object
@@ -43,14 +45,13 @@ type KubernetesDbaasReconciler struct {
 
 const (
 	dbaasResourceFinalizer = "finalizer.kubernetesdbaas.bedag.ch"
-	DateTimeLayout          = time.UnixDate
+	DateTimeLayout         = time.UnixDate
 )
 
 // +kubebuilder:rbac:groups=dbaas.bedag.ch,resources=kubernetesdbaas,verbs=list;watch;update
 // +kubebuilder:rbac:groups=dbaas.bedag.ch,resources=kubernetesdbaas/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=list;watch;create;update;delete
-func (r *KubernetesDbaasReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *KubernetesDbaasReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := r.Log.WithValues("kubernetesdbaas", req.NamespacedName)
 	logger.Info("Reconcile called.")
 	dbaasResource := &KubernetesDbaas{}

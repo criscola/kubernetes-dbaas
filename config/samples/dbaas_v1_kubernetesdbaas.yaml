@@ -1,8 +1,7 @@
-apiVersion: dbaas.bedag.ch/v1alpha1
+apiVersion: dbaas.bedag.ch/v1
 kind: KubernetesDbaas
 metadata:
   name: kubernetesdbaas-sample
 spec:
   # Add fields here
-  provisioner: sqlserver
-  endpoint: sqlserver-test
+  foo: bar

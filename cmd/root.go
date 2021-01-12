@@ -3,7 +3,7 @@ package cmd
 
 import (
 	"fmt"
-	dbaasv1alpha1 "github.com/bedag/kubernetes-dbaas/api/v1alpha1"
+	dbaasv1 "github.com/bedag/kubernetes-dbaas/api/v1"
 	"github.com/bedag/kubernetes-dbaas/controllers"
 	"github.com/bedag/kubernetes-dbaas/pkg/config"
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
@@ -103,9 +103,11 @@ func StartOperator() {
 // See config.ReadOperatorConfig for details.
 func LoadConfig() {
 	// Set Viper configuration
+	viper.SetConfigFile(ConfigFileName)
 	viper.AddConfigPath(".") // search for config file in the root directory of the project
-	viper.SetConfigName(ConfigFileName)
-	viper.SetConfigType("yaml")
+
+	setupLog.Info(ConfigFileName)
+	setupLog.Info(configFilepath)
 
 	if configFilepath != "" {
 		viper.SetConfigFile(configFilepath)
@@ -139,10 +141,10 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active "+
 			"controller manager.")
-	rootCmd.PersistentFlags().StringVar(&configFilepath, "load-config", ".", "Loads the config file from path")
+	rootCmd.PersistentFlags().StringVar(&configFilepath, "load-config", "", "Loads the config file from path")
 
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(dbaasv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(dbaasv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 

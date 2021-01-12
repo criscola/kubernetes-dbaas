@@ -7,7 +7,7 @@ replicaCount: 1
 image:
   # Repository of the operator manager image.
   repository:
-  pullPolicy: IfNotPresent
+  pullPolicy: IfNotPreset
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
