@@ -37,7 +37,6 @@ namespace controllers {
 
 
 "controllers.KubernetesDbaasReconciler""uses" o-- "logr.Logger"
-"controllers.KubernetesDbaasReconciler""uses" o-- "runtime.Scheme"
 
 namespace database {
     class Dbms << (S,Aquamarine) >> {
