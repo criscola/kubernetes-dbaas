@@ -31,6 +31,8 @@ type KubernetesDbaasSpec struct {
 	Provisioner string `json:"provisioner,omitempty"`
 	// Endpoint associates this resource with a particular endpoint (must be already configured on the operator side)
 	Endpoint string `json:"endpoint,omitempty"`
+	// Params is a map containing parameters to be mapped to the database instance
+	Params map[string]string `json:"params,omitempty"`
 }
 
 // KubernetesDbaasStatus defines the observed state of KubernetesDbaas.

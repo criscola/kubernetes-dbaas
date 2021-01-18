@@ -42,6 +42,12 @@ spec:
                 description: Endpoint associates this resource with a particular endpoint
                   (must be already configured on the operator side)
                 type: string
+              params:
+                additionalProperties:
+                  type: string
+                description: Params is a map containing parameters to be mapped to
+                  the database instance
+                type: object
               provisioner:
                 description: Provisioner identifies the type of system responsible
                   for provisioning resources (must be supported)
