@@ -6,9 +6,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	. "github.com/spf13/viper"
-	"os"
-	"path"
-	"strings"
 )
 
 // OperatorConfig represents the key-value configuration of the operator
@@ -46,33 +43,6 @@ func ReadOperatorConfig(v *Viper) error {
 // GetDbmsConfig returns the private struct containing the DBMS configuration
 func GetDbmsConfig() database.DbmsConfig {
 	return c[DbmsMapKey]
-}
-
-// GetRootProjectPath is a utility function which gets the root project path based on the location of the main.go file.
-// Do not move main.go in a place other than the root project path.
-func GetRootProjectPath() (string, error) {
-	var p string
-	// Walk up the FS tree until a path containing main.go is found
-	currentPath, _ := os.Getwd()
-	mainFile := "main.go"
-
-	for {
-		p = path.Join(currentPath, mainFile)
-		// Look if the current path contains main.go
-		if _, err := os.Stat(p); !os.IsNotExist(err) {
-			// path of main.go found
-			break
-		}
-
-		// Walk up the FS tree
-		i := strings.LastIndex(currentPath, "/")
-		currentPath = currentPath[:i]
-
-		if currentPath == "" {
-			return "", fmt.Errorf("path not found")
-		}
-	}
-	return currentPath, nil
 }
 
 // validateDbmsConfig validates the configuration of a DBMS configuration. It returns wrapped errors with the issues
