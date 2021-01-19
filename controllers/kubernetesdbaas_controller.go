@@ -19,10 +19,13 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/bedag/kubernetes-dbaas/pkg/config"
 	"github.com/bedag/kubernetes-dbaas/pkg/database"
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/json"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"time"
@@ -233,6 +236,11 @@ func (r *KubernetesDbaasReconciler) addFinalizer(dbaasResource *KubernetesDbaas)
 	return nil
 }
 
+type TemplateInput struct {
+	Metadata   map[string]interface{} // the whole "metadata" field of the kubernetesdbaas resource gets copied here
+	Parameters map[string]string      // the spec.parameters field of the kubernetesdbaas resource gets copied here
+}
+
 // createDb creates a new database instance on the external provisioner based on the dbaasResource data.
 func (r *KubernetesDbaasReconciler) createDb(dbaasResource *KubernetesDbaas) error {
 	r.Log.Info(fmt.Sprintf("Creating database instance for: %s", dbaasResource.UID))
@@ -241,18 +249,30 @@ func (r *KubernetesDbaasReconciler) createDb(dbaasResource *KubernetesDbaas) err
 		return err
 	}
 
-	output := conn.CreateDb(string(dbaasResource.UID))
+	dbms, err := config.
+		GetDbmsConfig().
+		GetByDriverAndEndpoint(dbaasResource.Spec.Provisioner, dbaasResource.Spec.Endpoint)
+	if err != nil {
+		return fmt.Errorf("could not get dbms entry: %s", err)
+	}
+
+	opValues, err := newOpValuesFromResource(dbaasResource)
+	if err != nil {
+		return fmt.Errorf("could not get generate operation values from resource: %s", err)
+	}
+
+	createOp, err := dbms.RenderOperation(database.CreateMapKey, opValues)
+	if err != nil {
+		return fmt.Errorf("could not render create operation values: %s", err)
+	}
+
+	output := conn.CreateDb(createOp)
 	if output.Err != nil {
 		return fmt.Errorf("could not create database: %s", output.Err)
 	}
 
-	dsn, err := pool.GetDsnByDriverAndEndpointName(dbaasResource.Spec.Provisioner, dbaasResource.Spec.Endpoint)
-	if err != nil {
-		return err
-	}
-
 	// Create Secret
-	err = r.createSecret(dbaasResource, output, dsn)
+	err = r.createSecret(dbaasResource, output)
 	if err != nil {
 		return fmt.Errorf("could not create secret: %s", err)
 	}
@@ -268,14 +288,33 @@ func (r *KubernetesDbaasReconciler) deleteDb(dbaasResource *KubernetesDbaas) err
 		return err
 	}
 
-	if err = conn.DeleteDb(string(dbaasResource.UID)).Err; err != nil {
-		return err
+	dbms, err := config.
+		GetDbmsConfig().
+		GetByDriverAndEndpoint(dbaasResource.Spec.Provisioner, dbaasResource.Spec.Endpoint)
+	if err != nil {
+		return fmt.Errorf("could not get dbms entry: %s", err)
 	}
+
+	opValues, err := newOpValuesFromResource(dbaasResource)
+	if err != nil {
+		return fmt.Errorf("could not get generate operation values from resource: %s", err)
+	}
+
+	deleteOp, err := dbms.RenderOperation(database.DeleteMapKey, opValues)
+	if err != nil {
+		return fmt.Errorf("could not render create operation values: %s", err)
+	}
+
+	output := conn.DeleteDb(deleteOp)
+	if output.Err != nil {
+		return fmt.Errorf("could not delete database: %s", output.Err)
+	}
+
 	return nil
 }
 
 // createSecret creates a new K8s secret owned by owner with the data contained in output and dsn.
-func (r *KubernetesDbaasReconciler) createSecret(owner *KubernetesDbaas, output database.OpOutput, dsn database.Dsn) error {
+func (r *KubernetesDbaasReconciler) createSecret(owner *KubernetesDbaas, output database.OpOutput) error {
 	var ownerRefs []metav1.OwnerReference
 
 	ownerRefs = append(ownerRefs, metav1.OwnerReference{
@@ -295,7 +334,11 @@ func (r *KubernetesDbaasReconciler) createSecret(owner *KubernetesDbaas, output 
 		StringData: map[string]string{
 			"username": output.Out[0],
 			"password": output.Out[1],
-			"dsn":      dsn.WithTable(output.Out[2]).String(),
+			"host": output.Out[2],
+			"port": output.Out[3],
+			"dbName": output.Out[4],
+			"dsn": database.NewDsn(owner.Spec.Provisioner,
+				output.Out[0], output.Out[1], output.Out[2], output.Out[3], output.Out[4]).String(),
 		},
 	}
 
@@ -316,6 +359,37 @@ func (r *KubernetesDbaasReconciler) createSecret(owner *KubernetesDbaas, output 
 	return r.Client.Update(context.Background(), newSecret)
 }
 
+func newOpValuesFromResource(resource *KubernetesDbaas) (database.OpValues, error) {
+	metaIn := resource.ObjectMeta
+	var metadata map[string]interface{}
+	temp, _ := json.Marshal(metaIn)
+	err := json.Unmarshal(temp, &metadata)
+	if err != nil {
+		return database.OpValues{}, err
+	}
+	specIn := resource.Spec.Params
+	var spec map[string]string
+	temp, err = json.Marshal(specIn)
+	err = json.Unmarshal(temp, &spec)
+	if err != nil {
+		return database.OpValues{}, err
+	}
+
+	// Ensure meta.namespace and meta.name are set
+	if metadata["namespace"] == "" {
+		metadata["namespace"] = "default"
+	}
+	if metadata["name"] == "" {
+		// Generate name randomly
+		metadata["name"] = randSeq(16)
+	}
+
+	return database.OpValues{
+		Metadata: metadata,
+		Parameters: spec,
+	}, nil
+}
+
 func contains(list []string, s string) bool {
 	for _, v := range list {
 		if v == s {
@@ -323,4 +397,16 @@ func contains(list []string, s string) bool {
 		}
 	}
 	return false
+}
+
+func randSeq(n int) string {
+	rand.Seed(time.Now().UnixNano())
+
+	var alphabet = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = alphabet[rand.Intn(len(alphabet))]
+	}
+	return string(b)
 }

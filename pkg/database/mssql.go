@@ -6,48 +6,56 @@ import (
 )
 
 type MssqlConn struct {
-	c          *sql.DB
-	operations map[string]Operation
+	c *sql.DB
 }
 
-func NewMssqlConn(dsn Dsn, ops map[string]Operation) (*MssqlConn, error) {
+func NewMssqlConn(dsn Dsn) (*MssqlConn, error) {
 	dbConn, err := sql.Open("sqlserver", dsn.String())
 	if err != nil {
 		return nil, err
 	}
 
-	conn := MssqlConn{dbConn, ops}
+	conn := MssqlConn{dbConn}
 	return &conn, nil
 }
 
-func (c *MssqlConn) CreateDb(name string) OpOutput {
+func (c *MssqlConn) CreateDb(operation Operation) OpOutput {
 	var username string
 	var password string
 	var dbName string
+	var fqdn string
+	var port string
 
-	operation := c.operations[CreateMapKey]
-
-	_, err := c.c.Exec(operation.Name,
-		sql.Named(operation.Inputs[K8sMapKey], name),
+	var inputParams []interface{}
+	for k, v := range operation.Inputs {
+		inputParams = append(inputParams, sql.Named(k, v))
+	}
+	inputParams = append(inputParams,
 		sql.Named(operation.Outputs[UserMapKey], sql.Out{Dest: &username}),
 		sql.Named(operation.Outputs[PassMapKey], sql.Out{Dest: &password}),
 		sql.Named(operation.Outputs[DbNameMapKey], sql.Out{Dest: &dbName}),
-	)
+		sql.Named(operation.Outputs[FqdnMapKey], sql.Out{Dest: &fqdn}),
+		sql.Named(operation.Outputs[PortMapKey], sql.Out{Dest: &port}))
+
+	_, err := c.c.Exec(operation.Name, inputParams...)
 	if err != nil {
 		return OpOutput{nil, err}
 	}
-	return OpOutput{[]string{username, password, dbName}, nil}
+
+	return OpOutput{[]string{username, password, dbName, fqdn, port}, nil}
 }
 
-func (c *MssqlConn) DeleteDb(name string) OpOutput {
-	operation := c.operations[DeleteMapKey]
+func (c *MssqlConn) DeleteDb(operation Operation) OpOutput {
+	var inputParams []interface{}
+	for k, v := range operation.Inputs {
+		inputParams = append(inputParams, sql.Named(k, v))
+	}
 
-	_, err := c.c.Exec(operation.Name,
-		sql.Named(operation.Inputs[K8sMapKey], name),
-	)
+	_, err := c.c.Exec(operation.Name, inputParams...)
 	if err != nil {
 		return OpOutput{nil, err}
 	}
+
 	return OpOutput{nil, nil}
 }
 
