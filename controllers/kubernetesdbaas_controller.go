@@ -303,7 +303,7 @@ func (r *KubernetesDbaasReconciler) deleteDb(dbaasResource *KubernetesDbaas) err
 	deleteOp, err := dbms.RenderOperation(database.DeleteMapKey, opValues)
 	if err != nil {
 		return fmt.Errorf("could not render create operation values: %s", err)
-	}y
+	}
 
 	output := conn.DeleteDb(deleteOp)
 	if output.Err != nil {
