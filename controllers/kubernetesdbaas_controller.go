@@ -303,7 +303,7 @@ func (r *KubernetesDbaasReconciler) deleteDb(dbaasResource *KubernetesDbaas) err
 	deleteOp, err := dbms.RenderOperation(database.DeleteMapKey, opValues)
 	if err != nil {
 		return fmt.Errorf("could not render create operation values: %s", err)
-	}
+	}y
 
 	output := conn.DeleteDb(deleteOp)
 	if output.Err != nil {
@@ -334,11 +334,11 @@ func (r *KubernetesDbaasReconciler) createSecret(owner *KubernetesDbaas, output 
 		StringData: map[string]string{
 			"username": output.Out[0],
 			"password": output.Out[1],
-			"host": output.Out[2],
-			"port": output.Out[3],
-			"dbName": output.Out[4],
+			"host": output.Out[3],
+			"port": output.Out[4],
+			"dbName": output.Out[2],
 			"dsn": database.NewDsn(owner.Spec.Provisioner,
-				output.Out[0], output.Out[1], output.Out[2], output.Out[3], output.Out[4]).String(),
+				output.Out[0], output.Out[1],  output.Out[3], output.Out[4], output.Out[2]) .String(),
 		},
 	}
 
