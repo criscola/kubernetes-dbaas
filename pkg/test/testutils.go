@@ -36,6 +36,8 @@ func GetRootProjectPath() (string, error) {
 	return currentPath, nil
 }
 
+// GetTestdataFolderPath is a utility function which tries to get the "testdata" folder which should contain data files
+// used for testing.
 func GetTestdataFolderPath() (string, error) {
 	rootPath, err := GetRootProjectPath()
 	if err != nil {
@@ -44,6 +46,7 @@ func GetTestdataFolderPath() (string, error) {
 	return path.Join(rootPath, "testdata"), nil
 }
 
+// GetUnexportedField is a "hacky" function which enables to read private fields from a struct.
 func GetUnexportedField(field reflect.Value) interface{} {
 	return reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem().Interface()
 }

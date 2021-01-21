@@ -1,3 +1,4 @@
+// Package config contains the initialization of the operator configuration.
 package config
 
 import (
@@ -15,6 +16,7 @@ const (
 	DbmsMapKey = "dbms"
 )
 
+// c holds the operator configuration
 var c OperatorConfig
 
 // ReadOperatorConfig unmarshalls the operator configuration from a viper.Viper struct into a private struct.

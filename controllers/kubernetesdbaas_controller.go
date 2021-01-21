@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package controllers contain the Kubernetes controllers responsible for their Custom Resource.
 package controllers
 
 import (
@@ -51,6 +52,7 @@ const (
 	DateTimeLayout         = time.UnixDate
 )
 
+// Reconcile tries to reconcile the state of the cluster with the state of KubernetesDbaas resources.
 // +kubebuilder:rbac:groups=dbaas.bedag.ch,resources=kubernetesdbaas,verbs=list;watch;update
 // +kubebuilder:rbac:groups=dbaas.bedag.ch,resources=kubernetesdbaas/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=list;watch;create;update;delete
@@ -236,11 +238,6 @@ func (r *KubernetesDbaasReconciler) addFinalizer(dbaasResource *KubernetesDbaas)
 	return nil
 }
 
-type TemplateInput struct {
-	Metadata   map[string]interface{} // the whole "metadata" field of the kubernetesdbaas resource gets copied here
-	Parameters map[string]string      // the spec.parameters field of the kubernetesdbaas resource gets copied here
-}
-
 // createDb creates a new database instance on the external provisioner based on the dbaasResource data.
 func (r *KubernetesDbaasReconciler) createDb(dbaasResource *KubernetesDbaas) error {
 	r.Log.Info(fmt.Sprintf("Creating database instance for: %s", dbaasResource.UID))
@@ -359,6 +356,7 @@ func (r *KubernetesDbaasReconciler) createSecret(owner *KubernetesDbaas, output 
 	return r.Client.Update(context.Background(), newSecret)
 }
 
+// newOpValuesFromResource constructs a database.OpValues struct starting from a KubernetesDbaas resource.
 func newOpValuesFromResource(resource *KubernetesDbaas) (database.OpValues, error) {
 	metaIn := resource.ObjectMeta
 	var metadata map[string]interface{}
@@ -390,6 +388,7 @@ func newOpValuesFromResource(resource *KubernetesDbaas) (database.OpValues, erro
 	}, nil
 }
 
+// contains is a very small utility function which returns true if s has been found in list.
 func contains(list []string, s string) bool {
 	for _, v := range list {
 		if v == s {
@@ -399,6 +398,7 @@ func contains(list []string, s string) bool {
 	return false
 }
 
+// randSeq generates a random alphanumeric string of length n
 func randSeq(n int) string {
 	rand.Seed(time.Now().UnixNano())
 

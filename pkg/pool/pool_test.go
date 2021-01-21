@@ -17,6 +17,7 @@ var dsn1 database.Dsn
 var dsn2 database.Dsn
 var dsnSlice []database.Dsn
 
+// TestMain is executed before each test case.
 func TestMain(m *testing.M) {
 	var resource1 *dockertest.Resource
 	var resource2 *dockertest.Resource
@@ -51,6 +52,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+// TestRegister tests whether the pool is able to register a new instance.
 func TestRegister(t *testing.T) {
 	endpoints := GetMockEndpoints(dsnSlice)
 	dbms := database.Dbms{
@@ -70,6 +72,7 @@ func TestRegister(t *testing.T) {
 	}
 }
 
+// TestGetByDriverAndEndpointName tests whether an entry by driver and endpoint name can be retrieved from the pool.
 func TestGetByDriverAndEndpointName(t *testing.T) {
 	endpoints := GetMockEndpoints(dsnSlice)
 	for _, v := range endpoints {

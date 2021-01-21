@@ -5,10 +5,12 @@ import (
 	_ "github.com/denisenkom/go-mssqldb"
 )
 
+// MssqlConn represents a connection to a SQL Server DBMS.
 type MssqlConn struct {
 	c *sql.DB
 }
 
+// NewMssqlConn constructs a new SQL Server connection from a given dsn.
 func NewMssqlConn(dsn Dsn) (*MssqlConn, error) {
 	dbConn, err := sql.Open("sqlserver", dsn.String())
 	if err != nil {
@@ -19,6 +21,8 @@ func NewMssqlConn(dsn Dsn) (*MssqlConn, error) {
 	return &conn, nil
 }
 
+// CreateDb attempts to create a new database as specified in the operation parameter. It returns an OpOutput with the
+// result of the call.
 func (c *MssqlConn) CreateDb(operation Operation) OpOutput {
 	var username string
 	var password string
@@ -45,6 +49,8 @@ func (c *MssqlConn) CreateDb(operation Operation) OpOutput {
 	return OpOutput{[]string{username, password, dbName, fqdn, port}, nil}
 }
 
+// DeleteDb attemps to delete a database instance as specified in the operation parameter. It returns an OpOutput with the
+// result of the call.
 func (c *MssqlConn) DeleteDb(operation Operation) OpOutput {
 	var inputParams []interface{}
 	for k, v := range operation.Inputs {
@@ -59,6 +65,7 @@ func (c *MssqlConn) DeleteDb(operation Operation) OpOutput {
 	return OpOutput{nil, nil}
 }
 
+// Ping returns an error if a connection cannot be established with the DBMS, else it returns nil.
 func (c *MssqlConn) Ping() error {
 	return c.c.Ping()
 }

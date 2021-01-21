@@ -1,3 +1,5 @@
+// Package database contains all the code related to the interaction with databases. It doesn't contain any application
+// state. Actual connections are retained in the pool package.
 package database
 
 import (
@@ -32,6 +34,7 @@ type Driver interface {
 	Ping() error
 }
 
+// OpValuesd represent the input values of an operation.
 type OpValues struct {
 	Metadata   map[string]interface{}
 	Parameters map[string]string
@@ -60,11 +63,14 @@ type Dbms struct {
 	Endpoints  []Endpoint
 }
 
+// Endpoint represent the configuration of a DBMS endpoint identified by a name.
 type Endpoint struct {
 	Name string
 	Dsn  Dsn
 }
 
+// Operation represents an operation performed on a DBMS identified by name and containing a map of inputs and a map
+// of outputs.
 type Operation struct {
 	Name    string
 	Inputs  map[string]string
@@ -102,6 +108,7 @@ func New(dsn Dsn, ops map[string]Operation) (*DbmsConn, error) {
 	return dbmsConn, nil
 }
 
+// GetByDriverAndEndpoint gets a Dbms identified by driver and endpoint from a DbmsConfig type.
 func (c DbmsConfig) GetByDriverAndEndpoint(driver, endpoint string) (Dbms, error) {
 	for _, dbms := range c {
 		if dbms.Driver == driver && contains(dbms.Endpoints, endpoint) {
@@ -151,14 +158,17 @@ func (d Dbms) RenderOperation(opKey string, values OpValues) (Operation, error) 
 	return renderedOp, nil
 }
 
+// IsNamePresent return true if an endpoint name is not empty, else it returns false.
 func (e Endpoint) IsNamePresent() bool {
 	return e.Name != ""
 }
 
+// IsDsnPresent return true if an endpoint dsn is not empty, else it returns false.
 func (e Endpoint) IsDsnPresent() bool {
 	return e.Dsn != ""
 }
 
+// contains is a very small utility function which returns true if s has been found in list.
 func contains(list []Endpoint, s string) bool {
 	for _, v := range list {
 		if v.Name == s {

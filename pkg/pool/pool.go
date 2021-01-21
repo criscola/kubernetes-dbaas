@@ -34,6 +34,7 @@ func Register(dbms database.Dbms) error {
 	return nil
 }
 
+// GetConnByDriverAndEndpointName tries to retrieve a database.DbmsConn from the pool of connections.
 func GetConnByDriverAndEndpointName(driver, endpointName string) (*database.DbmsConn, error) {
 	for _, v := range pool[driver] {
 		if v.dbmsConfig.Name == endpointName {
@@ -48,19 +49,12 @@ func GetConnByDriverAndEndpointName(driver, endpointName string) (*database.Dbms
 	return nil, fmt.Errorf("entry '%s' with driver '%s' not found in dbms pool", endpointName, driver)
 }
 
-func GetDsnByDriverAndEndpointName(driver, endpointName string) (database.Dsn, error) {
-	for _, v := range pool[driver] {
-		if v.dbmsConfig.Name == endpointName {
-			return v.dbmsConfig.Dsn, nil
-		}
-	}
-	return "", fmt.Errorf("entry '%s' with driver '%s' not found in dbms pool", endpointName, driver)
-}
-
+// SizeOf returns the number of connections in the current pool
 func SizeOf(driver string) int {
 	return len(pool[driver])
 }
 
+// String returns the pool formatted as a string.
 func String() string {
 	return fmt.Sprint(pool)
 }

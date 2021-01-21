@@ -16,6 +16,7 @@ import (
 
 var sqlserverDsn Dsn
 
+// TestMain is executed before each test case.
 func TestMain(m *testing.M) {
 	var resource *dockertest.Resource
 	var err error
@@ -37,6 +38,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+// TODO: Update test to reflect new templating feature
 func TestMssqlConn_CreateDb(t *testing.T) {
 	/*
 		ops := GetMockOps()
@@ -68,6 +70,7 @@ func TestMssqlConn_CreateDb(t *testing.T) {
 		}*/
 }
 
+// TODO: Update test to reflect new templating feature
 func TestMssqlConn_DeleteDb(t *testing.T) {
 	/*
 		t.Run("create db before deletion", TestMssqlConn_CreateDb)
