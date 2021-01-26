@@ -1,3 +1,4 @@
+// Package test provides the facilities to perform integration testing using the package dockertest.
 package test
 
 import (

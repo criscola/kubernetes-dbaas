@@ -20,9 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // KubernetesDbaasSpec defines the desired state of KubernetesDbaas.
 //
 // Important: Run "make" to regenerate code after modifying this file. Json tags are required.
@@ -31,6 +28,8 @@ type KubernetesDbaasSpec struct {
 	Provisioner string `json:"provisioner,omitempty"`
 	// Endpoint associates this resource with a particular endpoint (must be already configured on the operator side)
 	Endpoint string `json:"endpoint,omitempty"`
+	// Params is a map containing parameters to be mapped to the database instance
+	Params map[string]string `json:"params,omitempty"`
 }
 
 // KubernetesDbaasStatus defines the observed state of KubernetesDbaas.

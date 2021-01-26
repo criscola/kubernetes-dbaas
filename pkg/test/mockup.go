@@ -52,6 +52,7 @@ const (
 						END`
 )
 
+// GetMockOps returns a mock of map[string]database.Operation
 func GetMockOps() map[string]database.Operation {
 	// Mock map[string]Operation
 	ops := map[string]database.Operation{}
@@ -73,6 +74,7 @@ func GetMockOps() map[string]database.Operation {
 	return ops
 }
 
+// GetMockEndpoints returns a mock of []database.Endpoint given a slice of database.Dsn
 func GetMockEndpoints(dsnSlice []database.Dsn) []database.Endpoint {
 	var endpts []database.Endpoint
 

@@ -11,7 +11,7 @@
 Here's an example;
 
 ```
-apiVersion: dbaas.bedag.ch/v1alpha1
+apiVersion: dbaas.bedag.ch/v1
 kind: KubernetesDbaas
 metadata:
   name: kubernetesdbaas-sample  
@@ -20,9 +20,25 @@ spec:
   endpoint: us-sqlserver-test
 ```
 
-- "provisioner" tells the Operator which driver to use
-- "endpoint" tells the Operator where to create the operator. Your endpoint names are configured in the Operator 
-configuration and should be properly documented inside of your organization.
+- `provisioner` tells the Operator which driver to use (sqlserver)
+
+- `endpoint` tells the Operator where to create the operator. Your endpoint names are configured in the Operator configuration and should be properly documented inside of your organization.
+
+- You can supply other key values pairs if your Operator configuration is prepared to read them.
+
+  - Example:
+
+    ```
+    apiVersion: dbaas.bedag.ch/v1
+    kind: KubernetesDbaas
+    metadata:
+      name: kubernetesdbaas-sample  
+    spec:
+      provisioner: sqlserver
+      endpoint: us-sqlserver-test
+      params:
+        myCustomUserParam: "myvalue"
+    ```
 
 2. Apply the configuration in your cluster:
 

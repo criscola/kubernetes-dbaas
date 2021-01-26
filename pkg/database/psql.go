@@ -21,7 +21,7 @@ func NewPsqlConn(dsn string) (*PsqlConn, error) {
 	return nil, nil
 }
 
-func (c *PsqlConn) CreateDb(name string) OpOutput {
+func (c *PsqlConn) CreateDb(operation Operation) OpOutput {
 	log.Fatal("psql driver not yet implemented")
 	/*
 		if err != nil {
@@ -31,7 +31,7 @@ func (c *PsqlConn) CreateDb(name string) OpOutput {
 	return OpOutput{}
 }
 
-func (c *PsqlConn) DeleteDb(name string) OpOutput {
+func (c *PsqlConn) DeleteDb(operation Operation) OpOutput {
 	log.Fatal("psql driver not yet implemented")
 	// TODO: Implement
 	return OpOutput{}

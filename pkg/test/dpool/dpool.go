@@ -1,3 +1,5 @@
+// Package dpool contains a dockertest.Pool attribute which holds the pool of connections to docker containers. Checkout
+// the package ory/dockertest to learn more.
 package dpool
 
 import (
