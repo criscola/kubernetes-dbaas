@@ -7,7 +7,7 @@ replicaCount: 1
 image:
   # Repository of the operator manager image.
   repository: criscola/kubernetes-dbaas
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tag: "0.1.0"
 
@@ -54,8 +54,8 @@ serviceAccountName: controller-manager
 # otherwise
 automountServiceAccountToken: true
 
-# Path of the operator configuration which will be mounted in the manager Pod
-operatorConfigPath: "/var/kubedbaas"
+# Path of the operator configuration which will be mounted in the manager Pod. Default value: "/var/kubedbaas"
+operatorConfigPath:
 
 # Operator configuration. The first key is the name of Secret file mounted in the manager Pod. Consult the System administrator guide to learn more.
 operatorConfig:
@@ -64,16 +64,20 @@ operatorConfig:
       - driver: sqlserver
         endpoints:
           - name: us-sqlserver-test
-            dsn: sqlserver://sa:Password&1@192.168.49.1
+            dsn: sqlserver://sa:Password&1@192.168.49.1:1433
         operations:
           create:
             name: sp_create
             inputs:
-              k8sName: k8sName
+              k8sName: "{{ .Metadata.name }}"
+              paramName: "{{ .Parameters.myCustomUserParam }}"
             outputs:
               password: password
               username: username
+              dbName: dbName
+              fqdn: fqdn
+              port: port
           delete:
             name: sp_delete
             inputs:
-              k8sName: k8sName
+              k8sName: "{{ .Metadata.name }}"

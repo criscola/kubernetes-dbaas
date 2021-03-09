@@ -32,13 +32,17 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           volumeMounts:
             - name: operator-config
-              mountPath: {{ .Values.operatorConfigPath }}
+              mountPath: {{ .Values.operatorConfigPath | default "/var/kubedbaas" }}
               readOnly: true
           resources:
           {{- toYaml .Values.resources | nindent 12 }}
           command:
             - /manager
-          args: ["--load-config", {{ keys .Values.operatorConfig | first | print .Values.operatorConfigPath "/" | quote }} ]
+          {{- if .Values.operatorConfigPath }}
+          args:
+            - "--load-config"
+            - {{ print .Values.operatorConfigPath "/config.yaml"  | quote }}
+          {{- end }}
       volumes:
         - name: operator-config
           secret:
