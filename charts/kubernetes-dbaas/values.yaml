@@ -6,10 +6,10 @@ replicaCount: 1
 
 image:
   # Repository of the operator manager image.
-  repository:
+  repository: criscola/kubernetes-dbaas
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+  tag: "0.1.0"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -64,7 +64,7 @@ operatorConfig:
       - driver: sqlserver
         endpoints:
           - name: us-sqlserver-test
-            dsn: sqlserver://sa:Password&1@localhost
+            dsn: sqlserver://sa:Password&1@192.168.49.1
         operations:
           create:
             name: sp_create

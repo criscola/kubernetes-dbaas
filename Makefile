@@ -40,6 +40,9 @@ manager: generate fmt vet
 run: generate fmt vet manifests
 	go run ./main.go
 
+debug: generate fmt vet manifests
+	go run -gcflags='all=-N -l' ./main.go
+
 # Install CRDs into a cluster
 install: manifests kustomize
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
