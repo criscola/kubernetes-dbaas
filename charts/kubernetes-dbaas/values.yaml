@@ -6,8 +6,8 @@ replicaCount: 1
 
 image:
   # Repository of the operator manager image.
-  repository: criscola/kubernetes-dbaas
-  pullPolicy: Always
+  repository:
+  pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: "0.1.0"
 
