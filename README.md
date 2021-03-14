@@ -77,7 +77,9 @@ You can also use the supplied Dockerfile to compile your own Docker image.
 For more information about the operator-sdk and the enclosed Makefile, consult: https://sdk.operatorframework.io/docs/building-operators/golang/tutorial/
 
 ## CLI arguments
-- `--config-path <path>` defines the configuration file path. If no path is supplied, the Operator will search in the same folder of the manager binary for a file called `config.yaml`.
+| CLI argument             | Description                                                  |
+| ------------------------ | ------------------------------------------------------------ |
+| `--load-config <string>` | Specifies the exact location of the configuration file, e.g. `"--load-config /my/path/to/config.yaml"` |
 
 ## Known problems
 - Given that all errors are written in the resources' `LastError` status field, some things that should stay hidden, might leak to unauthorized personnel. There should be a way to hide the details from the End-users, while still logging them.

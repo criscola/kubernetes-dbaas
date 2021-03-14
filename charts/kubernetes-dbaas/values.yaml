@@ -57,27 +57,28 @@ automountServiceAccountToken: true
 # Path of the operator configuration which will be mounted in the manager Pod. Default value: "/var/kubedbaas"
 operatorConfigPath:
 
+# Name of the operator configuration file which will be mounted in the manager Pod. Default value: "config.yaml"
+operatorConfigFilename:
+
 # Operator configuration. The first key is the name of Secret file mounted in the manager Pod. Consult the System administrator guide to learn more.
 operatorConfig:
-  config.yaml: |
-    dbms:
-      - driver: sqlserver
-        endpoints:
-          - name: us-sqlserver-test
-            dsn: sqlserver://sa:Password&1@192.168.49.1:1433
-        operations:
-          create:
-            name: sp_create
-            inputs:
-              k8sName: "{{ .Metadata.name }}"
-              paramName: "{{ .Parameters.myCustomUserParam }}"
-            outputs:
-              password: password
-              username: username
-              dbName: dbName
-              fqdn: fqdn
-              port: port
-          delete:
-            name: sp_delete
-            inputs:
-              k8sName: "{{ .Metadata.name }}"
+  dbms:
+    - driver: sqlserver
+      endpoints:
+        - name: us-sqlserver-test
+          dsn: sqlserver://sa:Password&1@192.168.49.1:1433
+      operations:
+        create:
+          name: sp_create
+          inputs:
+            k8sName: "{{ .Metadata.uid }}"
+          outputs:
+            password: password
+            username: username
+            dbName: dbName
+            fqdn: fqdn
+            port: port
+        delete:
+          name: sp_delete
+          inputs:
+            k8sName: "{{ .Metadata.uid }}"

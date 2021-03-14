@@ -22,17 +22,19 @@ import (
 var (
 	metricsAddr          string
 	enableLeaderElection bool
-	configFilepath       string
+	cfgFile              string
 
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 )
 
 const (
-	ConfigFileName    = "config.yaml"
-	ConfigLoadError   = "problem loading configuration file"
-	ConfigParseError  = "problem parsing configuration file"
-	DbmsConnOpenError = "problem opening a connection to DBMS endpoint"
+	DefaultConfigType	  = "yaml"
+	DefaultConfigFilename = "config"
+	DefaultConfigFilepath = "/var/kubedbaas"
+	ConfigLoadError       = "problem loading configuration file"
+	ConfigParseError      = "problem parsing configuration file"
+	DbmsConnOpenError     = "problem opening a connection to DBMS endpoint"
 )
 
 // rootCmd represents the root 'kubedbaas' command
@@ -102,23 +104,23 @@ func StartOperator() {
 //
 // See config.ReadOperatorConfig for details.
 func LoadConfig() {
-	// Set Viper configuration
-	viper.SetConfigFile(ConfigFileName)
-	viper.AddConfigPath(".") // search for config file in the root directory of the project
-
-	setupLog.Info(ConfigFileName)
-	setupLog.Info(configFilepath)
-
-	if configFilepath != "" {
-		viper.SetConfigFile(configFilepath)
+	// If CLI flag was set
+	if cfgFile != "" {
+		// Use config file from the flag.
+		viper.SetConfigFile(cfgFile)
+		setupLog.Info("setting config file location from CLI flag: " + cfgFile)
+	} else {
+		viper.SetConfigType(DefaultConfigType)
+		viper.SetConfigName(DefaultConfigFilename)
+		viper.AddConfigPath(".") // search for config file in the same location as the executable file
+		viper.AddConfigPath(DefaultConfigFilepath)
 	}
 
-	// Load config
 	if err := viper.ReadInConfig(); err != nil {
 		fatalError(err, ConfigLoadError)
 	}
 
-	// Parse config.yaml
+	// Parse config file
 	err := config.ReadOperatorConfig(viper.GetViper())
 	if err != nil {
 		fatalError(err, ConfigParseError)
@@ -137,11 +139,11 @@ func RegisterEndpoints() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	rootCmd.PersistentFlags().BoolVar(&enableLeaderElection, "enable-leader-election", false,
-		"Enable leader election for controller manager. Enabling this will ensure there is only one active "+
-			"controller manager.")
-	rootCmd.PersistentFlags().StringVar(&configFilepath, "load-config", "", "Loads the config file from path")
+	// TODO: Metrics
+	//rootCmd.Flags().StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	//_ = viper.BindPFlag("port", rootCmd.Flags().Lookup("metrics-addr"))
+
+	rootCmd.Flags().StringVar(&cfgFile, "load-config", "", "Loads the config file from path")
 
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(dbaasv1.AddToScheme(scheme))

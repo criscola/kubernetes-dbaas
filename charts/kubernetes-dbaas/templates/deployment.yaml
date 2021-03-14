@@ -38,10 +38,10 @@ spec:
           {{- toYaml .Values.resources | nindent 12 }}
           command:
             - /manager
-          {{- if .Values.operatorConfigPath }}
+          {{- if or .Values.operatorConfigPath .Values.operatorConfigFilename }}
           args:
             - "--load-config"
-            - {{ print .Values.operatorConfigPath "/config.yaml"  | quote }}
+            - {{ print (.Values.operatorConfigPath | default "/var/kubedbaas") "/" (.Values.operatorConfigFilename | default "config.yaml") | quote }}
           {{- end }}
       volumes:
         - name: operator-config
