@@ -11,7 +11,7 @@ spec:
   group: dbaas.bedag.ch
   names:
     kind: Database
-    listKind: KubernetesDbaasList
+    listKind: DatabaseList
     plural: database
     singular: database
   scope: Namespaced
@@ -34,7 +34,7 @@ spec:
             metadata:
               type: object
             spec:
-              description: "KubernetesDbaasSpec defines the desired state of Database.
+              description: "DatabaseSpec defines the desired state of Database.
               \n Important: Run \"make\" to regenerate code after modifying this file.
               Json tags are required."
               properties:
@@ -54,7 +54,7 @@ spec:
                   type: string
               type: object
             status:
-              description: KubernetesDbaasStatus defines the observed state of Database.
+              description: DatabaseStatus defines the observed state of Database.
               properties:
                 lastError:
                   description: LastError if not nil, the resource in an error state
