@@ -331,11 +331,10 @@ func (r *KubernetesDbaasReconciler) createSecret(owner *KubernetesDbaas, output 
 		StringData: map[string]string{
 			"username": output.Out[0],
 			"password": output.Out[1],
-			"host": output.Out[3],
-			"port": output.Out[4],
-			"dbName": output.Out[2],
-			"dsn": database.NewDsn(owner.Spec.Provisioner,
-				output.Out[0], output.Out[1],  output.Out[3], output.Out[4], output.Out[2]) .String(),
+			"host":     output.Out[3],
+			"port":     output.Out[4],
+			"dbName":   output.Out[2],
+			"dsn": database.NewDsn(owner.Spec.Provisioner, output.Out[0], output.Out[1], output.Out[3], output.Out[4], output.Out[2]).String(),
 		},
 	}
 
@@ -383,7 +382,7 @@ func newOpValuesFromResource(resource *KubernetesDbaas) (database.OpValues, erro
 	}
 
 	return database.OpValues{
-		Metadata: metadata,
+		Metadata:   metadata,
 		Parameters: spec,
 	}, nil
 }

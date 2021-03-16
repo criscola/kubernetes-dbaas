@@ -12,16 +12,16 @@ import (
 )
 
 const (
-	Sqlserver    			= "sqlserver"
-	Psql         			= "psql"
-	CreateMapKey 			= "create"
-	DeleteMapKey 			= "delete"
-	K8sMapKey    			= "k8sName"
-	UserMapKey   			= "username"
-	PassMapKey   			= "password"
-	DbNameMapKey 			= "dbName"
-	FqdnMapKey 	 			= "fqdn"
-	PortMapKey	 			= "port"
+	Sqlserver               = "sqlserver"
+	Psql                    = "psql"
+	CreateMapKey            = "create"
+	DeleteMapKey            = "delete"
+	K8sMapKey               = "k8sName"
+	UserMapKey              = "username"
+	PassMapKey              = "password"
+	DbNameMapKey            = "dbName"
+	FqdnMapKey              = "fqdn"
+	PortMapKey              = "port"
 	ErrorOnMissingKeyOption = "missingkey=error"
 )
 

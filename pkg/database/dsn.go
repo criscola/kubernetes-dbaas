@@ -10,11 +10,10 @@ func (s Dsn) GetDriver() string {
 
 // NewDsn initialized a new Dsn string.
 func NewDsn(driver, username, password, host, port, dbName string) Dsn {
-	return Dsn(driver+"://"+username+":"+password+"@"+host+":"+port+"/"+dbName)
+	return Dsn(driver + "://" + username + ":" + password + "@" + host + ":" + port + "/" + dbName)
 }
 
 // String returns a string from a Dsn.
 func (s Dsn) String() string {
 	return string(s)
 }
-
