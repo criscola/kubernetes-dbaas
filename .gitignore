@@ -29,3 +29,7 @@ vendor/
 
 # avoid pushing your config file
 config.yaml
+
+# personal deploy script
+deploy.sh
+undeploy.sh
