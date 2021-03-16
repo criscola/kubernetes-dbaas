@@ -40,63 +40,63 @@ import (
 	. "github.com/bedag/kubernetes-dbaas/api/v1"
 )
 
-// KubernetesDbaasReconciler reconciles a KubernetesDbaas object
-type KubernetesDbaasReconciler struct {
+// DatabaseReconciler reconciles a Database object
+type DatabaseReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
 const (
-	dbaasResourceFinalizer = "finalizer.kubernetesdbaas.bedag.ch"
+	dbaasResourceFinalizer = "finalizer.database.bedag.ch"
 	DateTimeLayout         = time.UnixDate
 )
 
-// Reconcile tries to reconcile the state of the cluster with the state of KubernetesDbaas resources.
-// +kubebuilder:rbac:groups=dbaas.bedag.ch,resources=kubernetesdbaas,verbs=list;watch;update
-// +kubebuilder:rbac:groups=dbaas.bedag.ch,resources=kubernetesdbaas/status,verbs=get;update;patch
+// Reconcile tries to reconcile the state of the cluster with the state of Database resources.
+// +kubebuilder:rbac:groups=dbaas.bedag.ch,resources=database,verbs=list;watch;update
+// +kubebuilder:rbac:groups=dbaas.bedag.ch,resources=database/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=list;watch;create;update;delete
-func (r *KubernetesDbaasReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := r.Log.WithValues("kubernetesdbaas", req.NamespacedName)
+func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	logger := r.Log.WithValues("database", req.NamespacedName)
 	logger.Info("Reconcile called.")
-	dbaasResource := &KubernetesDbaas{}
+	dbaasResource := &Database{}
 	err := r.Get(ctx, req.NamespacedName, dbaasResource)
 
 	if err != nil {
-		// Fetch the KubernetesDbaas instance
-		dbaasResource := &KubernetesDbaas{}
+		// Fetch the Database instance
+		dbaasResource := &Database{}
 		err := r.Get(ctx, req.NamespacedName, dbaasResource)
 		if err != nil {
 			if k8sError.IsNotFound(err) {
 				// Request object not found, could have been deleted after reconcile request.
 				// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 				// Return and don't requeue
-				logger.Info("KubernetesDbaas resource not found. Ignoring since object must be deleted.")
+				logger.Info("Database resource not found. Ignoring since object must be deleted.")
 				// Not managed through ManageSuccess as the resource has been deleted and it will create problems if
 				// the controller tries to manipulate its status
 				return reconcile.Result{}, nil
 			}
 			// Error reading the object - requeue the request.
-			logger.Error(err, "Failed to get KubernetesDbaas resource.")
+			logger.Error(err, "Failed to get Database resource.")
 			return r.ManageError(dbaasResource, err)
 		}
 	}
 
-	// Check if the KubernetesDbaas instance is marked to be deleted, which is
+	// Check if the Database instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
 	isDbaasResourceMarkedToBeDeleted := dbaasResource.GetDeletionTimestamp() != nil
 	if isDbaasResourceMarkedToBeDeleted {
 		if contains(dbaasResource.GetFinalizers(), dbaasResourceFinalizer) {
-			// Run finalization logic for KubernetesDbaasFinalizer. If the
+			// Run finalization logic for DatabaseFinalizer. If the
 			// finalization logic fails, don't remove the finalizer so
 			// that we can retry during the next reconciliation.
 			logger.Info("Finalizing resource...")
 			if err := r.finalizeDbaasResource(logger, dbaasResource); err != nil {
-				logger.Error(err, "Failed to get KubernetesDbaas resource.")
+				logger.Error(err, "Failed to get Database resource.")
 				return r.ManageError(dbaasResource, err)
 			}
 
-			// Remove KubernetesDbaasFinalizer. Once all finalizers have been
+			// Remove databaseFinalizer. Once all finalizers have been
 			// removed, the object will be deleted.
 			logger.Info("Removing finalizer...")
 			controllerutil.RemoveFinalizer(dbaasResource, dbaasResourceFinalizer)
@@ -129,16 +129,16 @@ func (r *KubernetesDbaasReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return r.ManageSuccess(dbaasResource)
 }
 
-// SetupWithManager creates the controller responsible for KubernetesDbaas resources by means of a ctrl.Manager.
-func (r *KubernetesDbaasReconciler) SetupWithManager(mgr ctrl.Manager) error {
+// SetupWithManager creates the controller responsible for Database resources by means of a ctrl.Manager.
+func (r *DatabaseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&KubernetesDbaas{}).
+		For(&Database{}).
 		Owns(&v1.Secret{}).
 		Complete(r)
 }
 
 // ManageSuccess manages a successful reconciliation.
-func (r *KubernetesDbaasReconciler) ManageSuccess(obj *KubernetesDbaas) (reconcile.Result, error) {
+func (r *DatabaseReconciler) ManageSuccess(obj *Database) (reconcile.Result, error) {
 	r.Log.Info("ManageSuccess called.")
 
 	// If the object is nil,
@@ -168,7 +168,7 @@ func (r *KubernetesDbaasReconciler) ManageSuccess(obj *KubernetesDbaas) (reconci
 }
 
 // ManageSuccess manages a failed reconciliation.
-func (r *KubernetesDbaasReconciler) ManageError(obj *KubernetesDbaas, issue error) (reconcile.Result, error) {
+func (r *DatabaseReconciler) ManageError(obj *Database, issue error) (reconcile.Result, error) {
 	r.Log.Info("ManageError called.")
 	if issue == nil || obj == nil {
 		return r.ManageSuccess(obj)
@@ -209,7 +209,7 @@ func (r *KubernetesDbaasReconciler) ManageError(obj *KubernetesDbaas, issue erro
 }
 
 // finalizeDbaasResource cleans up resources not owned by dbaasResource.
-func (r *KubernetesDbaasReconciler) finalizeDbaasResource(logger logr.Logger, dbaasResource *KubernetesDbaas) error {
+func (r *DatabaseReconciler) finalizeDbaasResource(logger logr.Logger, dbaasResource *Database) error {
 	// TODO(user): Add the cleanup steps that the operator
 	// needs to do before the CR can be deleted. Examples
 	// of finalizers include performing backups and deleting
@@ -224,22 +224,22 @@ func (r *KubernetesDbaasReconciler) finalizeDbaasResource(logger logr.Logger, db
 	return nil
 }
 
-// addFinalizer adds a finalizer to a KubernetesDbaas resource.
-func (r *KubernetesDbaasReconciler) addFinalizer(dbaasResource *KubernetesDbaas) error {
-	r.Log.Info("Adding Finalizer for the KubernetesDbaas resource")
+// addFinalizer adds a finalizer to a Database resource.
+func (r *DatabaseReconciler) addFinalizer(dbaasResource *Database) error {
+	r.Log.Info("Adding Finalizer for the Database resource")
 	controllerutil.AddFinalizer(dbaasResource, dbaasResourceFinalizer)
 
 	// Update CR
 	err := r.Update(context.TODO(), dbaasResource)
 	if err != nil {
-		r.Log.Error(err, "Failed to update KubernetesDbaas resource with finalizer")
+		r.Log.Error(err, "Failed to update Database resource with finalizer")
 		return err
 	}
 	return nil
 }
 
 // createDb creates a new database instance on the external provisioner based on the dbaasResource data.
-func (r *KubernetesDbaasReconciler) createDb(dbaasResource *KubernetesDbaas) error {
+func (r *DatabaseReconciler) createDb(dbaasResource *Database) error {
 	r.Log.Info(fmt.Sprintf("Creating database instance for: %s", dbaasResource.UID))
 	conn, err := pool.GetConnByDriverAndEndpointName(dbaasResource.Spec.Provisioner, dbaasResource.Spec.Endpoint)
 	if err != nil {
@@ -278,7 +278,7 @@ func (r *KubernetesDbaasReconciler) createDb(dbaasResource *KubernetesDbaas) err
 }
 
 // deleteDb deletes the database instance on the external provisioner based on the dbaasResource data.
-func (r *KubernetesDbaasReconciler) deleteDb(dbaasResource *KubernetesDbaas) error {
+func (r *DatabaseReconciler) deleteDb(dbaasResource *Database) error {
 	r.Log.Info(fmt.Sprintf("Deleting database instance for: %s", dbaasResource.UID))
 	conn, err := pool.GetConnByDriverAndEndpointName(dbaasResource.Spec.Provisioner, dbaasResource.Spec.Endpoint)
 	if err != nil {
@@ -311,7 +311,7 @@ func (r *KubernetesDbaasReconciler) deleteDb(dbaasResource *KubernetesDbaas) err
 }
 
 // createSecret creates a new K8s secret owned by owner with the data contained in output and dsn.
-func (r *KubernetesDbaasReconciler) createSecret(owner *KubernetesDbaas, output database.OpOutput) error {
+func (r *DatabaseReconciler) createSecret(owner *Database, output database.OpOutput) error {
 	var ownerRefs []metav1.OwnerReference
 
 	ownerRefs = append(ownerRefs, metav1.OwnerReference{
@@ -334,7 +334,7 @@ func (r *KubernetesDbaasReconciler) createSecret(owner *KubernetesDbaas, output 
 			"host":     output.Out[3],
 			"port":     output.Out[4],
 			"dbName":   output.Out[2],
-			"dsn": database.NewDsn(owner.Spec.Provisioner, output.Out[0], output.Out[1], output.Out[3], output.Out[4], output.Out[2]).String(),
+			"dsn":      database.NewDsn(owner.Spec.Provisioner, output.Out[0], output.Out[1], output.Out[3], output.Out[4], output.Out[2]).String(),
 		},
 	}
 
@@ -355,8 +355,8 @@ func (r *KubernetesDbaasReconciler) createSecret(owner *KubernetesDbaas, output 
 	return r.Client.Update(context.Background(), newSecret)
 }
 
-// newOpValuesFromResource constructs a database.OpValues struct starting from a KubernetesDbaas resource.
-func newOpValuesFromResource(resource *KubernetesDbaas) (database.OpValues, error) {
+// newOpValuesFromResource constructs a database.OpValues struct starting from a Database resource.
+func newOpValuesFromResource(resource *Database) (database.OpValues, error) {
 	metaIn := resource.ObjectMeta
 	var metadata map[string]interface{}
 	temp, _ := json.Marshal(metaIn)

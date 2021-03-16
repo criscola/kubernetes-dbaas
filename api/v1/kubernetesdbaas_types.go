@@ -20,10 +20,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// KubernetesDbaasSpec defines the desired state of KubernetesDbaas.
+// DatabaseSpec defines the desired state of Database.
 //
 // Important: Run "make" to regenerate code after modifying this file. Json tags are required.
-type KubernetesDbaasSpec struct {
+type DatabaseSpec struct {
 	// Provisioner identifies the type of system responsible for provisioning resources (must be supported)
 	Provisioner string `json:"provisioner,omitempty"`
 	// Endpoint associates this resource with a particular endpoint (must be already configured on the operator side)
@@ -32,8 +32,8 @@ type KubernetesDbaasSpec struct {
 	Params map[string]string `json:"params,omitempty"`
 }
 
-// KubernetesDbaasStatus defines the observed state of KubernetesDbaas.
-type KubernetesDbaasStatus struct {
+// DatabaseStatus defines the observed state of Database.
+type DatabaseStatus struct {
 	// LastError if not nil, the resource in an error state
 	LastError string `json:"lastError,omitempty"`
 	// LastUpdate specifies the last time the Status field has been updated
@@ -49,24 +49,24 @@ type KubernetesDbaasStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// KubernetesDbaas is the Schema for the kubernetesdbaas API
-type KubernetesDbaas struct {
+// Database is the Schema for the database API
+type Database struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   KubernetesDbaasSpec   `json:"spec,omitempty"`
-	Status KubernetesDbaasStatus `json:"status,omitempty"`
+	Spec   DatabaseSpec   `json:"spec,omitempty"`
+	Status DatabaseStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// KubernetesDbaasList contains a list of KubernetesDbaas
-type KubernetesDbaasList struct {
+// DatabaseList contains a list of Database
+type DatabaseList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KubernetesDbaas `json:"items"`
+	Items           []Database `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&KubernetesDbaas{}, &KubernetesDbaasList{})
+	SchemeBuilder.Register(&Database{}, &DatabaseList{})
 }

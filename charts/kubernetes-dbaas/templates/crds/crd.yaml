@@ -6,20 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: kubernetesdbaas.dbaas.bedag.ch
+  name: database.dbaas.bedag.ch
 spec:
   group: dbaas.bedag.ch
   names:
-    kind: KubernetesDbaas
+    kind: Database
     listKind: KubernetesDbaasList
-    plural: kubernetesdbaas
-    singular: kubernetesdbaas
+    plural: database
+    singular: database
   scope: Namespaced
   versions:
     - name: v1
       schema:
         openAPIV3Schema:
-          description: KubernetesDbaas is the Schema for the kubernetesdbaas API
+          description: Database is the Schema for the database API
           properties:
             apiVersion:
               description: 'APIVersion defines the versioned schema of this representation
@@ -34,7 +34,7 @@ spec:
             metadata:
               type: object
             spec:
-              description: "KubernetesDbaasSpec defines the desired state of KubernetesDbaas.
+              description: "KubernetesDbaasSpec defines the desired state of Database.
               \n Important: Run \"make\" to regenerate code after modifying this file.
               Json tags are required."
               properties:
@@ -54,7 +54,7 @@ spec:
                   type: string
               type: object
             status:
-              description: KubernetesDbaasStatus defines the observed state of KubernetesDbaas.
+              description: KubernetesDbaasStatus defines the observed state of Database.
               properties:
                 lastError:
                   description: LastError if not nil, the resource in an error state

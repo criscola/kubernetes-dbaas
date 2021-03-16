@@ -16,27 +16,27 @@ namespace config {
 
 
 namespace controllers {
-    class KubernetesDbaasReconciler << (S,Aquamarine) >> {
+    class DatabaseReconciler << (S,Aquamarine) >> {
         + Log logr.Logger
         + Scheme *runtime.Scheme
 
-        - finalizeDbaasResource(logger logr.Logger, dbaasResource *KubernetesDbaas) error
-        - addFinalizer(dbaasResource *KubernetesDbaas) error
-        - createDb(dbaasResource *KubernetesDbaas) error
-        - deleteDb(dbaasResource *KubernetesDbaas) error
-        - createSecret(owner *KubernetesDbaas, output database.OpOutput, dsn database.Dsn) error
+        - finalizeDbaasResource(logger logr.Logger, dbaasResource *Database) error
+        - addFinalizer(dbaasResource *Database) error
+        - createDb(dbaasResource *Database) error
+        - deleteDb(dbaasResource *Database) error
+        - createSecret(owner *Database, output database.OpOutput, dsn database.Dsn) error
 
         + Reconcile(ctx context.Context, req controller-runtime.Request) (controller-runtime.Result, error)
         + SetupWithManager(mgr controller-runtime.Manager) error
-        + ManageSuccess(obj *KubernetesDbaas) (reconcile.Result, error)
-        + ManageError(obj *KubernetesDbaas, issue error) (reconcile.Result, error)
+        + ManageSuccess(obj *Database) (reconcile.Result, error)
+        + ManageError(obj *Database, issue error) (reconcile.Result, error)
 
     }
 }
-"client.Client" *-- "extends""controllers.KubernetesDbaasReconciler"
+"client.Client" *-- "extends""controllers.DatabaseReconciler"
 
 
-"controllers.KubernetesDbaasReconciler""uses" o-- "logr.Logger"
+"controllers.DatabaseReconciler""uses" o-- "logr.Logger"
 
 namespace database {
     class Dbms << (S,Aquamarine) >> {
@@ -118,39 +118,39 @@ namespace pool {
 "pool.dbmsPoolEntry""uses" o-- "database.Endpoint"
 
 namespace v1 {
-    class KubernetesDbaas << (S,Aquamarine) >> {
-        + Spec KubernetesDbaasSpec
-        + Status KubernetesDbaasStatus
+    class Database << (S,Aquamarine) >> {
+        + Spec DatabaseSpec
+        + Status DatabaseStatus
 
-        + DeepCopyInto(out *KubernetesDbaas) 
-        + DeepCopy() *KubernetesDbaas
+        + DeepCopyInto(out *Database)
+        + DeepCopy() *Database
         + DeepCopyObject() runtime.Object
 
     }
-    class KubernetesDbaasList << (S,Aquamarine) >> {
-        + Items []KubernetesDbaas
+    class DatabaseList << (S,Aquamarine) >> {
+        + Items []Database
 
-        + DeepCopyInto(out *KubernetesDbaasList) 
-        + DeepCopy() *KubernetesDbaasList
+        + DeepCopyInto(out *DatabaseList) 
+        + DeepCopy() *DatabaseList
         + DeepCopyObject() runtime.Object
 
     }
-    class KubernetesDbaasSpec << (S,Aquamarine) >> {
+    class DatabaseSpec << (S,Aquamarine) >> {
         + Provisioner string
         + Endpoint string
 
-        + DeepCopyInto(out *KubernetesDbaasSpec) 
-        + DeepCopy() *KubernetesDbaasSpec
+        + DeepCopyInto(out *DatabaseSpec) 
+        + DeepCopy() *DatabaseSpec
 
     }
-    class KubernetesDbaasStatus << (S,Aquamarine) >> {
+    class DatabaseStatus << (S,Aquamarine) >> {
         + LastError string
         + LastUpdate string
         + LastErrorUpdateCount int
         + Unrecoverable bool
 
-        + DeepCopyInto(out *KubernetesDbaasStatus) 
-        + DeepCopy() *KubernetesDbaasStatus
+        + DeepCopyInto(out *DatabaseStatus) 
+        + DeepCopy() *DatabaseStatus
 
     }
 }
@@ -178,9 +178,9 @@ namespace main {
 "cmd.Command""uses" o-- "controllers"
 "cmd.Command""uses" o-- "v1"
 
-"v1.KubernetesDbaas""uses" o-- "v1.KubernetesDbaasSpec"
-"v1.KubernetesDbaas""uses" o-- "v1.KubernetesDbaasStatus"
-"v1.KubernetesDbaasList""uses" o-- "v1.KubernetesDbaas"
+"v1.Database""uses" o-- "v1.DatabaseSpec"
+"v1.Database""uses" o-- "v1.DatabaseStatus"
+"v1.DatabaseList""uses" o-- "v1.Database"
 
 "config.fontcolorbluemapfontstringdatabaseDbmsConfig" #.. "alias of""config.OperatorConfig"
 "database.[]Dbms" #.. "alias of""database.DbmsConfig"

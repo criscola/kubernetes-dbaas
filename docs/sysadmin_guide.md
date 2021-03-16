@@ -59,15 +59,14 @@ dbms:
 
 As you can see, the first key starts with a dot and has the first letter capitalized. There are two sources of values:
 
-- `.Metadata`: maps values from the `metadata` field of the KubernetesDbaas resource.
-- `.Parameters`: maps values from the `paramas` field of the KubernetesDbaas resource.
+- `.Metadata`: maps values from the `metadata` field of the Database resource.
+- `.Parameters`: maps values from the `paramas` field of the Database resource.
 
 ### Notes
 
 - If a key is specified but not mapped by the user or Kubernetes, the resource will generate an error. Every `.Parameters.<key>` and `.Metadata.<key>` specified in the Operator configuration must be defined.
 - If `metadata.namespace` is not set in the resource, the Operator will replace it with the value `default` during the rendering.
 - If `metadata.name` is not set in the resource, the Operator will replace it with a 16-characters long, random alphanumeric string.
-
 
 
 ## DSN docs

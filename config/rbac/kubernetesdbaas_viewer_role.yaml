@@ -1,13 +1,13 @@
-# permissions for end users to view kubernetesdbaas.
+# permissions for end users to view database.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kubernetesdbaas-viewer-role
+  name: database-viewer-role
 rules:
 - apiGroups:
   - dbaas.bedag.ch
   resources:
-  - kubernetesdbaas
+  - database
   verbs:
   - get
   - list
@@ -15,6 +15,6 @@ rules:
 - apiGroups:
   - dbaas.bedag.ch
   resources:
-  - kubernetesdbaas/status
+  - database/status
   verbs:
   - get

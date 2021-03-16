@@ -1,7 +1,7 @@
 apiVersion: dbaas.bedag.ch/v1
-kind: KubernetesDbaas
+kind: Database
 metadata:
-  name: kubernetesdbaas-sample
+  name: database-sample
 spec:
   # Add fields here
   foo: bar

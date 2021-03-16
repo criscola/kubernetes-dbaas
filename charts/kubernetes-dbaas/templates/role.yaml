@@ -7,7 +7,7 @@ rules:
   - apiGroups:
       - dbaas.bedag.ch
     resources:
-      - kubernetesdbaas
+      - database
     verbs:
       - list
       - watch
@@ -15,7 +15,7 @@ rules:
   - apiGroups:
       - dbaas.bedag.ch
     resources:
-      - kubernetesdbaas/status
+      - database/status
     verbs:
       - get
       - patch

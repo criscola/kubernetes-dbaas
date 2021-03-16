@@ -1,13 +1,13 @@
-# permissions for end users to edit kubernetesdbaas.
+# permissions for end users to edit database.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kubernetesdbaas-editor-role
+  name: database-editor-role
 rules:
 - apiGroups:
   - dbaas.bedag.ch
   resources:
-  - kubernetesdbaas
+  - database
   verbs:
   - create
   - delete
@@ -19,6 +19,6 @@ rules:
 - apiGroups:
   - dbaas.bedag.ch
   resources:
-  - kubernetesdbaas/status
+  - database/status
   verbs:
   - get

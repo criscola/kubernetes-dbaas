@@ -29,7 +29,7 @@ var (
 )
 
 const (
-	DefaultConfigType	  = "yaml"
+	DefaultConfigType     = "yaml"
 	DefaultConfigFilename = "config"
 	DefaultConfigFilepath = "/var/kubedbaas"
 	ConfigLoadError       = "problem loading configuration file"
@@ -84,12 +84,12 @@ func StartOperator() {
 		fatalError(err, "unable to start manager")
 	}
 
-	if err = (&controllers.KubernetesDbaasReconciler{
+	if err = (&controllers.DatabaseReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("KubernetesDbaas"),
+		Log:    ctrl.Log.WithName("controllers").WithName("Database"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		fatalErrorWithValues(err, "unable to create controller", "controller", "KubernetesDbaas")
+		fatalErrorWithValues(err, "unable to create controller", "controller", "Database")
 	}
 
 	// +kubebuilder:scaffold:builder
