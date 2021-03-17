@@ -6,7 +6,7 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: database.dbaas.bedag.ch
+  name: databases.dbaas.bedag.ch
 spec:
   group: dbaas.bedag.ch
   names:
@@ -34,9 +34,9 @@ spec:
           metadata:
             type: object
           spec:
-            description: "DatabaseSpec defines the desired state of Database.
-              \n Important: Run \"make\" to regenerate code after modifying this file.
-              Json tags are required."
+            description: "DatabaseSpec defines the desired state of Database. \n Important:
+              Run \"make\" to regenerate code after modifying this file. Json tags
+              are required."
             properties:
               endpoint:
                 description: Endpoint associates this resource with a particular endpoint
