@@ -7,7 +7,7 @@ rules:
   - apiGroups:
       - dbaas.bedag.ch
     resources:
-      - database
+      - databases
     verbs:
       - list
       - watch
@@ -15,11 +15,23 @@ rules:
   - apiGroups:
       - dbaas.bedag.ch
     resources:
-      - database/status
+      - databases/status
     verbs:
       - get
       - patch
       - update
+  - apiGroups:
+      - dbaas.bedag.ch
+    resources:
+      - databaseclasses
+    verbs:
+      - get
+      - list
+      - create
+      - delete
+      - update
+      - watch
+
   - apiGroups:
     - ""
     resources:
