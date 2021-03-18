@@ -3,8 +3,8 @@ package cmd
 
 import (
 	"fmt"
-	dbaasv1 "github.com/bedag/kubernetes-dbaas/api/v1"
-	"github.com/bedag/kubernetes-dbaas/controllers"
+	dbaasv1 "github.com/bedag/kubernetes-dbaas/apis/database/v1"
+	"github.com/bedag/kubernetes-dbaas/controllers/database"
 	"github.com/bedag/kubernetes-dbaas/pkg/config"
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
 	"github.com/spf13/cobra"

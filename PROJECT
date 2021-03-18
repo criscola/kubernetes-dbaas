@@ -1,11 +1,16 @@
 domain: bedag.ch
 layout: go.kubebuilder.io/v3
+multigroup: true
 projectName: kubernetes-dbaas
 repo: github.com/bedag/kubernetes-dbaas
 resources:
 - crdVersion: v1
   group: dbaas
   kind: Database
+  version: v1
+- crdVersion: v1
+  group: databaseclass
+  kind: DatabaseClass
   version: v1
 version: 3-alpha
 plugins:

@@ -37,7 +37,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	. "github.com/bedag/kubernetes-dbaas/api/v1"
+	. "github.com/bedag/kubernetes-dbaas/apis/database/v1"
 )
 
 // DatabaseReconciler reconciles a Database object

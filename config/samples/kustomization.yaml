@@ -1,4 +1,5 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
 - dbaas_v1_kubernetesdbaas.yaml
+- databaseclass_v1_databaseclass.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples
