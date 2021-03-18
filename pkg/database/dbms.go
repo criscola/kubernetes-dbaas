@@ -4,10 +4,8 @@ package database
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/json"
-
-	//v1 "github.com/bedag/kubernetes-dbaas/api/v1"
 	"text/template"
 )
 
@@ -58,9 +56,8 @@ type DbmsConfig []Dbms
 // Dbms is the instance associated with a Dbms resource. It contains the Driver responsible for the Operations executed on
 // Endpoints.
 type Dbms struct {
-	Driver     string
-	Operations map[string]Operation
-	Endpoints  []Endpoint
+	DatabaseClassName string
+	Endpoints         []Endpoint
 }
 
 // Endpoint represent the configuration of a DBMS endpoint identified by a name.
@@ -69,19 +66,20 @@ type Endpoint struct {
 	Dsn  Dsn
 }
 
+// +kubebuilder:object:generate=true
 // Operation represents an operation performed on a DBMS identified by name and containing a map of inputs and a map
 // of outputs.
 type Operation struct {
-	Name    string
-	Inputs  map[string]string
-	Outputs map[string]string
+	Name    string            `json:"name,omitempty"`
+	Inputs  map[string]string `json:"inputs,omitempty"`
+	Outputs map[string]string `json:"outputs,omitempty"`
 }
 
 // New initializes a Dbms instance based on a map of Operation. It expects a dsn like that:
 // driver://username:password@host/instance?param1=value&param2=value
 //
 // See the individual Driver implementations.
-func New(dsn Dsn, ops map[string]Operation) (*DbmsConn, error) {
+func New(dsn Dsn, ops map[string]*Operation) (*DbmsConn, error) {
 	var dbmsConn *DbmsConn
 
 	switch dsn.GetDriver() {
@@ -108,23 +106,34 @@ func New(dsn Dsn, ops map[string]Operation) (*DbmsConn, error) {
 	return dbmsConn, nil
 }
 
-// GetByDriverAndEndpoint gets a Dbms identified by driver and endpoint from a DbmsConfig type.
-func (c DbmsConfig) GetByDriverAndEndpoint(driver, endpoint string) (Dbms, error) {
+func (c DbmsConfig) GetDatabaseClassNameByEndpointName(endpointName string) (string, error) {
 	for _, dbms := range c {
-		if dbms.Driver == driver && contains(dbms.Endpoints, endpoint) {
-			return dbms, nil
+		if contains(dbms.Endpoints, endpointName) {
+			return dbms.DatabaseClassName, nil
 		}
 	}
+	return "", fmt.Errorf("could not find any DatabaseClass for endpoint '%s'", endpointName)
+}
+
+/*
+// GetByDriverAndEndpoint gets a Dbms identified by driver and endpoint from a DbmsConfig type.
+func (c DbmsConfig) GetByDriverAndEndpoint(driver, endpoint string) (Dbms, error) {
+		for _, dbms := range c {
+			if dbms.DatabaseClassName == driver && contains(dbms.Endpoints, endpoint) {
+				return dbms, nil
+			}
+		}
 	return Dbms{}, fmt.Errorf("dbms entry not found for driver: %s, endpoint: %s", driver, endpoint)
 }
+*/
 
 // RenderOperation renders "actions" specified through the use of the Go text/template format. It renders Dbms.Input of
 // the receiver. Data to be inserted is taken directly from values. See OpValues. If the rendering is successful, the
 // method returns a rendered Operation, if an error is generated, it is returned along with an empty Operation struct.
 // Keys which are specified but not found generate an error (i.e. no unreferenced keys are allowed).
-func (d Dbms) RenderOperation(opKey string, values OpValues) (Operation, error) {
+func (op *Operation) RenderOperation(values OpValues) (Operation, error) {
 	// Get inputs
-	inputs := d.Operations[opKey].Inputs
+	inputs := op.Inputs
 	// Transform map[string]string to a single json string
 	stringInputs, err := json.Marshal(inputs)
 	if err != nil {
@@ -150,9 +159,9 @@ func (d Dbms) RenderOperation(opKey string, values OpValues) (Operation, error) 
 	}
 
 	renderedOp := Operation{
-		Name:    d.Operations[opKey].Name,
+		Name:    op.Name,
 		Inputs:  renderedInputs,
-		Outputs: d.Operations[opKey].Outputs,
+		Outputs: op.Outputs,
 	}
 
 	return renderedOp, nil

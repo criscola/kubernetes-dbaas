@@ -48,10 +48,6 @@ spec:
                 description: Params is a map containing parameters to be mapped to
                   the database instance
                 type: object
-              provisioner:
-                description: Provisioner identifies the type of system responsible
-                  for provisioning resources (must be supported)
-                type: string
             type: object
           status:
             description: DatabaseStatus defines the observed state of Database.

@@ -3,7 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/dbaas.bedag.ch_databases.yaml
-- bases/databaseclass.bedag.ch_databaseclasses.yaml
+- bases/dbaas.bedag.ch_databaseclasses.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

@@ -35,11 +35,13 @@ func ReadOperatorConfig(v *Viper) error {
 		fmt.Println("error decoding into config struct")
 		return err
 	}
-	err := validateDbmsConfig(c)
-	if err := validateDbmsConfig(c); err != nil {
-		err = errors.Unwrap(err)
-	}
-	return err
+	// TODO: Cleanup
+	//err := validateDbmsConfig(c)
+	//if err := validateDbmsConfig(c); err != nil {
+	//	err = errors.Unwrap(err)
+	//}
+	//return err
+	return nil
 }
 
 // GetDbmsConfig returns the private struct containing the DBMS configuration
@@ -49,6 +51,7 @@ func GetDbmsConfig() database.DbmsConfig {
 
 // validateDbmsConfig validates the configuration of a DBMS configuration. It returns wrapped errors with the issues
 // it was able to detect.
+/*
 func validateDbmsConfig(config OperatorConfig) error {
 	var err error
 
@@ -82,7 +85,7 @@ func validateDbmsConfig(config OperatorConfig) error {
 	}
 
 	return err
-}
+}*/
 
 func wrapErrorVerbose(err error, msg string) error {
 	if err == nil {

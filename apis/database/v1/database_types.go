@@ -24,8 +24,6 @@ import (
 //
 // Important: Run "make" to regenerate code after modifying this file. Json tags are required.
 type DatabaseSpec struct {
-	// Provisioner identifies the type of system responsible for provisioning resources (must be supported)
-	Provisioner string `json:"provisioner,omitempty"`
 	// Endpoint associates this resource with a particular endpoint (must be already configured on the operator side)
 	Endpoint string `json:"endpoint,omitempty"`
 	// Params is a map containing parameters to be mapped to the database instance

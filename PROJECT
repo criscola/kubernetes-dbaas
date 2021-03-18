@@ -9,7 +9,7 @@ resources:
   kind: Database
   version: v1
 - crdVersion: v1
-  group: databaseclass
+  group: dbaas
   kind: DatabaseClass
   version: v1
 version: 3-alpha

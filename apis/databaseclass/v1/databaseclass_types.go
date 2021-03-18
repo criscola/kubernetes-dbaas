@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	"github.com/bedag/kubernetes-dbaas/pkg/database"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,11 +26,8 @@ import (
 
 // DatabaseClassSpec defines the desired state of DatabaseClass
 type DatabaseClassSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of DatabaseClass. Edit DatabaseClass_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Driver     string                         `json:"driver,omitempty"`
+	Operations map[string]*database.Operation `json:"operations,omitempty"`
 }
 
 // DatabaseClassStatus defines the observed state of DatabaseClass

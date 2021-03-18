@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: databaseclasses.databaseclass.bedag.ch
+  name: databaseclasses.dbaas.bedag.ch
 spec:
-  group: databaseclass.bedag.ch
+  group: dbaas.bedag.ch
   names:
     kind: DatabaseClass
     listKind: DatabaseClassList
@@ -36,10 +36,26 @@ spec:
           spec:
             description: DatabaseClassSpec defines the desired state of DatabaseClass
             properties:
-              foo:
-                description: Foo is an example field of DatabaseClass. Edit DatabaseClass_types.go
-                  to remove/update
+              driver:
                 type: string
+              operations:
+                additionalProperties:
+                  description: Operation represents an operation performed on a DBMS
+                    identified by name and containing a map of inputs and a map of
+                    outputs.
+                  properties:
+                    inputs:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    name:
+                      type: string
+                    outputs:
+                      additionalProperties:
+                        type: string
+                      type: object
+                  type: object
+                type: object
             type: object
           status:
             description: DatabaseClassStatus defines the observed state of DatabaseClass

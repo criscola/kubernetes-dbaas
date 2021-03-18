@@ -37,7 +37,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	. "github.com/bedag/kubernetes-dbaas/apis/database/v1"
+	dbv1 "github.com/bedag/kubernetes-dbaas/apis/database/v1"
+	dbclassv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclass/v1"
 )
 
 // DatabaseReconciler reconciles a Database object
@@ -59,12 +60,12 @@ const (
 func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := r.Log.WithValues("database", req.NamespacedName)
 	logger.Info("Reconcile called.")
-	dbaasResource := &Database{}
+	dbaasResource := &dbv1.Database{}
 	err := r.Get(ctx, req.NamespacedName, dbaasResource)
 
 	if err != nil {
 		// Fetch the Database instance
-		dbaasResource := &Database{}
+		dbaasResource := &dbv1.Database{}
 		err := r.Get(ctx, req.NamespacedName, dbaasResource)
 		if err != nil {
 			if k8sError.IsNotFound(err) {
@@ -132,13 +133,13 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 // SetupWithManager creates the controller responsible for Database resources by means of a ctrl.Manager.
 func (r *DatabaseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&Database{}).
+		For(&dbv1.Database{}).
 		Owns(&v1.Secret{}).
 		Complete(r)
 }
 
 // ManageSuccess manages a successful reconciliation.
-func (r *DatabaseReconciler) ManageSuccess(obj *Database) (reconcile.Result, error) {
+func (r *DatabaseReconciler) ManageSuccess(obj *dbv1.Database) (reconcile.Result, error) {
 	r.Log.Info("ManageSuccess called.")
 
 	// If the object is nil,
@@ -168,7 +169,7 @@ func (r *DatabaseReconciler) ManageSuccess(obj *Database) (reconcile.Result, err
 }
 
 // ManageSuccess manages a failed reconciliation.
-func (r *DatabaseReconciler) ManageError(obj *Database, issue error) (reconcile.Result, error) {
+func (r *DatabaseReconciler) ManageError(obj *dbv1.Database, issue error) (reconcile.Result, error) {
 	r.Log.Info("ManageError called.")
 	if issue == nil || obj == nil {
 		return r.ManageSuccess(obj)
@@ -209,7 +210,7 @@ func (r *DatabaseReconciler) ManageError(obj *Database, issue error) (reconcile.
 }
 
 // finalizeDbaasResource cleans up resources not owned by dbaasResource.
-func (r *DatabaseReconciler) finalizeDbaasResource(logger logr.Logger, dbaasResource *Database) error {
+func (r *DatabaseReconciler) finalizeDbaasResource(logger logr.Logger, dbaasResource *dbv1.Database) error {
 	// TODO(user): Add the cleanup steps that the operator
 	// needs to do before the CR can be deleted. Examples
 	// of finalizers include performing backups and deleting
@@ -225,7 +226,7 @@ func (r *DatabaseReconciler) finalizeDbaasResource(logger logr.Logger, dbaasReso
 }
 
 // addFinalizer adds a finalizer to a Database resource.
-func (r *DatabaseReconciler) addFinalizer(dbaasResource *Database) error {
+func (r *DatabaseReconciler) addFinalizer(dbaasResource *dbv1.Database) error {
 	r.Log.Info("Adding Finalizer for the Database resource")
 	controllerutil.AddFinalizer(dbaasResource, dbaasResourceFinalizer)
 
@@ -239,28 +240,40 @@ func (r *DatabaseReconciler) addFinalizer(dbaasResource *Database) error {
 }
 
 // createDb creates a new database instance on the external provisioner based on the dbaasResource data.
-func (r *DatabaseReconciler) createDb(dbaasResource *Database) error {
-	r.Log.Info(fmt.Sprintf("Creating database instance for: %s", dbaasResource.UID))
-	conn, err := pool.GetConnByDriverAndEndpointName(dbaasResource.Spec.Provisioner, dbaasResource.Spec.Endpoint)
+func (r *DatabaseReconciler) createDb(dbaasResource *dbv1.Database) error {
+	r.Log.Info(fmt.Sprintf("Creating database instance for resource: %s", dbaasResource.UID))
+
+	// Get DatabaseClass resource
+	dbClassName, err := config.GetDbmsConfig().GetDatabaseClassNameByEndpointName(dbaasResource.Spec.Endpoint)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not retrieve DatabaseClass name from DBMS config: %s", err)
+	}
+	dbClass := dbclassv1.DatabaseClass{}
+	// TODO: Let admins customize namespace
+	err = r.Client.Get(context.Background(), client.ObjectKey{Namespace: "default", Name: dbClassName}, &dbClass)
+	if err != nil {
+		return fmt.Errorf("could not get DatabaseClass resource: %s", err)
 	}
 
-	dbms, err := config.
-		GetDbmsConfig().
-		GetByDriverAndEndpoint(dbaasResource.Spec.Provisioner, dbaasResource.Spec.Endpoint)
-	if err != nil {
-		return fmt.Errorf("could not get dbms entry: %s", err)
+	createOpTemplate, exists := dbClass.Spec.Operations[database.CreateMapKey]
+	if !exists {
+		return fmt.Errorf("could not find operation %s in DatabaseClass %s", database.CreateMapKey, dbClassName)
 	}
 
+	// Render operation
 	opValues, err := newOpValuesFromResource(dbaasResource)
 	if err != nil {
 		return fmt.Errorf("could not get generate operation values from resource: %s", err)
 	}
 
-	createOp, err := dbms.RenderOperation(database.CreateMapKey, opValues)
+	createOp, err := createOpTemplate.RenderOperation(opValues)
 	if err != nil {
 		return fmt.Errorf("could not render create operation values: %s", err)
+	}
+
+	conn, err := pool.GetConnByEndpointName(dbaasResource.Spec.Endpoint)
+	if err != nil {
+		return fmt.Errorf("could not get endpoint from pool: %s", err)
 	}
 
 	output := conn.CreateDb(createOp)
@@ -271,92 +284,95 @@ func (r *DatabaseReconciler) createDb(dbaasResource *Database) error {
 	// Create Secret
 	err = r.createSecret(dbaasResource, output)
 	if err != nil {
-		return fmt.Errorf("could not create secret: %s", err)
+		return fmt.Errorf("could not create Secret: %s", err)
 	}
 
 	return nil
 }
 
 // deleteDb deletes the database instance on the external provisioner based on the dbaasResource data.
-func (r *DatabaseReconciler) deleteDb(dbaasResource *Database) error {
-	r.Log.Info(fmt.Sprintf("Deleting database instance for: %s", dbaasResource.UID))
-	conn, err := pool.GetConnByDriverAndEndpointName(dbaasResource.Spec.Provisioner, dbaasResource.Spec.Endpoint)
-	if err != nil {
-		return err
-	}
+func (r *DatabaseReconciler) deleteDb(dbaasResource *dbv1.Database) error {
+	/*
+		r.Log.Info(fmt.Sprintf("Deleting database instance for: %s", dbaasResource.UID))
+		conn, err := pool.GetConnByDriverAndEndpointName(dbaasResource.Spec.Provisioner, dbaasResource.Spec.Endpoint)
+		if err != nil {
+			return err
+		}
 
-	dbms, err := config.
-		GetDbmsConfig().
-		GetByDriverAndEndpoint(dbaasResource.Spec.Provisioner, dbaasResource.Spec.Endpoint)
-	if err != nil {
-		return fmt.Errorf("could not get dbms entry: %s", err)
-	}
+		dbms, err := config.
+			GetDbmsConfig().
+			GetByDriverAndEndpoint(dbaasResource.Spec.Provisioner, dbaasResource.Spec.Endpoint)
+		if err != nil {
+			return fmt.Errorf("could not get dbms entry: %s", err)
+		}
 
-	opValues, err := newOpValuesFromResource(dbaasResource)
-	if err != nil {
-		return fmt.Errorf("could not get generate operation values from resource: %s", err)
-	}
+		opValues, err := newOpValuesFromResource(dbaasResource)
+		if err != nil {
+			return fmt.Errorf("could not get generate operation values from resource: %s", err)
+		}
 
-	deleteOp, err := dbms.RenderOperation(database.DeleteMapKey, opValues)
-	if err != nil {
-		return fmt.Errorf("could not render create operation values: %s", err)
-	}
+		deleteOp, err := dbms.RenderOperation(database.DeleteMapKey, opValues)
+		if err != nil {
+			return fmt.Errorf("could not render create operation values: %s", err)
+		}
 
-	output := conn.DeleteDb(deleteOp)
-	if output.Err != nil {
-		return fmt.Errorf("could not delete database: %s", output.Err)
-	}
-
+		output := conn.DeleteDb(deleteOp)
+		if output.Err != nil {
+			return fmt.Errorf("could not delete database: %s", output.Err)
+		}
+	*/
 	return nil
 }
 
 // createSecret creates a new K8s secret owned by owner with the data contained in output and dsn.
-func (r *DatabaseReconciler) createSecret(owner *Database, output database.OpOutput) error {
-	var ownerRefs []metav1.OwnerReference
+func (r *DatabaseReconciler) createSecret(owner *dbv1.Database, output database.OpOutput) error {
+	/*
+		var ownerRefs []metav1.OwnerReference
 
-	ownerRefs = append(ownerRefs, metav1.OwnerReference{
-		APIVersion: owner.APIVersion,
-		Kind:       owner.Kind,
-		Name:       owner.Name,
-		UID:        owner.UID,
-		Controller: &[]bool{true}[0], // sets this controller as owner
-	})
+		ownerRefs = append(ownerRefs, metav1.OwnerReference{
+			APIVersion: owner.APIVersion,
+			Kind:       owner.Kind,
+			Name:       owner.Name,
+			UID:        owner.UID,
+			Controller: &[]bool{true}[0], // sets this controller as owner
+		})
 
-	newSecret := &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            owner.Name + "-credentials",
-			Namespace:       owner.Namespace,
-			OwnerReferences: ownerRefs,
-		},
-		StringData: map[string]string{
-			"username": output.Out[0],
-			"password": output.Out[1],
-			"host":     output.Out[3],
-			"port":     output.Out[4],
-			"dbName":   output.Out[2],
-			"dsn":      database.NewDsn(owner.Spec.Provisioner, output.Out[0], output.Out[1], output.Out[3], output.Out[4], output.Out[2]).String(),
-		},
-	}
-
-	oldSecret := v1.Secret{}
-	key := client.ObjectKey{
-		Namespace: owner.Namespace,
-		Name:      owner.Name + "-credentials",
-	}
-	err := r.Client.Get(context.TODO(), key, &oldSecret)
-	if err != nil {
-		if k8sError.IsNotFound(err) {
-			return r.Client.Create(context.Background(), newSecret)
+		newSecret := &v1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            owner.Name + "-credentials",
+				Namespace:       owner.Namespace,
+				OwnerReferences: ownerRefs,
+			},
+			StringData: map[string]string{
+				"username": output.Out[0],
+				"password": output.Out[1],
+				"host":     output.Out[3],
+				"port":     output.Out[4],
+				"dbName":   output.Out[2],
+				"dsn":      database.NewDsn(owner.Spec.Provisioner, output.Out[0], output.Out[1], output.Out[3], output.Out[4], output.Out[2]).String(),
+			},
 		}
-		return err
-	}
 
-	// Secret exists, overwrite
-	return r.Client.Update(context.Background(), newSecret)
+		oldSecret := v1.Secret{}
+		key := client.ObjectKey{
+			Namespace: owner.Namespace,
+			Name:      owner.Name + "-credentials",
+		}
+		err := r.Client.Get(context.TODO(), key, &oldSecret)
+		if err != nil {
+			if k8sError.IsNotFound(err) {
+				return r.Client.Create(context.Background(), newSecret)
+			}
+			return err
+		}
+
+		// Secret exists, overwrite
+		return r.Client.Update(context.Background(), newSecret)*/
+	return nil
 }
 
 // newOpValuesFromResource constructs a database.OpValues struct starting from a Database resource.
-func newOpValuesFromResource(resource *Database) (database.OpValues, error) {
+func newOpValuesFromResource(resource *dbv1.Database) (database.OpValues, error) {
 	metaIn := resource.ObjectMeta
 	var metadata map[string]interface{}
 	temp, _ := json.Marshal(metaIn)

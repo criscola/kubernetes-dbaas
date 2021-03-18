@@ -2,9 +2,11 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
-	dbaasv1 "github.com/bedag/kubernetes-dbaas/apis/database/v1"
-	"github.com/bedag/kubernetes-dbaas/controllers/database"
+	dbv1 "github.com/bedag/kubernetes-dbaas/apis/database/v1"
+	dbclassv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclass/v1"
+	controllers "github.com/bedag/kubernetes-dbaas/controllers/database"
 	"github.com/bedag/kubernetes-dbaas/pkg/config"
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
 	"github.com/spf13/cobra"
@@ -15,6 +17,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	// +kubebuilder:scaffold:imports
 )
@@ -47,10 +50,13 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		// Setup Logger
 		ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+
 		// Load configuration
 		setupLog.Info("loading config...")
 		LoadConfig()
 		setupLog.Info("config loaded: " + viper.ConfigFileUsed())
+
+		// Register endpoints
 		setupLog.Info("registering endpoints...")
 		RegisterEndpoints()
 		setupLog.Info("endpoints registered")
@@ -69,6 +75,8 @@ func Execute() {
 
 // StartOperator starts the operator by creating a new manager which in turn starts the operator controller.
 func StartOperator() {
+	// +kubebuilder:scaffold:builder
+
 	var metricsAddr string
 	var enableLeaderElection bool
 
@@ -81,7 +89,7 @@ func StartOperator() {
 	})
 
 	if err != nil {
-		fatalError(err, "unable to start manager")
+		fatalError(err, "unable to create manager")
 	}
 
 	if err = (&controllers.DatabaseReconciler{
@@ -92,9 +100,7 @@ func StartOperator() {
 		fatalErrorWithValues(err, "unable to create controller", "controller", "Database")
 	}
 
-	// +kubebuilder:scaffold:builder
-
-	setupLog.Info("starting manager")
+	setupLog.Info("starting controller")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		fatalError(err, "problem running manager")
 	}
@@ -131,23 +137,36 @@ func LoadConfig() {
 //
 // See pool.Register for details.
 func RegisterEndpoints() {
+	c, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
+	if err != nil {
+		setupLog.Error(err, "unable to create client instance")
+	}
+
 	for _, dbmsConfigEntry := range config.GetDbmsConfig() {
-		if err := pool.Register(dbmsConfigEntry); err != nil {
+		dbClass := dbclassv1.DatabaseClass{}
+		// TODO: Let admins configure namespace for DB classes
+		err = c.Get(context.Background(), client.ObjectKey{Namespace: "default", Name: dbmsConfigEntry.DatabaseClassName}, &dbClass)
+		if err != nil {
+			setupLog.Error(err, "unable to get database class")
+		}
+
+		if err := pool.Register(dbmsConfigEntry, dbClass); err != nil {
 			fatalError(err, DbmsConnOpenError)
 		}
 	}
 }
 
 func init() {
-	// TODO: Metrics
-	//rootCmd.Flags().StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	//_ = viper.BindPFlag("port", rootCmd.Flags().Lookup("metrics-addr"))
-
 	rootCmd.Flags().StringVar(&cfgFile, "load-config", "", "Loads the config file from path")
 
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(dbaasv1.AddToScheme(scheme))
+	utilruntime.Must(dbv1.AddToScheme(scheme))
+	utilruntime.Must(dbclassv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
+
+	// TODO: Metrics
+	//rootCmd.Flags().StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	//_ = viper.BindPFlag("port", rootCmd.Flags().Lookup("metrics-addr"))
 }
 
 func fatalError(err error, msg string) {
