@@ -127,7 +127,7 @@ func (c DbmsConfig) GetByDriverAndEndpoint(driver, endpoint string) (Dbms, error
 }
 */
 
-// RenderOperation renders "actions" specified through the use of the Go text/template format. It renders Dbms.Input of
+// RenderOperation renders "actions" specified through the use of the Go text/template format. It renders Input of
 // the receiver. Data to be inserted is taken directly from values. See OpValues. If the rendering is successful, the
 // method returns a rendered Operation, if an error is generated, it is returned along with an empty Operation struct.
 // Keys which are specified but not found generate an error (i.e. no unreferenced keys are allowed).
