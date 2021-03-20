@@ -323,7 +323,7 @@ func (r *DatabaseReconciler) deleteDb(dbaasResource *dbv1.Database) error {
 
 	output := conn.DeleteDb(deleteOp)
 	if output.Err != nil {
-		return fmt.Errorf("could not create database: %s", output.Err)
+		return fmt.Errorf("could not delete database: %s", output.Err)
 	}
 
 	return nil
