@@ -245,7 +245,7 @@ func (r *DatabaseReconciler) createDb(dbaasResource *dbv1.Database) error {
 		return fmt.Errorf("could not retrieve DatabaseClass name from DBMS config: %s", err)
 	}
 	dbClass := dbclassv1.DatabaseClass{}
-	err = r.Client.Get(context.Background(), client.ObjectKey{Namespace: "default", Name: dbClassName}, &dbClass)
+	err = r.Client.Get(context.Background(), client.ObjectKey{Namespace: "", Name: dbClassName}, &dbClass)
 	if err != nil {
 		return fmt.Errorf("could not get DatabaseClass resource: %s", err)
 	}
@@ -295,7 +295,7 @@ func (r *DatabaseReconciler) deleteDb(dbaasResource *dbv1.Database) error {
 		return fmt.Errorf("could not retrieve DatabaseClass name from DBMS config: %s", err)
 	}
 	dbClass := dbclassv1.DatabaseClass{}
-	err = r.Client.Get(context.Background(), client.ObjectKey{Namespace: "default", Name: dbClassName}, &dbClass)
+	err = r.Client.Get(context.Background(), client.ObjectKey{Namespace: "", Name: dbClassName}, &dbClass)
 	if err != nil {
 		return fmt.Errorf("could not get DatabaseClass resource: %s", err)
 	}

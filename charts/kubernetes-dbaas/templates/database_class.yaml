@@ -2,7 +2,6 @@ apiVersion: dbaas.bedag.ch/v1
 kind: DatabaseClass
 metadata:
   name: sqlserver-default
-  namespace: default
 spec:
   driver: sqlserver
   operations:

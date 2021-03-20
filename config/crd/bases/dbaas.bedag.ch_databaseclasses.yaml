@@ -14,7 +14,7 @@ spec:
     listKind: DatabaseClassList
     plural: databaseclasses
     singular: databaseclass
-  scope: Namespaced
+  scope: Cluster
   versions:
   - name: v1
     schema:

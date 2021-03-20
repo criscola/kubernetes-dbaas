@@ -5,11 +5,11 @@ projectName: kubernetes-dbaas
 repo: github.com/bedag/kubernetes-dbaas
 resources:
 - crdVersion: v1
-  group: dbaas
+  group: database
   kind: Database
   version: v1
 - crdVersion: v1
-  group: dbaas
+  group: databaseclass
   kind: DatabaseClass
   version: v1
 version: 3-alpha
