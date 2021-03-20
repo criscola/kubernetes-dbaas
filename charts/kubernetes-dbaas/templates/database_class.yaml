@@ -9,7 +9,7 @@ spec:
       name: sp_create
       inputs:
         k8sName: |-
-          {{`"{{ .Metadata.uid }}"`}}
+          {{`{{ .Metadata.uid }}`}}
       outputs:
         password: password
         username: username
@@ -20,4 +20,4 @@ spec:
       name: sp_delete
       inputs:
         k8sName: |-
-          {{`"{{ .Metadata.uid }}"`}}
+          {{`{{ .Metadata.uid }}`}}
