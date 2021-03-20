@@ -1,0 +1,8 @@
+apiVersion: dbaas.bedag.ch/v1
+kind: Database
+metadata:
+  name: database-sample-123
+spec:
+  endpoint: us-sqlserver-test
+  params:
+    toast: french
