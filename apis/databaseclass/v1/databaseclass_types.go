@@ -38,6 +38,7 @@ type DatabaseClassStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:path=databaseclasses,scope=Cluster
 
 // DatabaseClass is the Schema for the databaseclasses API
 type DatabaseClass struct {
