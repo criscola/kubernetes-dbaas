@@ -38,6 +38,7 @@ const (
 	ConfigLoadError       = "problem loading configuration file"
 	ConfigParseError      = "problem parsing configuration file"
 	DbmsConnOpenError     = "problem opening a connection to DBMS endpoint"
+	DbmsClassError	      = "unable to get database class"
 )
 
 // rootCmd represents the root 'kubedbaas' command
@@ -144,10 +145,9 @@ func RegisterEndpoints() {
 
 	for _, dbmsConfigEntry := range config.GetDbmsConfig() {
 		dbClass := dbclassv1.DatabaseClass{}
-		// TODO: Let admins configure namespace for DB classes
 		err = c.Get(context.Background(), client.ObjectKey{Namespace: "default", Name: dbmsConfigEntry.DatabaseClassName}, &dbClass)
 		if err != nil {
-			setupLog.Error(err, "unable to get database class")
+			fatalError(err, DbmsClassError)
 		}
 
 		if err := pool.Register(dbmsConfigEntry, dbClass); err != nil {
@@ -158,6 +158,7 @@ func RegisterEndpoints() {
 
 func init() {
 	rootCmd.Flags().StringVar(&cfgFile, "load-config", "", "Loads the config file from path")
+	rootCmd.Flags().
 
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(dbv1.AddToScheme(scheme))

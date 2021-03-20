@@ -211,10 +211,6 @@ func (r *DatabaseReconciler) ManageError(obj *dbv1.Database, issue error) (recon
 
 // finalizeDbaasResource cleans up resources not owned by dbaasResource.
 func (r *DatabaseReconciler) finalizeDbaasResource(logger logr.Logger, dbaasResource *dbv1.Database) error {
-	// TODO(user): Add the cleanup steps that the operator
-	// needs to do before the CR can be deleted. Examples
-	// of finalizers include performing backups and deleting
-	// resources that are not owned by this CR, like a PVC.
 	logger.Info("Debug", "resource UID: %s", string(dbaasResource.UID))
 
 	err := r.deleteDb(dbaasResource)
@@ -231,7 +227,7 @@ func (r *DatabaseReconciler) addFinalizer(dbaasResource *dbv1.Database) error {
 	controllerutil.AddFinalizer(dbaasResource, dbaasResourceFinalizer)
 
 	// Update CR
-	err := r.Update(context.TODO(), dbaasResource)
+	err := r.Update(context.Background(), dbaasResource)
 	if err != nil {
 		r.Log.Error(err, "failed to update Database resource with finalizer")
 		return err
@@ -249,7 +245,6 @@ func (r *DatabaseReconciler) createDb(dbaasResource *dbv1.Database) error {
 		return fmt.Errorf("could not retrieve DatabaseClass name from DBMS config: %s", err)
 	}
 	dbClass := dbclassv1.DatabaseClass{}
-	// TODO: Let admins customize namespace
 	err = r.Client.Get(context.Background(), client.ObjectKey{Namespace: "default", Name: dbClassName}, &dbClass)
 	if err != nil {
 		return fmt.Errorf("could not get DatabaseClass resource: %s", err)
@@ -300,7 +295,6 @@ func (r *DatabaseReconciler) deleteDb(dbaasResource *dbv1.Database) error {
 		return fmt.Errorf("could not retrieve DatabaseClass name from DBMS config: %s", err)
 	}
 	dbClass := dbclassv1.DatabaseClass{}
-	// TODO: Let admins customize namespace
 	err = r.Client.Get(context.Background(), client.ObjectKey{Namespace: "default", Name: dbClassName}, &dbClass)
 	if err != nil {
 		return fmt.Errorf("could not get DatabaseClass resource: %s", err)
@@ -368,7 +362,7 @@ func (r *DatabaseReconciler) createSecret(owner *dbv1.Database, driver string, o
 		Namespace: owner.Namespace,
 		Name:      owner.Name + "-credentials",
 	}
-	err := r.Client.Get(context.TODO(), key, &oldSecret)
+	err := r.Client.Get(context.Background(), key, &oldSecret)
 	if err != nil {
 		if k8sError.IsNotFound(err) {
 			return r.Client.Create(context.Background(), newSecret)

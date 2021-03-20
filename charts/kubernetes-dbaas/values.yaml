@@ -67,3 +67,6 @@ operatorConfig:
       endpoints:
         - name: us-sqlserver-test
           dsn: sqlserver://sa:Password&1@192.168.49.1:1433
+
+databaseClasses:
+

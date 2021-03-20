@@ -1,5 +1,4 @@
 // This package attempts at opening a   nd retaining a pool of distinct DBMS connections
-// TODO: Versioning. Especially for this package (service layer)
 package pool
 
 import (
