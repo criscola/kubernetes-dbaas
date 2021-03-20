@@ -3,7 +3,7 @@ package pool
 
 import (
 	"fmt"
-	dbaasv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclass/v1"
+	dbaasv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclasses/v1"
 	"github.com/bedag/kubernetes-dbaas/pkg/database"
 )
 

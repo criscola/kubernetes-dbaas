@@ -4,8 +4,8 @@ package cmd
 import (
 	"context"
 	"fmt"
-	dbv1 "github.com/bedag/kubernetes-dbaas/apis/database/v1"
-	dbclassv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclass/v1"
+	dbv1 "github.com/bedag/kubernetes-dbaas/apis/databases/v1"
+	dbclassv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclasses/v1"
 	controllers "github.com/bedag/kubernetes-dbaas/controllers/database"
 	"github.com/bedag/kubernetes-dbaas/pkg/config"
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
