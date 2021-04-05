@@ -64,9 +64,11 @@ To try out the Operator on your local development machine, follow these steps:
 6. Install the CRDs
    
 `make install`
+
 7. Install an example DatabaseClass
    
 `kubectl apply -f testdata/dbclass.yaml`. 
+
 8. Run the Operator in local development mode 
    
 `make run ARGS="--load-config=config/manager/controller_manager_config.yaml --enable-webhooks=false --leaderElection.leaderElect=false --debug=true"`
