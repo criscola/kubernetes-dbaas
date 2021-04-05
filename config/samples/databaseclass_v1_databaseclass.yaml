@@ -1,0 +1,7 @@
+apiVersion: databaseclass.dbaas.bedag.ch/v1
+kind: DatabaseClass
+metadata:
+  name: databaseclass-sample
+spec:
+  # Add fields here
+  foo: bar

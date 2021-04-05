@@ -1,0 +1,50 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: kubernetes-dbaas-manager-role
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - create
+      - delete
+      - list
+      - update
+      - watch
+  - apiGroups:
+      - database.dbaas.bedag.ch
+    resources:
+      - databases
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - database.dbaas.bedag.ch
+    resources:
+      - databases/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - database.dbaas.bedag.ch
+    resources:
+      - databases/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - databaseclass.dbaas.bedag.ch
+    resources:
+      - databaseclasses
+    verbs:
+      - get
+      - list
+      - watch

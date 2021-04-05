@@ -6,10 +6,10 @@ replicaCount: 1
 
 image:
   # Repository of the operator manager image.
-  repository:
-  pullPolicy: IfNotPresent
+  repository: criscola/kubernetes-dbaas
+  pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "0.1.0"
+  tag: "latest"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -17,8 +17,8 @@ fullnameOverride: ""
 
 podAnnotations: {}
 
-podSecurityContext: {}
-# fsGroup: 2000
+podSecurityContext:
+  runAsNonRoot: true
 
 securityContext: {}
   # capabilities:
@@ -46,24 +46,46 @@ affinity: {}
 # The termination grace period of your operator manager container.
 terminationGracePeriodSeconds: 10
 
-# Overrides the ServiceAccount subject to receive the access rights needed to run the manager Pod correctly. Look at
-# role.yaml and role_binding.yaml to find out more.
-serviceAccountName: controller-manager
+# Manager service account name
+managerSaName: kubernetes-dbaas-controller-manager
 
 # Should the ServiceAccount of the manager Pod automount the SA Account Token?
 # otherwise
 automountServiceAccountToken: true
 
-# Path of the operator configuration which will be mounted in the manager Pod. Default value: "/var/kubedbaas"
-operatorConfigPath:
+managerArgs: ["--debug=true"]
 
-# Name of the operator configuration file which will be mounted in the manager Pod. Default value: "config.yaml"
-operatorConfigFilename:
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8081
+  initialDelaySeconds: 15
+  periodSeconds: 20
+
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: 8081
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+prometheusSaName: prometheus-kube-prometheus-prometheus
+
+prometheusSaNamespace: default
 
 # Operator configuration. The first key is the name of Secret file mounted in the manager Pod. Consult the System administrator guide to learn more.
 operatorConfig:
+  health:
+    healthProbeBindAddress: :8081
+  metrics:
+    bindAddress: 127.0.0.1:8080
+  webhook:
+    port: 9443
+  leaderElection:
+    leaderElect: true
+    resourceName: bfa62c96.dbaas.bedag.ch
   dbms:
-    - databaseClassName: sqlserver-default
+    - databaseClassName: "databaseclass-sample"
       endpoints:
-        - name: us-sqlserver-test
-          dsn: sqlserver://sa:Password&1@192.168.49.1:1433
+        - name: "us-sqlserver-test"
+          dsn: "sqlserver://sa:Password&1@192.168.49.1:1433"

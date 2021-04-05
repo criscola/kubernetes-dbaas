@@ -1,0 +1,23 @@
+apiVersion: databaseclass.dbaas.bedag.ch/v1
+kind: DatabaseClass
+metadata:
+  name: databaseclass-sample
+spec:
+  driver: sqlserver
+  operations:
+    create:
+      name: sp_create
+      inputs:
+        k8sName: |-
+          {{`{{ .Metadata.uid }}`}}
+      outputs:
+        password: password
+        username: username
+        dbName: dbName
+        fqdn: fqdn
+        port: port
+    delete:
+      name: sp_delete
+      inputs:
+        k8sName: |-
+          {{`{{ .Metadata.uid }}`}}

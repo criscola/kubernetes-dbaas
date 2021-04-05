@@ -5,7 +5,7 @@ metadata:
   name: databaseclass-viewer-role
 rules:
 - apiGroups:
-  - databaseclass.bedag.ch
+  - databaseclass.dbaas.bedag.ch
   resources:
   - databaseclasses
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - databaseclass.bedag.ch
+  - databaseclass.dbaas.bedag.ch
   resources:
   - databaseclasses/status
   verbs:

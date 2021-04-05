@@ -1,5 +1,3 @@
-// Package database contains all the code related to the interaction with databases. It doesn't contain any application
-// state. Actual connections are retained in the pool package.
 package database
 
 import (
@@ -21,6 +19,7 @@ const (
 	FqdnMapKey              = "fqdn"
 	PortMapKey              = "port"
 	ErrorOnMissingKeyOption = "missingkey=error"
+	DbmsConfigKey           = "dbms"
 )
 
 // Driver represents a struct responsible for executing CreateDb and DeleteDb operations on a system it supports. Drivers
@@ -32,38 +31,9 @@ type Driver interface {
 	Ping() error
 }
 
-// OpValuesd represent the input values of an operation.
-type OpValues struct {
-	Metadata   map[string]interface{}
-	Parameters map[string]string
-}
-
-// OpOutput represents the return values of an operation. If the operation generates an error, it must be set in the Err
-// field. If Err is nil, the operation is assumed to be successful.
-type OpOutput struct {
-	Out []string // May be changed to interface{} if typing is needed
-	Err error
-}
-
 // DbmsConn represents the DBMS connection. See Driver.
 type DbmsConn struct {
 	Driver
-}
-
-// DbmsConfig is a slice containing Dbms structs.
-type DbmsConfig []Dbms
-
-// Dbms is the instance associated with a Dbms resource. It contains the Driver responsible for the Operations executed on
-// Endpoints.
-type Dbms struct {
-	DatabaseClassName string
-	Endpoints         []Endpoint
-}
-
-// Endpoint represent the configuration of a DBMS endpoint identified by a name.
-type Endpoint struct {
-	Name string
-	Dsn  Dsn
 }
 
 // +kubebuilder:object:generate=true
@@ -75,11 +45,44 @@ type Operation struct {
 	Outputs map[string]string `json:"outputs,omitempty"`
 }
 
+// OpOutput represents the return values of an operation. If the operation generates an error, it must be set in the Err
+// field. If Err is nil, the operation is assumed to be successful.
+type OpOutput struct {
+	Out []string // May be changed to interface{} if typing is needed
+	Err error
+}
+
+// OpValues represent the input values of an operation.
+type OpValues struct {
+	Metadata   map[string]interface{}
+	Parameters map[string]string
+}
+
+// +kubebuilder:object:generate=true
+// Dbms is the instance associated with a Dbms resource. It contains the Driver responsible for the Operations executed on
+// Endpoints.
+type Dbms struct {
+	DatabaseClassName string     `json:"databaseClassName"`
+	Endpoints         []Endpoint `json:"endpoints"`
+}
+
+// +kubebuilder:object:generate=true
+// DbmsList is a slice containing Dbms structs.
+type DbmsList []Dbms
+
+// +kubebuilder:object:generate=true
+// +kubebuilder:kubebuilder:validation:MinItems=1
+// Endpoint represent the configuration of a DBMS endpoint identified by a name.
+type Endpoint struct {
+	Name string `json:"name"`
+	Dsn  Dsn    `json:"dsn"`
+}
+
 // New initializes a Dbms instance based on a map of Operation. It expects a dsn like that:
 // driver://username:password@host/instance?param1=value&param2=value
 //
 // See the individual Driver implementations.
-func New(dsn Dsn, ops map[string]*Operation) (*DbmsConn, error) {
+func New(dsn Dsn) (*DbmsConn, error) {
 	var dbmsConn *DbmsConn
 
 	switch dsn.GetDriver() {
@@ -105,27 +108,6 @@ func New(dsn Dsn, ops map[string]*Operation) (*DbmsConn, error) {
 
 	return dbmsConn, nil
 }
-
-func (c DbmsConfig) GetDatabaseClassNameByEndpointName(endpointName string) (string, error) {
-	for _, dbms := range c {
-		if contains(dbms.Endpoints, endpointName) {
-			return dbms.DatabaseClassName, nil
-		}
-	}
-	return "", fmt.Errorf("could not find any DatabaseClass for endpoint '%s'", endpointName)
-}
-
-/*
-// GetByDriverAndEndpoint gets a Dbms identified by driver and endpoint from a DbmsConfig type.
-func (c DbmsConfig) GetByDriverAndEndpoint(driver, endpoint string) (Dbms, error) {
-		for _, dbms := range c {
-			if dbms.DatabaseClassName == driver && contains(dbms.Endpoints, endpoint) {
-				return dbms, nil
-			}
-		}
-	return Dbms{}, fmt.Errorf("dbms entry not found for driver: %s, endpoint: %s", driver, endpoint)
-}
-*/
 
 // RenderOperation renders "actions" specified through the use of the Go text/template format. It renders Input of
 // the receiver. Data to be inserted is taken directly from values. See OpValues. If the rendering is successful, the
@@ -165,6 +147,15 @@ func (op *Operation) RenderOperation(values OpValues) (Operation, error) {
 	}
 
 	return renderedOp, nil
+}
+
+func (c DbmsList) GetDatabaseClassNameByEndpointName(endpointName string) (string, error) {
+	for _, dbms := range c {
+		if contains(dbms.Endpoints, endpointName) {
+			return dbms.DatabaseClassName, nil
+		}
+	}
+	return "", fmt.Errorf("could not find any DatabaseClass for endpoint '%s'", endpointName)
 }
 
 // IsNamePresent return true if an endpoint name is not empty, else it returns false.

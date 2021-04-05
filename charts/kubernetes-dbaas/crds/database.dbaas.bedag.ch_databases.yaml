@@ -1,0 +1,80 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: kubernetes-dbaas-system/kubernetes-dbaas-serving-cert
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: databases.database.dbaas.bedag.ch
+spec:
+  group: database.dbaas.bedag.ch
+  names:
+    kind: Database
+    listKind: DatabaseList
+    plural: databases
+    singular: database
+  scope: Namespaced
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          description: Database is the Schema for the database API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: DatabaseSpec defines the desired state of Database.
+              properties:
+                endpoint:
+                  description: Endpoint associates this resource with a particular endpoint
+                    (must be already configured on the operator side)
+                  type: string
+                params:
+                  additionalProperties:
+                    type: string
+                  description: Params is a map containing parameters to be mapped to
+                    the database instance
+                  type: object
+              type: object
+            status:
+              description: DatabaseStatus defines the observed state of Database.
+              properties:
+                lastError:
+                  description: LastError if not nil, the resource in an error state
+                  type: string
+                lastErrorUpdateCount:
+                  description: LastErrorUpdateCount specifies how many times the LastError
+                    field has been updated
+                  type: integer
+                lastUpdate:
+                  description: LastUpdate specifies the last time the Status field has
+                    been updated
+                  type: string
+                unrecoverable:
+                  description: "If Unrecoverable is set to true, the controller was
+                  unable to fix the issue by itself \n TODO: Do something like 'kubectl
+                  get pods', i.e. create a set of state and enable users to print
+                  column with the current state"
+                  type: boolean
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

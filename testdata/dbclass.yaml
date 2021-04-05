@@ -1,4 +1,4 @@
-apiVersion: dbaas.bedag.ch/v1
+apiVersion: databaseclass.dbaas.bedag.ch/v1
 kind: DatabaseClass
 metadata:
   name: databaseclass-sample

@@ -1,5 +1,5 @@
-apiVersion: controller-runtime.sigs.k8s.io/v1alpha1
-kind: ControllerManagerConfig
+apiVersion: config.dbaas.bedag.ch/v1
+kind: OperatorConfig
 health:
   healthProbeBindAddress: :8081
 metrics:
@@ -8,4 +8,9 @@ webhook:
   port: 9443
 leaderElection:
   leaderElect: true
-  resourceName: bfa62c96.bedag.ch
+  resourceName: bfa62c96.dbaas.bedag.ch
+dbms:
+  - databaseClassName: "databaseclass-sample"
+    endpoints:
+      - name: "us-sqlserver-test"
+        dsn: "sqlserver://sa:Password&1@192.168.49.1:1433"

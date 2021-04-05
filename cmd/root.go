@@ -1,47 +1,71 @@
-// Package cmd contains the CLI command definitions along with their initialization and startup code
+/*
+Copyright © 2021 NAME HERE <EMAIL ADDRESS>
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 package cmd
 
 import (
 	"context"
-	"fmt"
-	dbv1 "github.com/bedag/kubernetes-dbaas/apis/databases/v1"
-	dbclassv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclasses/v1"
-	controllers "github.com/bedag/kubernetes-dbaas/controllers/database"
 	"github.com/bedag/kubernetes-dbaas/pkg/config"
+
+	//"context"
+	"fmt"
+	operatorconfigv1 "github.com/bedag/kubernetes-dbaas/apis/config/v1"
+	databasev1 "github.com/bedag/kubernetes-dbaas/apis/database/v1"
+	databaseclassv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclass/v1"
+	controllers "github.com/bedag/kubernetes-dbaas/controllers/database"
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
+
+	//"github.com/bedag/kubernetes-dbaas/pkg/pool"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	// +kubebuilder:scaffold:imports
+
+	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+	// to ensure that exec-entrypoint and run can make use of them.
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	//+kubebuilder:scaffold:imports
+
+	"github.com/spf13/viper"
+)
+
+const (
+	LoadConfigKey    = "load-config"
+	DebugKey         = "debug"
+	WebhookEnableKey = "enable-webhooks"
+
+	// Flag overrides for specified in OperatorConfig
+	MetricsBindAddressKey     = "metrics.bindAddress"
+	HealthProbeBindAddressKey = "health.healthProbeBindAddress"
+	LeaderElectEnableKey      = "leaderElection.leaderElect"
+	LeaderElectResName        = "leaderElection.resourceName"
+	WebhookPortKey            = "webhook.port"
 )
 
 var (
-	metricsAddr          string
-	enableLeaderElection bool
-	cfgFile              string
-
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 )
 
-const (
-	DefaultConfigType     = "yaml"
-	DefaultConfigFilename = "config"
-	DefaultConfigFilepath = "/var/kubedbaas"
-	ConfigLoadError       = "problem loading configuration file"
-	ConfigParseError      = "problem parsing configuration file"
-	DbmsConnOpenError     = "problem opening a connection to DBMS endpoint"
-	DbmsClassError        = "unable to get database class"
-)
-
-// rootCmd represents the root 'kubedbaas' command
+// rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "kubedbaas",
 	Short: "kubedbaas is a Kubernetes Operator written in Go used to provision databases on external infrastructure",
@@ -49,132 +73,180 @@ var rootCmd = &cobra.Command{
 				Users are able to create new database instances by writing an API Object configuration using Custom Resources.
 				The Operator watches for new API Objects and tells the target DBMS to trigger a certain stored procedure based on the content of the configuration.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Setup Logger
-		ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
-
-		// Load configuration
-		setupLog.Info("loading config...")
-		LoadConfig()
-		setupLog.Info("config loaded: " + viper.ConfigFileUsed())
-
-		// Register endpoints
 		setupLog.Info("registering endpoints...")
-		RegisterEndpoints()
+		registerEndpoints()
 		setupLog.Info("endpoints registered")
 
-		// Finally start the Operator
-		StartOperator()
+		setupLog.Info("starting operator")
+		loadOperator()
 	},
 }
 
+// Execute adds all child commands to the root command and sets flags appropriately.
+// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+	cobra.CheckErr(rootCmd.Execute())
+}
+
+func init() {
+	cobra.OnInitialize(initConfigFile, initLogger)
+
+	initFlags()
+
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(operatorconfigv1.AddToScheme(scheme))
+	utilruntime.Must(databasev1.AddToScheme(scheme))
+	utilruntime.Must(databaseclassv1.AddToScheme(scheme))
+	//+kubebuilder:scaffold:scheme
+}
+
+func initFlags() {
+	rootCmd.PersistentFlags().String(LoadConfigKey, "", "The location of the Operator's config file")
+	rootCmd.PersistentFlags().Bool(DebugKey, false, "Enable debug mode for development purposes")
+	rootCmd.PersistentFlags().Bool(WebhookEnableKey, true, "Enable webhooks servers.")
+	rootCmd.PersistentFlags().String(MetricsBindAddressKey, ":8080", "The address the metric endpoint binds to")
+	rootCmd.PersistentFlags().String(HealthProbeBindAddressKey, ":8081", "The address the probe endpoint binds to")
+	rootCmd.PersistentFlags().Bool(LeaderElectEnableKey, true, "Enable leader election for controller manager. "+
+		"Enabling this will ensure there is only one active controller manager")
+	rootCmd.PersistentFlags().String(LeaderElectResName, "bfa62c96.dbaas.bedag.ch", "The resource name to lock during election cycles")
+	rootCmd.PersistentFlags().Int(WebhookPortKey, 9443, "The port the webhook server binds to")
+
+	// Bind all flags to Viper
+	rootCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
+		_ = viper.BindPFlag(flag.Name, flag)
+	})
+}
+
+// initConfig reads in the Operator's configuration.
+func initConfigFile() {
+	if cfgFile := viper.GetString(LoadConfigKey); cfgFile != "" {
+		// Use config file set from the flag.
+		viper.SetConfigFile(viper.GetString("load-config"))
+	} else {
+		viper.SetConfigType("yaml")
+		viper.AddConfigPath("/etc/kubedbaas")
+		viper.AddConfigPath(".")
+		viper.SetConfigName("config")
+	}
+
+	// If a config file is found, read it in.
+	if err := viper.ReadInConfig(); err != nil {
+		// A config file must be specified.
+		_, _ = fmt.Fprintf(os.Stderr, "error reading config file (%s): %s\n", viper.ConfigFileUsed(), err)
 		os.Exit(1)
+	}
+
+	_, _ = fmt.Fprintln(os.Stdout, "config file loaded:", viper.ConfigFileUsed())
+}
+
+// initLogger initializes the Operator's logger.
+func initLogger() {
+	// Distinguish between 'debug' and 'production' setting.
+	if viper.GetBool(DebugKey) {
+		fmt.Println("setting up logger in debug mode...")
+		ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	} else {
+		fmt.Println("setting up logger in production mode...")
+		ctrl.SetLogger(zap.New())
 	}
 }
 
-// StartOperator starts the operator by creating a new manager which in turn starts the operator controller.
-func StartOperator() {
-	// +kubebuilder:scaffold:builder
+// loadOperator registers all the Manager's controllers, webhooks and starts them.
+func loadOperator() {
 
-	var metricsAddr string
-	var enableLeaderElection bool
-
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: metricsAddr,
-		Port:               9443,
-		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "bfa62c96.bedag.ch",
-	})
-
-	if err != nil {
-		fatalError(err, "unable to create manager")
+	// Load the Operator configuration
+	// Set CLI flags given by user or set by default
+	var err error
+	ctrlConfig := operatorconfigv1.OperatorConfig{}
+	options := ctrl.Options{
+		Scheme:                 scheme,
+		MetricsBindAddress:     viper.GetString(MetricsBindAddressKey),
+		Port:                   viper.GetInt(WebhookPortKey),
+		HealthProbeBindAddress: viper.GetString(HealthProbeBindAddressKey),
+		LeaderElection:         viper.GetBool(LeaderElectEnableKey),
+		LeaderElectionID:       viper.GetString(LeaderElectResName),
 	}
 
+	// Build and pass the configuration file to the controller.
+	if cfgFile := viper.GetString(LoadConfigKey); cfgFile != "" {
+		options, err = options.AndFrom(ctrl.ConfigFile().AtPath(cfgFile).OfKind(&ctrlConfig))
+
+		if err != nil {
+			fatalError(err, "unable to load the config file into the controller")
+		}
+	}
+
+	// TODO: Check status of https://github.com/kubernetes-sigs/controller-runtime/issues/1463
+	options.LeaderElection = viper.GetBool(LeaderElectEnableKey)
+
+	// Initialize manager
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
+	if err != nil {
+		fatalError(err, "unable to initialize manager")
+	}
+
+	// Setup controllers
 	if err = (&controllers.DatabaseReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Database"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		fatalErrorWithValues(err, "unable to create controller", "controller", "Database")
+		fatalError(err, "unable to create controller", "controller", "Database")
 	}
 
-	setupLog.Info("starting controller")
+	// Setup webhooks
+	if viper.GetBool(WebhookEnableKey) {
+		if err = (&databasev1.Database{}).SetupWebhookWithManager(mgr); err != nil {
+			fatalError(err, "unable to create webhook", "webhook", "Database")
+		}
+	}
+
+	//+kubebuilder:scaffold:builder
+
+	// Setup probes
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		fatalError(err, "unable to set up health check")
+	}
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		fatalError(err, "unable to set up ready check")
+	}
+
+	// Finally start controllers and webhooks
+	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		fatalError(err, "problem running manager")
-	}
-}
-
-// LoadConfig attempts to load the operator configuration.
-//
-// See config.ReadOperatorConfig for details.
-func LoadConfig() {
-	// If CLI flag was set
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-		setupLog.Info("setting config file location from CLI flag: " + cfgFile)
-	} else {
-		viper.SetConfigType(DefaultConfigType)
-		viper.SetConfigName(DefaultConfigFilename)
-		viper.AddConfigPath(".") // search for config file in the same location as the executable file
-		viper.AddConfigPath(DefaultConfigFilepath)
-	}
-
-	if err := viper.ReadInConfig(); err != nil {
-		fatalError(err, ConfigLoadError)
-	}
-
-	// Parse config file
-	err := config.ReadOperatorConfig(viper.GetViper())
-	if err != nil {
-		fatalError(err, ConfigParseError)
 	}
 }
 
 // RegisterEndpoints attempts to register the endpoints specified in the operator configuration loaded from LoadConfig.
 //
 // See pool.Register for details.
-func RegisterEndpoints() {
+func registerEndpoints() {
 	c, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
 	if err != nil {
 		setupLog.Error(err, "unable to create client instance")
+		os.Exit(1)
 	}
 
-	for _, dbmsConfigEntry := range config.GetDbmsConfig() {
-		dbClass := dbclassv1.DatabaseClass{}
-		err = c.Get(context.Background(), client.ObjectKey{Namespace: "default", Name: dbmsConfigEntry.DatabaseClassName}, &dbClass)
+	dbmsList, err := config.GetDbmsList()
+	if err != nil {
+		fatalError(err, "unable to retrieve dbms configuration")
+	}
+	for _, dbmsConfigEntry := range dbmsList {
+		dbClass := databaseclassv1.DatabaseClass{}
+		err = c.Get(context.Background(), client.ObjectKey{Namespace: "", Name: dbmsConfigEntry.DatabaseClassName}, &dbClass)
 		if err != nil {
-			fatalError(err, DbmsClassError)
+			fatalError(err, "problem getting databaseclass from api server", "databaseClassName",
+				dbmsConfigEntry.DatabaseClassName)
 		}
 
 		if err := pool.Register(dbmsConfigEntry, dbClass); err != nil {
-			fatalError(err, DbmsConnOpenError)
+			fatalError(err, "problem registering dbms endpoint", "databaseClassName", dbClass.Name)
 		}
 	}
 }
 
-func init() {
-	rootCmd.Flags().StringVar(&cfgFile, "load-config", "", "Loads the config file from path")
-
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(dbv1.AddToScheme(scheme))
-	utilruntime.Must(dbclassv1.AddToScheme(scheme))
-	// +kubebuilder:scaffold:scheme
-
-	// TODO: Metrics
-	//rootCmd.Flags().StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	//_ = viper.BindPFlag("port", rootCmd.Flags().Lookup("metrics-addr"))
-}
-
-func fatalError(err error, msg string) {
-	setupLog.Error(err, msg)
-	os.Exit(1)
-}
-
-func fatalErrorWithValues(err error, msg string, values ...string) {
-	setupLog.Error(err, msg, values)
+func fatalError(err error, msg string, values ...interface{}) {
+	setupLog.Error(err, msg, values...)
 	os.Exit(1)
 }

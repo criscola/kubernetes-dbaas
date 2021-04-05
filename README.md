@@ -1,4 +1,8 @@
 # Kubernetes DbaaS
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+![Bedag](https://www.bedag.ch/wGlobal/wGlobal/layout/images/logo.svg)
+
 *A Kubernetes Database as a Service (DBaaS) Operator for non-Kubernetes managed database management systems.*
 
 ## Abstract
@@ -14,7 +18,7 @@ There are many cases where a company can't or doesn't want to host their preciou
 ## Main technologies
 
 - Go 1.15 or newer
-- operator-sdk v1.3.x 
+- operator-sdk v1.5.x 
 - Kubernetes v1.19.0 or newer
 - Helm v3
 
@@ -27,16 +31,6 @@ There are many cases where a company can't or doesn't want to host their preciou
 ### Delete database
 
 ![k8s_dbaas_bedag_delete](docs/resources/k8s_dbaas_bedag_delete.png)
-
-### To-do
-
-- Implement additional DBMS drivers (see supported DBMS)
-- Test the controller with [KUTTL](https://github.com/kudobuilder/kuttl)
-- Tests refactoring
-- Extend the Helm chart for a larger number of use cases
-- Support db connections encryption
-- Scalable controller
-- Metrics
 
 ## Manuals
 
@@ -66,20 +60,52 @@ To try out the Operator on your local development machine, follow these steps:
 2. Install kubectl v1.19+ https://kubernetes.io/docs/tasks/tools/install-kubectl/
 3. Install minikube v1.16+ https://minikube.sigs.k8s.io/docs/start/
 4. Install the operator-sdk and its prerequisites: https://sdk.operatorframework.io/docs/installation/
-5. Rename `config.example.yaml` to `config.yaml`
 5. Configure the Operator by following the [System administrator guide](docs/sysadmin_guide.md)
-6. `chmod +x start.sh`
-7. `./start.sh`
-8. Create and delete a custom resource by following the [End-user guide](docs/enduser_guide.md)
+6. Install the CRDs
+   
+`make install`
+7. Install an example DatabaseClass
+   
+`kubectl apply -f testdata/dbclass.yaml`. 
+8. Run the Operator in local development mode 
+   
+`make run ARGS="--load-config=config/manager/controller_manager_config.yaml --enable-webhooks=false --leaderElection.leaderElect=false --debug=true"`
 
-You can also use the supplied Dockerfile to compile your own Docker image. 
+9. Create and delete a Database resource by following the [End-user guide](docs/enduser_guide.md)
 
 For more information about the operator-sdk and the enclosed Makefile, consult: https://sdk.operatorframework.io/docs/building-operators/golang/tutorial/
 
+### Helm deployment
+Make sure to have certmanager deployed in your target cluster.
+```
+helm install charts/kubernetes-dbaas --generate-name --create-namespace --namespace=kubernetes-dbaas-system
+```
+
+### Other deployment options
+Make sure to have certmanager deployed in your local cluster.
+
+You may deploy the Operator in a local cluster by running the following:
+
+```
+docker build -t yourrepo/imagename . && docker push yourrepo/imagename
+make deploy IMG=yourrepo/imagename
+```
+
+
 ## CLI arguments
-| CLI argument             | Description                                                  |
-| ------------------------ | ------------------------------------------------------------ |
-| `--load-config <string>` | Specifies the exact location of the configuration file, e.g. `"--load-config /my/path/to/config.yaml"` |
+|                                          	    | Description                                                                                                                          	|
+|---------------------------------------------- |--------------------------------------------------------------------------------------------------------------------------------------	|
+| `--debug`                                  	| Enables debug mode for development purposes                                                                                          	|
+| `--enable-webhooks`                        	| Enables webhooks servers (default true)                                                                                               	|
+| `--health.healthProbeBindAddress <string>` 	| The address the probe endpoint binds to (default ":8081")                                                                            	|
+| `-h`, `--help`                               	| help for kubedbaas                                                                                                                   	|
+| `--leaderElection.leaderElect`             	| Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager  (default true) 	|
+| `--leaderElection.resourceName <string>`   	| The resource name to lock during election cycles (default "bfa62c96.dbaas.bedag.ch")                                                 	|
+| `--load-config <string>`                   	| Location of the Operator's config file                                                                                               	|
+| `--metrics.bindAddress <string>`           	| The address the metric endpoint binds to (default "127.0.0.1:8080")                                                                  	|
+| `--webhook.port int`                       	| The port the webhook server binds to (default 9443)                                                                                  	|
+
+The order of precedence is `flags > config file > defaults`. Environment variables are not read.
 
 ## Known problems
 - Given that all errors are written in the resources' `LastError` status field, some things that should stay hidden, might leak to unauthorized personnel. There should be a way to hide the details from the End-users, while still logging them.

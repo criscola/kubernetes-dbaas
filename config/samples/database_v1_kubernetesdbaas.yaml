@@ -1,7 +1,0 @@
-apiVersion: dbaas.bedag.ch/v1
-kind: Database
-metadata:
-  name: database-sample
-spec:
-  # Add fields here
-  foo: bar
