@@ -18,7 +18,6 @@ package cmd
 import (
 	"context"
 	"github.com/bedag/kubernetes-dbaas/pkg/config"
-
 	//"context"
 	"fmt"
 	operatorconfigv1 "github.com/bedag/kubernetes-dbaas/apis/config/v1"
@@ -153,7 +152,6 @@ func initLogger() {
 
 // loadOperator registers all the Manager's controllers, webhooks and starts them.
 func loadOperator() {
-
 	// Load the Operator configuration
 	// Set CLI flags given by user or set by default
 	var err error
@@ -190,6 +188,7 @@ func loadOperator() {
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Database"),
 		Scheme: mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor(controllers.DatabaseControllerName),
 	}).SetupWithManager(mgr); err != nil {
 		fatalError(err, "unable to create controller", "controller", "Database")
 	}

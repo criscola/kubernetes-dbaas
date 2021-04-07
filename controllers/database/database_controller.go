@@ -23,10 +23,12 @@ import (
 	"github.com/bedag/kubernetes-dbaas/pkg/config"
 	"github.com/bedag/kubernetes-dbaas/pkg/database"
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
+	. "github.com/bedag/kubernetes-dbaas/pkg/typeutil"
 	corev1 "k8s.io/api/core/v1"
-	meta "k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"time"
@@ -46,11 +48,12 @@ type DatabaseReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
+	EventRecorder record.EventRecorder
 }
 
 const (
-	dbaasResourceFinalizer = "finalizer.database.bedag.ch"
-	DateTimeLayout         = time.UnixDate
+	DatabaseControllerName = "database-controller"
+	databaseFinalizer      = "finalizer.database.bedag.ch"
 )
 
 var logger logr.Logger
@@ -64,6 +67,7 @@ var logger logr.Logger
 // SetupWithManager creates the controller responsible for Database resources by means of a ctrl.Manager.
 func (r *DatabaseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		Named(DatabaseControllerName).
 		For(&databasev1.Database{}).
 		Owns(&corev1.Secret{}).
 		Complete(r)
@@ -73,186 +77,167 @@ func (r *DatabaseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // move the current state of the cluster closer to the desired state.
 func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger = r.Log.V(0).WithValues("database", req.NamespacedName)
-	logger.Info("reconcile called")
+	logger.Info("Reconcile called")
 
-	dbaasResource := &databasev1.Database{}
-	err := r.Get(ctx, req.NamespacedName, dbaasResource)
+	obj := &databasev1.Database{}
+	err := r.Get(ctx, req.NamespacedName, obj)
 
 	if err != nil {
 		if k8sError.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			logger.Info("database resource not found. Ignoring since object must be deleted")
+			logger.Info(MessageDatabaseNotFound)
 			// Not managed through ManageSuccess as the resource has been deleted and it will create problems if
 			// the controller tries to manipulate its status
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		logger.Error(err, "failed to get database resource")
-		return r.ManageError(dbaasResource, err)
+		r.EventRecorder.Event(obj, Warning, ReasonDatabaseGetFailed, MessageDatabaseGetFailed)
+		logger.Error(err, ReasonDatabaseGetFailed)
+		meta.SetStatusCondition(&obj.Status.Conditions, metav1.Condition{
+			Type:    TypeReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  ReasonDatabaseGetFailed,
+			Message: MessageDatabaseDeleteFailed,
+		})
+		return reconcile.Result{}, err
 	}
 
-	// Check if the Database instance is marked to be deleted, which is
-	// indicated by the deletion timestamp being set.
-	if dbaasResource.GetDeletionTimestamp() != nil {
-		if contains(dbaasResource.GetFinalizers(), dbaasResourceFinalizer) {
-			// Run finalization logic for DatabaseFinalizer. If the
-			// finalization logic fails, don't remove the finalizer so
-			// that we can retry during the next reconciliation.
-			logger.Info("finalizing database resource")
-			if err := r.finalizeDbaasResource(dbaasResource); err != nil {
-				logger.Error(err, "failed to get database resource")
-				return r.ManageError(dbaasResource, err)
-			}
-
-			// Remove databaseFinalizer. Once all finalizers have been
-			// removed, the object will be deleted.
-			logger.Info("removing finalizer")
-			controllerutil.RemoveFinalizer(dbaasResource, dbaasResourceFinalizer)
-			if err := r.Update(ctx, dbaasResource); err != nil {
-				logger.Error(err, "error updating resource after removing finalizer")
-				return r.ManageError(dbaasResource, err)
-			}
-		}
-		logger.Info("resource finalized with success")
-		return r.ManageSuccess(dbaasResource)
-	}
-
-	// Add finalizer for this CR
-	if !contains(dbaasResource.GetFinalizers(), dbaasResourceFinalizer) {
-		logger.Info("adding finalizer")
-		if err := r.addFinalizer(dbaasResource); err != nil {
-			logger.Error(err, "error adding finalizer")
-			return r.ManageError(dbaasResource, err)
-		}
-	}
-
-	// Create.
-	logger.Info("calling create operation")
-	if err = r.createDb(dbaasResource); err != nil {
-		logger.Error(err, "failed to create resource")
-		return r.ManageError(dbaasResource, err)
-	}
-
-	logger.Info("reached end of reconcile")
-	return r.ManageSuccess(dbaasResource)
-}
-
-// ManageSuccess manages a successful reconciliation.
-func (r *DatabaseReconciler) ManageSuccess(obj *databasev1.Database) (reconcile.Result, error) {
-	// If the object is nil,
-	if obj == nil {
-		logger.Info("ManageSuccess called on nil resource, ignoring")
-		return reconcile.Result{}, nil
-	}
-
-	// If the object is marked unrecoverable, ignore
-	if obj.Status.Unrecoverable {
-		return reconcile.Result{}, nil
-	}
-
-	obj.Status.LastError = ""
-	obj.Status.LastUpdate = metav1.Now().Format(DateTimeLayout)
-	obj.Status.LastErrorUpdateCount = 0
-
-	err := r.Status().Update(context.Background(), obj)
-	if err != nil {
-		// TODO: Implement conditions pre-update checks
-		if k8sError.IsConflict(err) {
-			return reconcile.Result{}, nil
-		}
-		return r.ManageError(obj, err)
-	}
-	return reconcile.Result{}, nil
-}
-
-// ManageSuccess manages a failed reconciliation.
-func (r *DatabaseReconciler) ManageError(obj *databasev1.Database, issue error) (reconcile.Result, error) {
-	if issue == nil || obj == nil {
-		return r.ManageSuccess(obj)
-	}
-
-	// If error is unrecoverable, ignore
-	if obj.Status.Unrecoverable {
-		return reconcile.Result{}, nil
-	}
-
-	// If 3 seconds haven't passed since last requeue, don't do anything
-	t, _ := time.Parse(DateTimeLayout, obj.Status.LastUpdate)
-	timeSinceLastRequeue := time.Now().Sub(t)
-	if timeSinceLastRequeue <= 3*time.Second {
-		return reconcile.Result{}, nil
-	}
-
-	// Set/Update error fields
+	// Set reason to unknown to indicate the resource was correctly received by a controller but no action was resolved yet
 	meta.SetStatusCondition(&obj.Status.Conditions, metav1.Condition{
-		Type:               "",
-		Status:             "",
-		ObservedGeneration: 0,
-		LastTransitionTime: metav1.Time{},
+		Type:               TypeReady,
+		Status:             metav1.ConditionUnknown,
 		Reason:             "",
 		Message:            "",
 	})
 
-	obj.Status.LastError = issue.Error()
-	obj.Status.LastUpdate = metav1.Now().Format(DateTimeLayout)
-	obj.Status.LastErrorUpdateCount++
+	// Check if the Database instance is marked to be deleted, which is
+	// indicated by the deletion timestamp being set.
+	if obj.GetDeletionTimestamp() != nil {
+		if contains(obj.GetFinalizers(), databaseFinalizer) {
+			// Run finalization logic for DatabaseFinalizer. If the
+			// finalization logic fails, don't remove the finalizer so
+			// that we can retry during the next reconciliation.
+			logger.Info("Finalizing database resource")
+			if err := r.finalizeDbaasResource(obj); err != nil {
+				r.EventRecorder.Event(obj, Warning, ReasonDatabaseUpdateFailed, MessageDatabaseUpdateFailed)
+				meta.SetStatusCondition(&obj.Status.Conditions, metav1.Condition{
+					Type:               TypeReady,
+					Status:             metav1.ConditionFalse,
+					Reason:             ReasonDatabaseUpdateFailed,
+					Message:            MessageDatabaseUpdateFailed,
+				})
+				logger.Info("Resource finalized with success")
+				logger.Error(err, "Failed to finalize database resource")
+				return reconcile.Result{}, err
+			}
 
-	if err := r.Status().Update(context.Background(), obj); err != nil {
+			// Remove databaseFinalizer. Once all finalizers have been
+			// removed, the object will be deleted.
+			logger.Info("Removing finalizer")
+			controllerutil.RemoveFinalizer(obj, databaseFinalizer)
+			if err := r.Update(ctx, obj); err != nil {
+				logger.Error(err, MessageDatabaseUpdateFailed)
+				r.EventRecorder.Event(obj, Warning, ReasonDatabaseUpdateFailed, MessageDatabaseUpdateFailed)
+				meta.SetStatusCondition(&obj.Status.Conditions, metav1.Condition{
+					Type:               TypeReady,
+					Status:             metav1.ConditionFalse,
+					Reason:             ReasonDatabaseUpdateFailed,
+					Message:            MessageDatabaseUpdateFailed,
+				})
+				return reconcile.Result{}, err
+			}
+		}
+		return reconcile.Result{}, nil
+	}
+
+	// Create
+	logger.Info("Calling create operation")
+	if err = r.createDb(obj); err != nil {
+		logger.Error(err, MessageDatabaseCreateFailed)
 		return reconcile.Result{}, err
 	}
 
-	if obj.Status.LastErrorUpdateCount < 14 {
-		return reconcile.Result{RequeueAfter: 3 * time.Second}, nil
+	// If finalizer is not present, add finalizer to resource
+	if !contains(obj.GetFinalizers(), databaseFinalizer) {
+		logger.Info("Adding finalizer")
+		if err := r.addFinalizer(obj); err != nil {
+			logger.Error(err, "Error adding finalizer")
+			return reconcile.Result{}, err
+		}
 	}
 
-	// The controller couldn't fix the problem itself
-	obj.Status.Unrecoverable = true
-	logger.Error(issue, "resource is in unrecoverable state")
-	if err := r.Status().Update(context.Background(), obj); err != nil {
-		return reconcile.Result{}, err
-	}
+	meta.SetStatusCondition(&obj.Status.Conditions, metav1.Condition{
+		Type:    TypeReady,
+		Status:  metav1.ConditionTrue,
+		Reason:  ReasonCreate,
+		Message: MessageCreateSuccess,
+	})
+
+	logger.Info("Reached end of reconcile")
 	return reconcile.Result{}, nil
 }
 
 // finalizeDbaasResource cleans up resources not owned by dbaasResource.
-func (r *DatabaseReconciler) finalizeDbaasResource(dbaasResource *databasev1.Database) error {
-	err := r.deleteDb(dbaasResource)
+func (r *DatabaseReconciler) finalizeDbaasResource(obj *databasev1.Database) error {
+	err := r.deleteDb(obj)
 	if err != nil {
 		return err
 	}
-	logger.Info("successfully finalized database resource")
+	logger.Info("Successfully finalized database resource")
 	return nil
 }
 
 // addFinalizer adds a finalizer to a Database resource.
-func (r *DatabaseReconciler) addFinalizer(dbaasResource *databasev1.Database) error {
-	logger.Info("adding finalizer to the database resource")
-	controllerutil.AddFinalizer(dbaasResource, dbaasResourceFinalizer)
+func (r *DatabaseReconciler) addFinalizer(obj *databasev1.Database) error {
+	logger.Info("Adding finalizer to the database resource")
+	controllerutil.AddFinalizer(obj, databaseFinalizer)
 
 	// Update CR
-	err := r.Update(context.Background(), dbaasResource)
+	err := r.Update(context.Background(), obj)
 	if err != nil {
-		logger.Error(err, "failed to update database resource with finalizer")
+		r.EventRecorder.Event(obj, Warning, ReasonDatabaseUpdateFailed, MessageDatabaseUpdateFailed)
+		logger.Error(err, "Failed to update database resource with finalizer")
+		meta.SetStatusCondition(&obj.Status.Conditions, metav1.Condition{
+			Type:    TypeReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  ReasonDatabaseUpdateFailed,
+			Message: MessageDatabaseUpdateFailed,
+		})
 		return err
 	}
 	return nil
 }
 
-// createDb creates a new database instance on the external provisioner based on the dbaasResource data.
-func (r *DatabaseReconciler) createDb(dbaasResource *databasev1.Database) error {
-	logger.Info("creating database instance")
+// createDb creates a new database instance on the external provisioner based on the Database data.
+func (r *DatabaseReconciler) createDb(obj *databasev1.Database) error {
+	logger.Info(MessageDatabaseCreateInProgress)
+	r.EventRecorder.Event(obj, Normal, ReasonDatabaseCreateInProgress, MessageDatabaseCreateInProgress)
 
+	// TODO: refactor separate method
 	// Get DatabaseClass resource
 	dbmsList, err := config.GetDbmsList()
 	if err != nil {
-		return fmt.Errorf("could not retrieve dbms list from operator config: %s", err)
+		r.EventRecorder.Event(obj, Warning, ReasonDbmsConfigReadFailed, MessageDbmsConfigReadFailed)
+		meta.SetStatusCondition(&obj.Status.Conditions, metav1.Condition{
+			Type:               TypeReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             ReasonDbmsConfigReadFailed,
+			Message:            MessageDbmsConfigReadFailed,
+		})
+		return fmt.Errorf("%s: %s", MessageDbmsConfigReadFailed, err)
 	}
 
-	dbClassName, err := dbmsList.GetDatabaseClassNameByEndpointName(dbaasResource.Spec.Endpoint)
+	dbClassName, err := dbmsList.GetDatabaseClassNameByEndpointName(obj.Spec.Endpoint)
 	if err != nil {
-		return fmt.Errorf("could not retrieve databaseclass name from dbms config: %s", err)
+		meta.SetStatusCondition(&obj.Status.Conditions, metav1.Condition{
+			Type:               TypeReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             ReasonDatabaseClassGetFailed,
+			Message:            MessageDatabaseClassGetFailed,
+		})
+		return fmt.Errorf("%s: %s", MessageDatabaseClassGetFailed, err)
 	}
 	dbClass := databaseclassv1.DatabaseClass{}
 	err = r.Client.Get(context.Background(), client.ObjectKey{Namespace: "", Name: dbClassName}, &dbClass)
@@ -266,7 +251,7 @@ func (r *DatabaseReconciler) createDb(dbaasResource *databasev1.Database) error 
 	}
 
 	// Render operation
-	opValues, err := newOpValuesFromResource(dbaasResource)
+	opValues, err := newOpValuesFromResource(obj)
 	if err != nil {
 		return fmt.Errorf("could not get generate operation values from resource: %s", err)
 	}
@@ -276,7 +261,7 @@ func (r *DatabaseReconciler) createDb(dbaasResource *databasev1.Database) error 
 		return fmt.Errorf("could not render create operation values: %s", err)
 	}
 
-	conn, err := pool.GetConnByEndpointName(dbaasResource.Spec.Endpoint)
+	conn, err := pool.GetConnByEndpointName(obj.Spec.Endpoint)
 	if err != nil {
 		return fmt.Errorf("could not get endpoint from pool: %s", err)
 	}
@@ -287,7 +272,7 @@ func (r *DatabaseReconciler) createDb(dbaasResource *databasev1.Database) error 
 	}
 
 	// Create Secret
-	err = r.createSecret(dbaasResource, dbClass.Spec.Driver, output)
+	err = r.createSecret(obj, dbClass.Spec.Driver, output)
 	if err != nil {
 		return fmt.Errorf("could not create secret: %s", err)
 	}
@@ -296,16 +281,17 @@ func (r *DatabaseReconciler) createDb(dbaasResource *databasev1.Database) error 
 }
 
 // deleteDb deletes the database instance on the external provisioner based on the dbaasResource data.
-func (r *DatabaseReconciler) deleteDb(dbaasResource *databasev1.Database) error {
+func (r *DatabaseReconciler) deleteDb(obj *databasev1.Database) error {
 	logger.Info("deleting database instance")
 
+	// TODO: refactor separate method
 	// Get DatabaseClass resource
 	dbmsList, err := config.GetDbmsList()
 	if err != nil {
 		return fmt.Errorf("could not retrieve dbms list from operator config: %s", err)
 	}
 
-	dbClassName, err := dbmsList.GetDatabaseClassNameByEndpointName(dbaasResource.Spec.Endpoint)
+	dbClassName, err := dbmsList.GetDatabaseClassNameByEndpointName(obj.Spec.Endpoint)
 	if err != nil {
 		return fmt.Errorf("could not retrieve databaseclass name from dbms config: %s", err)
 	}
@@ -321,7 +307,7 @@ func (r *DatabaseReconciler) deleteDb(dbaasResource *databasev1.Database) error 
 	}
 
 	// Render operation
-	opValues, err := newOpValuesFromResource(dbaasResource)
+	opValues, err := newOpValuesFromResource(obj)
 	if err != nil {
 		return fmt.Errorf("could not get generate operation values from resource: %s", err)
 	}
@@ -331,7 +317,7 @@ func (r *DatabaseReconciler) deleteDb(dbaasResource *databasev1.Database) error 
 		return fmt.Errorf("could not render delete operation values: %s", err)
 	}
 
-	conn, err := pool.GetConnByEndpointName(dbaasResource.Spec.Endpoint)
+	conn, err := pool.GetConnByEndpointName(obj.Spec.Endpoint)
 	if err != nil {
 		return fmt.Errorf("could not get endpoint from pool: %s", err)
 	}
@@ -390,15 +376,15 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, driver str
 }
 
 // newOpValuesFromResource constructs a database.OpValues struct starting from a Database resource.
-func newOpValuesFromResource(resource *databasev1.Database) (database.OpValues, error) {
-	metaIn := resource.ObjectMeta
+func newOpValuesFromResource(obj *databasev1.Database) (database.OpValues, error) {
+	metaIn := obj.ObjectMeta
 	var metadata map[string]interface{}
 	temp, _ := json.Marshal(metaIn)
 	err := json.Unmarshal(temp, &metadata)
 	if err != nil {
 		return database.OpValues{}, err
 	}
-	specIn := resource.Spec.Params
+	specIn := obj.Spec.Params
 	var spec map[string]string
 	temp, err = json.Marshal(specIn)
 	err = json.Unmarshal(temp, &spec)
