@@ -116,7 +116,6 @@ make deploy IMG=yourrepo/imagename
 The order of precedence is `flags > config file > defaults`. Environment variables are not read.
 
 ## Known problems
-- Given that all errors are written in the resources' `LastError` status field, some things that should stay hidden, might leak to unauthorized personnel. There should be a way to hide the details from the End-users, while still logging them.
 
 ## Code reference
 
