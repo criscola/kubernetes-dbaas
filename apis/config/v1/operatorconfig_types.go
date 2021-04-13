@@ -24,7 +24,6 @@ import (
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-
 // OperatorConfig is the Schema for the operatorconfigs API
 type OperatorConfig struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -40,7 +39,6 @@ type OperatorConfig struct {
 }
 
 // +kubebuilder:object:root=true
-
 func (c OperatorConfig) Complete() (cfg.ControllerManagerConfigurationSpec, error) {
 	return c.ControllerManagerConfigurationSpec, nil
 }

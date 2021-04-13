@@ -46,7 +46,7 @@ type DatabaseStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-
+// +kubebuilder:resource:shortName=db
 // Database is the Schema for the database API
 type Database struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -56,8 +56,8 @@ type Database struct {
 	Status DatabaseStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
 
+// +kubebuilder:object:root=true
 // DatabaseList contains a list of Database
 type DatabaseList struct {
 	metav1.TypeMeta `json:",inline"`

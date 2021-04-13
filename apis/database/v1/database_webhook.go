@@ -28,7 +28,7 @@ import (
 )
 
 // log is for logging in this package.
-var databaselog = logf.Log.WithName("database-resource")
+var databaselog = logf.Log.WithName("database-resource-webhook")
 
 func (r *Database) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -42,7 +42,7 @@ var _ webhook.Defaulter = &Database{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *Database) Default() {
-	databaselog.Info("default", "name", r.Name)
+	//databaselog.Info("default", "name", r.Name)
 
 	// TODO(user): fill in with defaulting logic
 }
