@@ -63,6 +63,7 @@ var logger logr.Logger
 // +kubebuilder:rbac:groups=database.dbaas.bedag.ch,resources=databases,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=database.dbaas.bedag.ch,resources=databases/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=database.dbaas.bedag.ch,resources=databases/finalizers,verbs=update
+// +kubebuilder:rbac:groups=database.dbaas.bedag.ch,resources=databases/events,verbs=update
 // +kubebuilder:rbac:groups=databaseclass.dbaas.bedag.ch,resources=databaseclasses,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=list;watch;create;update;delete
 
@@ -192,44 +193,48 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) error {
 	// Get DatabaseClass resource from api server
 	dbClassName, err := dbmsList.GetDatabaseClassNameByEndpointName(obj.Spec.Endpoint)
 	if err != nil {
-		return r.defaultErrHandling(obj, err, RsnDbcConfigGetFail, fmt.Sprintf(MsgDbcConfigGetFail, dbClassName))
+		return r.defaultErrHandling(obj, err, RsnDbcConfigGetFail, MsgDbcConfigGetFail,
+			DatabaseClass, dbClassName, EndpointName, obj.Spec.Endpoint)
+
 	}
+	// Add some logging values
+	loggingKv := stringSliceToInterfaceSlice([]string{DatabaseClass, dbClassName, database.OperationsConfigKey, database.CreateMapKey})
+
 	dbClass := databaseclassv1.DatabaseClass{}
 	err = r.Client.Get(context.Background(), client.ObjectKey{Namespace: "", Name: dbClassName}, &dbClass)
 	if err != nil {
-		return r.defaultErrHandling(obj, err, RsnDbcGetFail, MsgDbcConfigGetFail)
-	}
-
-	createOpTemplate, exists := dbClass.Spec.Operations[database.CreateMapKey]
-	if !exists {
-		return fmt.Errorf("could not find operation %s in databaseclass %s", database.CreateMapKey, dbClassName)
+		return r.defaultErrHandling(obj, err, RsnDbcGetFail, MsgDbcGetFail, loggingKv...)
 	}
 
 	// Render operation
+	createOpTemplate, exists := dbClass.Spec.Operations[database.CreateMapKey]
+	if !exists {
+		return r.defaultErrHandling(obj, nil, RsnOpNotSupported, MsgOpNotSupported, loggingKv...)
+	}
 	opValues, err := newOpValuesFromResource(obj)
 	if err != nil {
-		return fmt.Errorf("could not get generate operation values from resource: %s", err)
+		return r.defaultErrHandling(obj, nil, RsnOpValuesCreateFail, MsgOpValuesCreateFail, loggingKv...)
 	}
-
 	createOp, err := createOpTemplate.RenderOperation(opValues)
 	if err != nil {
-		return fmt.Errorf("could not render create operation values: %s", err)
+		return r.defaultErrHandling(obj, nil, RsnOpRenderFail, MsgOpRenderFail, loggingKv...)
 	}
 
+	// Execute operation on DBMS
+	loggingKv = append(loggingKv, EndpointName, obj.Spec.Endpoint)
 	conn, err := pool.GetConnByEndpointName(obj.Spec.Endpoint)
 	if err != nil {
-		return fmt.Errorf("could not get endpoint from pool: %s", err)
+		return r.defaultErrHandling(obj, err, RsnDbmsEndpointConnFail, MsgDbmsEndpointConnFail, loggingKv...)
 	}
-
 	output := conn.CreateDb(createOp)
 	if output.Err != nil {
-		return fmt.Errorf("could not create database: %s", output.Err)
+		return r.defaultErrHandling(obj, err, RsnDbCreateFail, MsgDbCreateFail, loggingKv...)
 	}
 
 	// Create Secret
 	err = r.createSecret(obj, dbClass.Spec.Driver, output)
 	if err != nil {
-		return fmt.Errorf("could not create secret: %s", err)
+		return  r.defaultErrHandling(obj, err, RsnSecretCreateFail, MsgSecretCreateFail, loggingKv...)
 	}
 
 	return nil
@@ -251,38 +256,38 @@ func (r *DatabaseReconciler) deleteDb(obj *databasev1.Database) error {
 		return r.defaultErrHandling(obj, err, RsnDbcConfigGetFail, MsgDbcConfigGetFail,
 			DatabaseClass, dbClassName, EndpointName, obj.Spec.Endpoint)
 	}
+	// Add some logging values
+	loggingKv := stringSliceToInterfaceSlice([]string{DatabaseClass, dbClassName, database.OperationsConfigKey, database.DeleteMapKey})
+
 	dbClass := databaseclassv1.DatabaseClass{}
 	err = r.Client.Get(context.Background(), client.ObjectKey{Namespace: "", Name: dbClassName}, &dbClass)
 	if err != nil {
-		return r.defaultErrHandling(obj, err, RsnDbcGetFail, MsgDbcGetFail, DatabaseClass, dbClassName)
-	}
-
-	deleteOpTemplate, exists := dbClass.Spec.Operations[database.DeleteMapKey]
-	if !exists {
-		return r.defaultErrHandling(obj, nil, RsnOperationNotSupported, MsgOperationNotSupported,
-			DatabaseClass, dbClassName,
-			database.OperationsConfigKey, database.DeleteMapKey)
+		return r.defaultErrHandling(obj, err, RsnDbcGetFail, MsgDbcGetFail, loggingKv...)
 	}
 
 	// Render operation
+	deleteOpTemplate, exists := dbClass.Spec.Operations[database.DeleteMapKey]
+	if !exists {
+		return r.defaultErrHandling(obj, nil, RsnOpNotSupported, MsgOpNotSupported, loggingKv...)
+	}
 	opValues, err := newOpValuesFromResource(obj)
 	if err != nil {
-		return fmt.Errorf("could not get generate operation values from resource: %s", err)
+		return r.defaultErrHandling(obj, err, RsnOpValuesCreateFail, MsgOpValuesCreateFail, loggingKv...)
 	}
-
 	deleteOp, err := deleteOpTemplate.RenderOperation(opValues)
 	if err != nil {
-		return fmt.Errorf("could not render delete operation values: %s", err)
+		return r.defaultErrHandling(obj, err, RsnOpRenderFail, MsgOpRenderFail, loggingKv...)
 	}
 
+	// Execute operation on DBMS
+	loggingKv = append(loggingKv, EndpointName, obj.Spec.Endpoint)
 	conn, err := pool.GetConnByEndpointName(obj.Spec.Endpoint)
 	if err != nil {
-		return fmt.Errorf("could not get endpoint from pool: %s", err)
+		return r.defaultErrHandling(obj, err, RsnDbmsEndpointConnFail, MsgDbmsEndpointConnFail, loggingKv...)
 	}
-
 	output := conn.DeleteDb(deleteOp)
 	if output.Err != nil {
-		return fmt.Errorf("could not delete database: %s", output.Err)
+		return r.defaultErrHandling(obj, err, RsnDbDeleteFail, MsgDbDeleteFail, loggingKv...)
 	}
 
 	return nil
@@ -290,7 +295,7 @@ func (r *DatabaseReconciler) deleteDb(obj *databasev1.Database) error {
 
 // defaultErrHandling sets the obj Conditions type Ready to false and sets the relative fields error and message,
 // it records a Warning event with reason and message for the given obj and
-// logs err and message to the global logger. It returns an error formatted as following: "<message>: <err>".
+// logs err (if present) and message to the global logger. It returns an error formatted as following: "<message>: <err>".
 func (r *DatabaseReconciler) defaultErrHandling(obj *databasev1.Database, err error, reason, message string, keyAndValues ...interface{}) error {
 	keyAndValuesLen := len(keyAndValues)
 	if keyAndValuesLen % 2 != 0 {
@@ -305,7 +310,7 @@ func (r *DatabaseReconciler) defaultErrHandling(obj *databasev1.Database, err er
 	if keyAndValuesLen > 0 {
 		eventMessage := fmt.Sprintf("%s: ", message)
 		for i := 0; i < keyAndValuesLen; i+=2 {
-			if i != keyAndValuesLen-1 {
+			if i != keyAndValuesLen-2 {
 				eventMessage += fmt.Sprintf(`{ "%s": "%v" }, `, keyAndValues[i], keyAndValues[i+1])
 				continue
 			}
@@ -421,4 +426,12 @@ func randSeq(n int) string {
 		b[i] = alphabet[rand.Intn(len(alphabet))]
 	}
 	return string(b)
+}
+
+func stringSliceToInterfaceSlice(x []string) []interface{} {
+	y := make([]interface{}, len(x))
+	for i, v := range x {
+		y[i] = v
+	}
+	return y
 }
