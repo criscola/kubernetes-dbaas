@@ -27,11 +27,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/tools/record"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"time"
 
 	"github.com/go-logr/logr"
 	k8sError "k8s.io/apimachinery/pkg/api/errors"
@@ -43,6 +42,20 @@ import (
 	databaseclassv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclass/v1"
 )
 
+const (
+	DatabaseControllerName = "database-controller"
+	DatabaseClass	       = "databaseclass"
+	EndpointName           = "endpoint-name"
+	databaseFinalizer      = "finalizer.database.bedag.ch"
+)
+
+type ReconcileError struct {
+	Reason  string
+	Message string
+	Err 	error
+	AdditionalInfo []interface{}
+}
+
 // DatabaseReconciler reconciles a Database object
 type DatabaseReconciler struct {
 	client.Client
@@ -51,22 +64,13 @@ type DatabaseReconciler struct {
 	EventRecorder record.EventRecorder
 }
 
-const (
-	DatabaseControllerName = "database-controller"
-	DatabaseClass	       = "databaseclass"
-	EndpointName           = "endpoint-name"
-	databaseFinalizer      = "finalizer.database.bedag.ch"
-)
-
 var logger logr.Logger
 
 // +kubebuilder:rbac:groups=database.dbaas.bedag.ch,resources=databases,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=database.dbaas.bedag.ch,resources=databases/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=database.dbaas.bedag.ch,resources=databases/finalizers,verbs=update
-// +kubebuilder:rbac:groups=database.dbaas.bedag.ch,resources=databases/events,verbs=update
 // +kubebuilder:rbac:groups=databaseclass.dbaas.bedag.ch,resources=databaseclasses,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=list;watch;create;update;delete
-
 // SetupWithManager creates the controller responsible for Database resources by means of a ctrl.Manager.
 func (r *DatabaseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -80,32 +84,34 @@ func (r *DatabaseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // move the current state of the cluster closer to the desired state.
 func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger = r.Log.V(0).WithValues("database", req.NamespacedName)
-	logger.Info("Reconcile called")
+	logger.V(3).Info("Reconcile called")
 
 	obj := &databasev1.Database{}
 	err := r.Get(ctx, req.NamespacedName, obj)
-
 	if err != nil {
 		if k8sError.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			logger.Info(MsgDbDeleted)
-			// Not managed through ManageSuccess as the resource has been deleted and it will create problems if
-			// the controller tries to manipulate its status
+			logger.V(2).Info(MsgDbDeleted)
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		return reconcile.Result{}, r.defaultErrHandling(obj, err, RsnDbGetFail, MsgDbGetFail)
+		r.defaultErrHandling(obj, ReconcileError{
+			Reason:         RsnDbGetFail,
+			Message:        MsgDbGetFail,
+			Err:            err,
+		})
+		return reconcile.Result{Requeue: true}, nil
 	}
 
 	// Set reason to unknown to indicate the resource was correctly received by a controller but no action was resolved yet
-	meta.SetStatusCondition(&obj.Status.Conditions, metav1.Condition{
-		Type:               TypeReady,
-		Status:             metav1.ConditionUnknown,
-		Reason:             "",
-		Message:            "",
-	})
+	// Update condition field
+	if err = r.updateReadyCondition(obj, metav1.ConditionUnknown, "", ""); err != nil {
+		r.EventRecorder.Event(obj, Normal, RsnDbUpdateFail, MsgDbUpdateFail)
+		logger.Error(err, MsgDbUpdateFail)
+		return ctrl.Result{Requeue: true}, nil
+	}
 
 	// Check if the Database instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
@@ -114,218 +120,256 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			// Run finalization logic for DatabaseFinalizer. If the
 			// finalization logic fails, don't remove the finalizer so
 			// that we can retry during the next reconciliation.
-			logger.Info("Finalizing database resource")
-			if err := r.deleteDb(obj); err != nil {
-				// Errors handled internally in r.deleteDb
-				return reconcile.Result{}, err
+			logger.V(2).Info("Finalizing database resource")
+			if err := r.deleteDb(obj); err.IsNotEmpty() {
+				r.defaultErrHandling(obj, err)
+				return reconcile.Result{Requeue: true}, nil
 			}
 
 			// Remove databaseFinalizer. Once all finalizers have been
 			// removed, the object will be deleted.
-			logger.Info("Removing finalizer")
+			logger.V(2).Info("Removing finalizer")
 			controllerutil.RemoveFinalizer(obj, databaseFinalizer)
 			if err := r.Update(ctx, obj); err != nil {
-				logger.Error(err, MsgDbUpdateFail)
-				r.EventRecorder.Event(obj, Warning, RsnDbUpdateFail, MsgDbUpdateFail)
-				meta.SetStatusCondition(&obj.Status.Conditions, metav1.Condition{
-					Type:    TypeReady,
-					Status:  metav1.ConditionFalse,
-					Reason:  RsnDbUpdateFail,
-					Message: MsgDbUpdateFail,
+				r.defaultErrHandling(obj, ReconcileError{
+					Reason:         RsnDbUpdateFail,
+					Message:        MsgDbUpdateFail,
+					Err:            err,
+					AdditionalInfo: stringsToInterfaceSlice("finalizer", databaseFinalizer),
 				})
-				return reconcile.Result{}, err
+				return reconcile.Result{Requeue: true}, nil
 			}
 		}
 		return reconcile.Result{}, nil
 	}
 
 	// Create
-	if err = r.createDb(obj); err != nil {
-		logger.Error(err, MsgDbProvisionFail)
-		return reconcile.Result{}, err
+	if err := r.createDb(obj); err.IsNotEmpty() {
+		r.defaultErrHandling(obj, err)
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// If finalizer is not present, add finalizer to resource
 	if !contains(obj.GetFinalizers(), databaseFinalizer) {
-		logger.Info("Adding finalizer")
+		logger.V(2).Info("Adding finalizer")
 		if err := r.addFinalizer(obj); err != nil {
-			logger.Error(err, "Error adding finalizer")
-			return reconcile.Result{}, err
+			r.defaultErrHandling(obj, ReconcileError{
+				Reason:         RsnDbUpdateFail,
+				Message:        MsgDbUpdateFail,
+				Err:            err,
+			})
+			return ctrl.Result{Requeue: true}, nil
 		}
 	}
 
-	meta.SetStatusCondition(&obj.Status.Conditions, metav1.Condition{
-		Type:    TypeReady,
-		Status:  metav1.ConditionTrue,
-		Reason:  RsnCreate,
-		Message: MsgDbProvisionSucc,
-	})
-
-	logger.Info("Reached end of reconcile")
+	if err := r.updateReadyCondition(obj, metav1.ConditionTrue, RsnCreate, MsgDbProvisionSucc); err != nil {
+		r.defaultErrHandling(obj, ReconcileError{
+			Reason:         RsnDbUpdateFail,
+			Message:        MsgDbUpdateFail,
+			Err:            err,
+		})
+		return ctrl.Result{Requeue: true}, nil
+	}
+	logger.V(3).Info("Reached end of reconcile")
 	return reconcile.Result{}, nil
 }
 
 // addFinalizer adds a finalizer to a Database resource.
 func (r *DatabaseReconciler) addFinalizer(obj *databasev1.Database) error {
-	logger.Info("Adding finalizer to the database resource")
 	controllerutil.AddFinalizer(obj, databaseFinalizer)
 
 	// Update CR
-	err := r.Update(context.Background(), obj)
-	if err != nil {
-		return r.defaultErrHandling(obj, err, RsnDbUpdateFail, MsgDbUpdateFail)
-	}
-	return nil
+	return r.Update(context.Background(), obj)
 }
 
 // createDb creates a new Database instance on the external provisioner based on the Database data.
-func (r *DatabaseReconciler) createDb(obj *databasev1.Database) error {
+func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError {
 	logger.Info(MsgDbCreateInProg)
 	r.EventRecorder.Event(obj, Normal, RsnDbCreateInProg, MsgDbCreateInProg)
 
-	// TODO: Extract in method getDbClass(obj databasev1.Database) databaseclassv1.DatabaseClass
-	// Get DatabaseClass name from DBMS config
-	dbmsList, err := config.GetDbmsList()
-	if err != nil {
-		return r.defaultErrHandling(obj, err, RsnDbmsConfigGetFail, MsgDbmsConfigGetFail)
+	dbClass, err := r.getDbmsClassFromDb(obj)
+	if err.IsNotEmpty() {
+		return err
 	}
-
-	// Get DatabaseClass resource from api server
-	dbClassName, err := dbmsList.GetDatabaseClassNameByEndpointName(obj.Spec.Endpoint)
-	if err != nil {
-		return r.defaultErrHandling(obj, err, RsnDbcConfigGetFail, MsgDbcConfigGetFail,
-			DatabaseClass, dbClassName, EndpointName, obj.Spec.Endpoint)
-
-	}
-	// Add some logging values
-	loggingKv := stringSliceToInterfaceSlice([]string{DatabaseClass, dbClassName, database.OperationsConfigKey, database.CreateMapKey})
-
-	dbClass := databaseclassv1.DatabaseClass{}
-	err = r.Client.Get(context.Background(), client.ObjectKey{Namespace: "", Name: dbClassName}, &dbClass)
-	if err != nil {
-		return r.defaultErrHandling(obj, err, RsnDbcGetFail, MsgDbcGetFail, loggingKv...)
-	}
+	loggingKv := stringsToInterfaceSlice(DatabaseClass, dbClass.Name, database.OperationsConfigKey, database.CreateMapKey)
 
 	// Render operation
 	createOpTemplate, exists := dbClass.Spec.Operations[database.CreateMapKey]
 	if !exists {
-		return r.defaultErrHandling(obj, nil, RsnOpNotSupported, MsgOpNotSupported, loggingKv...)
+		return ReconcileError{
+			Reason:         RsnOpNotSupported,
+			Message:        MsgOpNotSupported,
+			Err:            nil,
+			AdditionalInfo: loggingKv,
+		}
 	}
 	opValues, err := newOpValuesFromResource(obj)
-	if err != nil {
-		return r.defaultErrHandling(obj, nil, RsnOpValuesCreateFail, MsgOpValuesCreateFail, loggingKv...)
+	if err.IsNotEmpty() {
+		return err.With(loggingKv)
 	}
-	createOp, err := createOpTemplate.RenderOperation(opValues)
-	if err != nil {
-		return r.defaultErrHandling(obj, nil, RsnOpRenderFail, MsgOpRenderFail, loggingKv...)
+	createOp, simpleErr := createOpTemplate.RenderOperation(opValues)
+	if simpleErr != nil {
+		return ReconcileError{
+			Reason:         RsnOpRenderFail,
+			Message:        MsgOpRenderFail,
+			Err:            simpleErr,
+			AdditionalInfo: loggingKv,
+		}
 	}
+	loggingKv = append(loggingKv, EndpointName, obj.Spec.Endpoint)
 
 	// Execute operation on DBMS
-	loggingKv = append(loggingKv, EndpointName, obj.Spec.Endpoint)
-	conn, err := pool.GetConnByEndpointName(obj.Spec.Endpoint)
-	if err != nil {
-		return r.defaultErrHandling(obj, err, RsnDbmsEndpointConnFail, MsgDbmsEndpointConnFail, loggingKv...)
+	conn, simpleErr := pool.GetConnByEndpointName(obj.Spec.Endpoint)
+	if simpleErr != nil {
+		return ReconcileError{
+			Reason:         RsnDbmsEndpointConnFail,
+			Message:        MsgDbmsEndpointConnFail,
+			Err:            simpleErr,
+			AdditionalInfo: loggingKv,
+		}
 	}
 	output := conn.CreateDb(createOp)
 	if output.Err != nil {
-		return r.defaultErrHandling(obj, err, RsnDbCreateFail, MsgDbCreateFail, loggingKv...)
+		return ReconcileError{
+			Reason:         RsnDbCreateFail,
+			Message:        MsgDbCreateFail,
+			Err:            output.Err,
+			AdditionalInfo: loggingKv,
+		}
 	}
 
 	// Create Secret
-	err = r.createSecret(obj, dbClass.Spec.Driver, output)
-	if err != nil {
-		return  r.defaultErrHandling(obj, err, RsnSecretCreateFail, MsgSecretCreateFail, loggingKv...)
+	simpleErr = r.createSecret(obj, dbClass.Spec.Driver, output)
+	if simpleErr != nil {
+		return ReconcileError{
+			Reason:         RsnSecretCreateFail,
+			Message:        MsgSecretCreateFail,
+			Err:            simpleErr,
+			AdditionalInfo: loggingKv,
+		}
 	}
 
-	return nil
+	return ReconcileError{}
 }
 
 // deleteDb deletes the database instance on the external provisioner.
-func (r *DatabaseReconciler) deleteDb(obj *databasev1.Database) error {
+func (r *DatabaseReconciler) deleteDb(obj *databasev1.Database) ReconcileError {
 	logger.Info(MsgDbDeleteInProg)
 	r.EventRecorder.Event(obj, Normal, RsnDbDeleteInProg, MsgDbDeleteInProg)
 
-	// TODO: Extract in method getDbClass(obj databasev1.Database) databaseclassv1.DatabaseClass
-	// Get DatabaseClass resource
-	dbmsList, err := config.GetDbmsList()
-	if err != nil {
-		return r.defaultErrHandling(obj, err, RsnDbmsConfigGetFail, MsgDbmsConfigGetFail)
+	dbClass, err := r.getDbmsClassFromDb(obj)
+	if err.IsNotEmpty() {
+		return err
 	}
-	dbClassName, err := dbmsList.GetDatabaseClassNameByEndpointName(obj.Spec.Endpoint)
-	if err != nil {
-		return r.defaultErrHandling(obj, err, RsnDbcConfigGetFail, MsgDbcConfigGetFail,
-			DatabaseClass, dbClassName, EndpointName, obj.Spec.Endpoint)
-	}
-	// Add some logging values
-	loggingKv := stringSliceToInterfaceSlice([]string{DatabaseClass, dbClassName, database.OperationsConfigKey, database.DeleteMapKey})
-
-	dbClass := databaseclassv1.DatabaseClass{}
-	err = r.Client.Get(context.Background(), client.ObjectKey{Namespace: "", Name: dbClassName}, &dbClass)
-	if err != nil {
-		return r.defaultErrHandling(obj, err, RsnDbcGetFail, MsgDbcGetFail, loggingKv...)
-	}
+	loggingKv := stringsToInterfaceSlice(DatabaseClass, dbClass.Name, database.OperationsConfigKey, database.DeleteMapKey)
 
 	// Render operation
 	deleteOpTemplate, exists := dbClass.Spec.Operations[database.DeleteMapKey]
 	if !exists {
-		return r.defaultErrHandling(obj, nil, RsnOpNotSupported, MsgOpNotSupported, loggingKv...)
+		return ReconcileError{
+			Reason:         RsnOpNotSupported,
+			Message:        MsgOpNotSupported,
+			Err:            nil,
+			AdditionalInfo: loggingKv,
+		}
 	}
 	opValues, err := newOpValuesFromResource(obj)
-	if err != nil {
-		return r.defaultErrHandling(obj, err, RsnOpValuesCreateFail, MsgOpValuesCreateFail, loggingKv...)
+	if err.IsNotEmpty() {
+		return err.With(loggingKv)
 	}
-	deleteOp, err := deleteOpTemplate.RenderOperation(opValues)
-	if err != nil {
-		return r.defaultErrHandling(obj, err, RsnOpRenderFail, MsgOpRenderFail, loggingKv...)
+	deleteOp, simpleErr := deleteOpTemplate.RenderOperation(opValues)
+	if simpleErr != nil {
+		return ReconcileError{
+			Reason:         RsnOpRenderFail,
+			Message:        MsgOpRenderFail,
+			Err:            simpleErr,
+			AdditionalInfo: loggingKv,
+		}
 	}
+	loggingKv = append(loggingKv, EndpointName, obj.Spec.Endpoint)
 
 	// Execute operation on DBMS
-	loggingKv = append(loggingKv, EndpointName, obj.Spec.Endpoint)
-	conn, err := pool.GetConnByEndpointName(obj.Spec.Endpoint)
-	if err != nil {
-		return r.defaultErrHandling(obj, err, RsnDbmsEndpointConnFail, MsgDbmsEndpointConnFail, loggingKv...)
+	conn, simpleErr := pool.GetConnByEndpointName(obj.Spec.Endpoint)
+	if simpleErr != nil {
+		return ReconcileError{
+			Reason:         RsnDbmsEndpointConnFail,
+			Message:        MsgDbmsEndpointConnFail,
+			Err:            simpleErr,
+			AdditionalInfo: loggingKv,
+		}
 	}
 	output := conn.DeleteDb(deleteOp)
 	if output.Err != nil {
-		return r.defaultErrHandling(obj, err, RsnDbDeleteFail, MsgDbDeleteFail, loggingKv...)
+		return ReconcileError{
+			Reason:         RsnDbDeleteFail,
+			Message:        MsgDbDeleteFail,
+			Err:            output.Err,
+			AdditionalInfo: loggingKv,
+		}
+	}
+	return ReconcileError{}
+}
+
+func (r *DatabaseReconciler) getDbmsClassFromDb(obj *databasev1.Database) (databaseclassv1.DatabaseClass, ReconcileError) {
+	// Get DatabaseClass name from DBMS config
+	dbmsList, err := config.GetDbmsList()
+	if err != nil {
+		return databaseclassv1.DatabaseClass{}, ReconcileError{
+			Reason:         RsnDbmsConfigGetFail,
+			Message:        MsgDbmsConfigGetFail,
+			Err:            err,
+		}
+	}
+	// Get DatabaseClass resource from api server
+	dbClassName, err := dbmsList.GetDatabaseClassNameByEndpointName(obj.Spec.Endpoint)
+	if err != nil {
+		return databaseclassv1.DatabaseClass{}, ReconcileError{
+			Reason:         RsnDbcConfigGetFail,
+			Message:        MsgDbcConfigGetFail,
+			Err:            err,
+			AdditionalInfo: stringsToInterfaceSlice(DatabaseClass, dbClassName, EndpointName, obj.Spec.Endpoint),
+		}
 	}
 
-	return nil
+	dbClass := databaseclassv1.DatabaseClass{}
+	err = r.Client.Get(context.Background(), client.ObjectKey{Namespace: "", Name: dbClassName}, &dbClass)
+	if err != nil {
+		return databaseclassv1.DatabaseClass{}, ReconcileError{
+			Reason:         RsnDbcGetFail,
+			Message:        MsgDbcGetFail,
+			Err:            err,
+			AdditionalInfo: stringsToInterfaceSlice(DatabaseClass, dbClassName),
+		}
+	}
+	return dbClass, ReconcileError{}
 }
 
 // defaultErrHandling sets the obj Conditions type Ready to false and sets the relative fields error and message,
-// it records a Warning event with reason and message for the given obj and
-// logs err (if present) and message to the global logger. It returns an error formatted as following: "<message>: <err>".
-func (r *DatabaseReconciler) defaultErrHandling(obj *databasev1.Database, err error, reason, message string, keyAndValues ...interface{}) error {
-	keyAndValuesLen := len(keyAndValues)
+// it records a Warning event with reason and message for the given obj and logs err (if present) and message to the
+// global logger.
+func (r *DatabaseReconciler) defaultErrHandling (obj *databasev1.Database, err ReconcileError) {
+	keyAndValuesLen := len(err.AdditionalInfo)
 	if keyAndValuesLen % 2 != 0 {
 		panic("odd number of keyAndValues provided!")
 	}
-	meta.SetStatusCondition(&obj.Status.Conditions, metav1.Condition{
-		Type:    TypeReady,
-		Status:  metav1.ConditionFalse,
-		Reason:  reason,
-		Message: message,
-	})
 	if keyAndValuesLen > 0 {
-		eventMessage := fmt.Sprintf("%s: ", message)
+		eventMessage := fmt.Sprintf("%s: ", err.Message)
 		for i := 0; i < keyAndValuesLen; i+=2 {
 			if i != keyAndValuesLen-2 {
-				eventMessage += fmt.Sprintf(`{ "%s": "%v" }, `, keyAndValues[i], keyAndValues[i+1])
+				eventMessage += fmt.Sprintf(`{"%s": "%v"}, `, err.AdditionalInfo[i], err.AdditionalInfo[i+1])
 				continue
 			}
-			eventMessage += fmt.Sprintf(`{ "%s": "%v" }`, keyAndValues[i], keyAndValues[i+1])
+			eventMessage += fmt.Sprintf(`{"%s": "%v"}`, err.AdditionalInfo[i], err.AdditionalInfo[i+1])
 		}
-		r.EventRecorder.Event(obj, Warning, reason, eventMessage)
-		logger.Error(err, message, keyAndValues...)
+		r.EventRecorder.Event(obj, Warning, err.Reason, eventMessage)
+		logger.Error(err.Err, err.Message, err.AdditionalInfo...)
 	} else {
-		r.EventRecorder.Event(obj, Warning, reason, message)
-		logger.Error(err, message)
+		r.EventRecorder.Event(obj, Warning, err.Reason, err.Message)
+		logger.Error(err.Err, err.Message)
 	}
-	if err != nil {
-		return fmt.Errorf("%s: %s", message, err)
+	if updateErr := r.updateReadyCondition(obj, metav1.ConditionFalse, err.Reason, err.Message); updateErr != nil {
+		logger.Error(err.Err, MsgDbUpdateFail)
 	}
-	return fmt.Errorf(message)
 }
 
 // createSecret creates a new K8s secret owned by owner with the data contained in output and dsn.
@@ -374,35 +418,47 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, driver str
 }
 
 // newOpValuesFromResource constructs a database.OpValues struct starting from a Database resource.
-func newOpValuesFromResource(obj *databasev1.Database) (database.OpValues, error) {
+func newOpValuesFromResource(obj *databasev1.Database) (database.OpValues, ReconcileError) {
 	metaIn := obj.ObjectMeta
 	var metadata map[string]interface{}
 	temp, _ := json.Marshal(metaIn)
 	err := json.Unmarshal(temp, &metadata)
 	if err != nil {
-		return database.OpValues{}, err
+		return database.OpValues{}, ReconcileError{
+			Reason:         RsnDbMetaParseFail,
+			Message:        MsgDbMetaParseFail,
+			Err:            err,
+		}
 	}
 	specIn := obj.Spec.Params
 	var spec map[string]string
 	temp, err = json.Marshal(specIn)
 	err = json.Unmarshal(temp, &spec)
 	if err != nil {
-		return database.OpValues{}, err
-	}
-
-	// Ensure meta.namespace and meta.name are set
-	if metadata["namespace"] == "" {
-		metadata["namespace"] = "default"
-	}
-	if metadata["name"] == "" {
-		// Generate name randomly
-		metadata["name"] = randSeq(16)
+		return database.OpValues{}, ReconcileError{
+			Reason:         RsnDbSpecParseFail,
+			Message:        MsgDbSpecParseFail,
+			Err:            err,
+		}
 	}
 
 	return database.OpValues{
 		Metadata:   metadata,
 		Parameters: spec,
-	}, nil
+	}, ReconcileError{}
+}
+
+// updateReadyCondition updates the Ready Condition status of obj.
+func (r *DatabaseReconciler) updateReadyCondition(obj *databasev1.Database, status metav1.ConditionStatus, reason, message string) error {
+	meta.SetStatusCondition(&obj.Status.Conditions, metav1.Condition{
+		Type:    TypeReady,
+		Status:  status,
+		Reason:  reason,
+		Message: message,
+	})
+
+	// Update condition field
+	return r.Client.Update(context.Background(), obj)
 }
 
 // contains is a very small utility function which returns true if s has been found in list.
@@ -415,23 +471,25 @@ func contains(list []string, s string) bool {
 	return false
 }
 
-// randSeq generates a random alphanumeric string of length n
-func randSeq(n int) string {
-	rand.Seed(time.Now().UnixNano())
-
-	var alphabet = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = alphabet[rand.Intn(len(alphabet))]
-	}
-	return string(b)
-}
-
-func stringSliceToInterfaceSlice(x []string) []interface{} {
-	y := make([]interface{}, len(x))
-	for i, v := range x {
+func stringsToInterfaceSlice(values ...string) []interface{} {
+	y := make([]interface{}, len(values))
+	for i, v := range values {
 		y[i] = v
 	}
 	return y
+}
+
+// IsNotEmpty checks if r is not empty using reflect.DeepEqual. Needed because field AdditionalInfo is not comparable.
+func (r ReconcileError) IsNotEmpty() bool {
+	return !reflect.DeepEqual(r, ReconcileError{})
+}
+
+// With creates a copy of the receiver and appends values to its AdditionalInfo field.
+func (r ReconcileError) With(values ...interface{}) ReconcileError {
+	return ReconcileError{
+		Reason:         r.Reason,
+		Message:        r.Message,
+		Err:            r.Err,
+		AdditionalInfo: append(r.AdditionalInfo, values...),
+	}
 }

@@ -111,9 +111,21 @@ make deploy IMG=yourrepo/imagename
 | `--leaderElection.resourceName <string>`   	| The resource name to lock during election cycles (default "bfa62c96.dbaas.bedag.ch")                                                 	|
 | `--load-config <string>`                   	| Location of the Operator's config file                                                                                               	|
 | `--metrics.bindAddress <string>`           	| The address the metric endpoint binds to (default "127.0.0.1:8080")                                                                  	|
-| `--webhook.port int`                       	| The port the webhook server binds to (default 9443)                                                                                  	|
+| `--webhook.port <int>`                       	| The port the webhook server binds to (default 9443)                                                                                  	|
+| `--log-level <int>`                       	| The verbosity of the logger from 0 to 3 (default 1)                                                                                  	|
 
 The order of precedence is `flags > config file > defaults`. Environment variables are not read.
+
+## Troubleshooting
+You can troubleshoot problems in two ways:
+1. Look at the events of the resource with `kubectl describe database my-database-resource `
+2. Consult the logs of the manager pod.
+
+To avoid leaking possibly sensitive information, events do not contain the full error, only a message along with some
+pertinent values if present.
+
+You can also control the verbosity of the logger by setting the `--log-level <int>` flag to a value from 0 (only strictly
+necessary logs) to 3 (very verbose). By default, this value is set to 1.
 
 ## Known problems
 
