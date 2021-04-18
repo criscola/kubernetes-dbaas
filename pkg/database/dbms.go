@@ -12,7 +12,7 @@ const (
 	Psql                    = "psql"
 	CreateMapKey            = "create"
 	DeleteMapKey            = "delete"
-	OperationsConfigKey		= "operations"
+	OperationsConfigKey     = "operations"
 	K8sMapKey               = "k8sName"
 	UserMapKey              = "username"
 	PassMapKey              = "password"
@@ -21,7 +21,6 @@ const (
 	PortMapKey              = "port"
 	ErrorOnMissingKeyOption = "missingkey=error"
 	DbmsConfigKey           = "dbms"
-
 )
 
 // Driver represents a struct responsible for executing CreateDb and DeleteDb operations on a system it supports. Drivers

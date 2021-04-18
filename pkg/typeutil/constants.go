@@ -23,6 +23,7 @@ const (
 	RsnSecretCreateFail     = "SecretCreateFailed"
 	RsnDbMetaParseFail      = "DatabaseMetaParseFailed"
 	RsnDbSpecParseFail      = "DatabaseSpecParseFailed"
+	RsnDbCreateSucc         = "DatabaseCreateSuccess"
 
 	// Human-readable messages
 	MsgDbProvisionSucc      = "database instance provisioned successfully on dbms endpoint"

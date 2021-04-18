@@ -50,8 +50,9 @@ const (
 	LoadConfigKey    = "load-config"
 	DebugKey         = "debug"
 	WebhookEnableKey = "enable-webhooks"
+	ZapLogLevelKey   = "log-level"
 
-	// Flag overrides for specified in OperatorConfig
+	// Flag overrides for flags specified in OperatorConfig
 	MetricsBindAddressKey     = "metrics.bindAddress"
 	HealthProbeBindAddressKey = "health.healthProbeBindAddress"
 	LeaderElectEnableKey      = "leaderElection.leaderElect"
@@ -101,7 +102,7 @@ func init() {
 
 func initFlags() {
 	rootCmd.PersistentFlags().String(LoadConfigKey, "", "The location of the Operator's config file")
-	rootCmd.PersistentFlags().Bool(DebugKey, false, "Enable debug mode for development purposes")
+	rootCmd.PersistentFlags().Bool(DebugKey, false, "Enable debug mode for development purposes. If set, --log-level value defaults to 3")
 	rootCmd.PersistentFlags().Bool(WebhookEnableKey, true, "Enable webhooks servers.")
 	rootCmd.PersistentFlags().String(MetricsBindAddressKey, ":8080", "The address the metric endpoint binds to")
 	rootCmd.PersistentFlags().String(HealthProbeBindAddressKey, ":8081", "The address the probe endpoint binds to")
@@ -109,6 +110,7 @@ func initFlags() {
 		"Enabling this will ensure there is only one active controller manager")
 	rootCmd.PersistentFlags().String(LeaderElectResName, "bfa62c96.dbaas.bedag.ch", "The resource name to lock during election cycles")
 	rootCmd.PersistentFlags().Int(WebhookPortKey, 9443, "The port the webhook server binds to")
+	rootCmd.PersistentFlags().Int(ZapLogLevelKey, 1, "The verbosity of the logger from 0 (less verbose) to 3")
 
 	// Bind all flags to Viper
 	rootCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
@@ -143,6 +145,13 @@ func initLogger() {
 	// Distinguish between 'debug' and 'production' setting.
 	if viper.GetBool(DebugKey) {
 		fmt.Println("setting up logger in debug mode...")
+		// TODO: https://github.com/operator-framework/operator-sdk/issues/4771
+		//devModeOpt := zap.UseDevMode(true)
+		//opts := []zap.Opts{devModeOpt}
+		//if !viper.IsSet(ZapLogLevelKey) {
+		//	opts = append(opts, )
+		//}
+		//ctrl.SetLogger(zap.New())
 		ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 	} else {
 		fmt.Println("setting up logger in production mode...")
@@ -185,9 +194,9 @@ func loadOperator() {
 
 	// Setup controllers
 	if err = (&controllers.DatabaseReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Database"),
-		Scheme: mgr.GetScheme(),
+		Client:        mgr.GetClient(),
+		Log:           ctrl.Log.WithName("controllers").WithName("Database"),
+		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor(controllers.DatabaseControllerName),
 	}).SetupWithManager(mgr); err != nil {
 		fatalError(err, "unable to create controller", "controller", "Database")

@@ -123,23 +123,6 @@ spec:
                   - type
                   type: object
                 type: array
-              lastError:
-                description: LastError if not nil, the resource in an error state
-                type: string
-              lastErrorUpdateCount:
-                description: LastErrorUpdateCount specifies how many times the LastError
-                  field has been updated
-                type: integer
-              lastUpdate:
-                description: LastUpdate specifies the last time the Status field has
-                  been updated
-                type: string
-              unrecoverable:
-                description: "If Unrecoverable is set to true, the controller was
-                  unable to fix the issue by itself \n TODO: Do something like 'kubectl
-                  get pods', i.e. create a set of state and enable users to print
-                  column with the current state"
-                type: boolean
             required:
             - conditions
             type: object

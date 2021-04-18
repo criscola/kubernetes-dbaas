@@ -32,16 +32,6 @@ type DatabaseSpec struct {
 type DatabaseStatus struct {
 	// Conditions represent the latest available observations of an object's state
 	Conditions []metav1.Condition `json:"conditions"`
-	// LastError if not nil, the resource in an error state
-	LastError string `json:"lastError,omitempty"`
-	// LastUpdate specifies the last time the Status field has been updated
-	LastUpdate string `json:"lastUpdate,omitempty"`
-	// LastErrorUpdateCount specifies how many times the LastError field has been updated
-	LastErrorUpdateCount int `json:"lastErrorUpdateCount,omitempty"`
-	// If Unrecoverable is set to true, the controller was unable to fix the issue by itself
-	//
-	// TODO: Do something like 'kubectl get pods', i.e. create a set of state and enable users to print column with the current state
-	Unrecoverable bool `json:"unrecoverable,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -55,7 +45,6 @@ type Database struct {
 	Spec   DatabaseSpec   `json:"spec,omitempty"`
 	Status DatabaseStatus `json:"status,omitempty"`
 }
-
 
 // +kubebuilder:object:root=true
 // DatabaseList contains a list of Database

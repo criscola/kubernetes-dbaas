@@ -4,6 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
+    cert-manager.io/inject-ca-from: kubernetes-dbaas-system/kubernetes-dbaas-serving-cert
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
   name: databases.database.dbaas.bedag.ch
@@ -123,23 +124,6 @@ spec:
                       - type
                     type: object
                   type: array
-                lastError:
-                  description: LastError if not nil, the resource in an error state
-                  type: string
-                lastErrorUpdateCount:
-                  description: LastErrorUpdateCount specifies how many times the LastError
-                    field has been updated
-                  type: integer
-                lastUpdate:
-                  description: LastUpdate specifies the last time the Status field has
-                    been updated
-                  type: string
-                unrecoverable:
-                  description: "If Unrecoverable is set to true, the controller was
-                  unable to fix the issue by itself \n TODO: Do something like 'kubectl
-                  get pods', i.e. create a set of state and enable users to print
-                  column with the current state"
-                  type: boolean
               required:
                 - conditions
               type: object
