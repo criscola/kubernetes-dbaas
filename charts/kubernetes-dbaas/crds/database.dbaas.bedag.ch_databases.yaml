@@ -19,7 +19,16 @@ spec:
     singular: database
   scope: Namespaced
   versions:
-    - name: v1
+    - additionalPrinterColumns:
+        - description: Ready status of resource
+          jsonPath: .status.conditions[*].status
+          name: Ready
+          type: string
+        - description: The endpoint where the resource is supposed to be provisioned
+          jsonPath: .spec.endpoint
+          name: Endpoint
+          type: string
+      name: v1
       schema:
         openAPIV3Schema:
           description: Database is the Schema for the database API

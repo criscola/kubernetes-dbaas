@@ -35,6 +35,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	databasev1 "github.com/bedag/kubernetes-dbaas/apis/database/v1"
 	databaseclassv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclass/v1"
@@ -81,21 +82,105 @@ func (r *DatabaseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	// https://pastebin.com/FXLmBa13
+	logger = r.Log.WithValues("database", req.NamespacedName)
+	logger.V(0).Info("Test0")
+	logger.V(1).Info("Test1")
+	logger.V(2).Info("Test2")
+	logger.V(3).Info("Reconcile called")
+
 	obj := &databasev1.Database{}
-	_ = r.Get(ctx, req.NamespacedName, obj)
-	meta.SetStatusCondition(&obj.Status.Conditions, metav1.Condition{
-		Type:    TypeReady,
-		Status:  metav1.ConditionTrue,
-		Reason:  "Test",
-		Message: "this is a test",
-	})
-	err := r.Status().Update(ctx, obj)
+	err := r.Get(ctx, req.NamespacedName, obj)
 	if err != nil {
-		fmt.Println(err)
+		if k8sError.IsNotFound(err) {
+			// Request object not found, could have been deleted after reconcile request.
+			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+			// Return and don't requeue
+			logger.V(2).Info(MsgDbDeleted)
+			return reconcile.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
+		r.defaultErrHandling(obj, ReconcileError{
+			Reason:         RsnDbGetFail,
+			Message:        MsgDbGetFail,
+			Err:            err,
+		})
+		return reconcile.Result{Requeue: true}, nil
 	}
-	newObj := &databasev1.Database{}
-	_ = r.Get(ctx, req.NamespacedName, newObj)
+
+	// Set reason to unknown to indicate the resource was correctly received by a controller but no action was resolved yet
+	// Update condition field
+	if meta.FindStatusCondition(obj.Status.Conditions, TypeReady) == nil {
+		logger.V(3).Info("Updating ConditionStatus")
+		if err = r.updateReadyCondition(obj, metav1.ConditionUnknown, RsnDbOpQueueSucc, RsnDbOpQueueSucck); err != nil {
+			r.EventRecorder.Event(obj, Warning, RsnDbUpdateFail, MsgDbUpdateFail)
+			logger.Error(err, MsgDbUpdateFail)
+			return ctrl.Result{Requeue: true}, nil
+		}
+	}
+
+	// Check if the Database instance is marked to be deleted, which is
+	// indicated by the deletion timestamp being set.
+	if obj.GetDeletionTimestamp() != nil {
+		if contains(obj.GetFinalizers(), databaseFinalizer) {
+			// Run finalization logic for DatabaseFinalizer. If the
+			// finalization logic fails, don't remove the finalizer so
+			// that we can retry during the next reconciliation.
+			logger.V(2).Info("Finalizing database resource")
+			if err := r.deleteDb(obj); err.IsNotEmpty() {
+				r.defaultErrHandling(obj, err)
+				return reconcile.Result{Requeue: true}, nil
+			}
+
+			// Remove databaseFinalizer. Once all finalizers have been
+			// removed, the object will be deleted.
+			logger.V(2).Info("Removing finalizer")
+			controllerutil.RemoveFinalizer(obj, databaseFinalizer)
+			if err := r.Update(ctx, obj); err != nil {
+				r.defaultErrHandling(obj, ReconcileError{
+					Reason:         RsnDbUpdateFail,
+					Message:        MsgDbUpdateFail,
+					Err:            err,
+					AdditionalInfo: stringsToInterfaceSlice("finalizer", databaseFinalizer),
+				})
+				return reconcile.Result{Requeue: true}, nil
+			}
+		}
+		return reconcile.Result{}, nil
+	}
+
+	// Create
+	// Check conditions, if database is ready, skip
+	if meta.IsStatusConditionTrue(obj.Status.Conditions, TypeReady) {
+		return ctrl.Result{}, nil
+	}
+	if err := r.createDb(obj); err.IsNotEmpty() {
+		r.defaultErrHandling(obj, err)
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// If finalizer is not present, add finalizer to resource
+	if !contains(obj.GetFinalizers(), databaseFinalizer) {
+		logger.V(2).Info("Adding finalizer")
+		if err := r.addFinalizer(obj); err != nil {
+			r.defaultErrHandling(obj, ReconcileError{
+				Reason:         RsnDbUpdateFail,
+				Message:        MsgDbUpdateFail,
+				Err:            err,
+			})
+			return ctrl.Result{Requeue: true}, nil
+		}
+	}
+
+	logger.Info("Updating ConditionStatus")
+	if err := r.updateReadyCondition(obj, metav1.ConditionTrue, RsnCreate, MsgDbProvisionSucc); err != nil {
+		r.defaultErrHandling(obj, ReconcileError{
+			Reason:         RsnDbUpdateFail,
+			Message:        MsgDbUpdateFail,
+			Err:            err,
+		})
+		return ctrl.Result{Requeue: true}, nil
+	}
+	logger.V(3).Info("Reached end of reconcile")
 	return ctrl.Result{}, nil
 }
 
@@ -383,7 +468,7 @@ func (r *DatabaseReconciler) updateReadyCondition(obj *databasev1.Database, stat
 	})
 
 	// Update condition field
-	return r.Client.Update(context.Background(), obj)
+	return r.Client.Status().Update(context.Background(), obj)
 }
 
 // contains is a very small utility function which returns true if s has been found in list.

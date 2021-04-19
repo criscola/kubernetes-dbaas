@@ -24,6 +24,7 @@ const (
 	RsnDbMetaParseFail      = "DatabaseMetaParseFailed"
 	RsnDbSpecParseFail      = "DatabaseSpecParseFailed"
 	RsnDbCreateSucc         = "DatabaseCreateSuccess"
+	RsnDbOpQueueSucc		= "DatabaseQueueSuccess"
 
 	// Human-readable messages
 	MsgDbProvisionSucc      = "database instance provisioned successfully on dbms endpoint"
@@ -44,6 +45,7 @@ const (
 	MsgSecretCreateFail     = "could not create secret resource for database resource"
 	MsgDbMetaParseFail      = "could not parse metadata field of database resource during operation values creation"
 	MsgDbSpecParseFail      = "could not parse spec field of database resource during operation values creation"
+	RsnDbOpQueueSucck       = "database operation queued successfully"
 
 	// Event types
 	Normal  = "Normal"

@@ -37,6 +37,8 @@ type DatabaseStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=db
+// +kubebuilder:printcolumn:JSONPath=.status.conditions[*].status,description="Ready status of resource",name="Ready",type=string
+// +kubebuilder:printcolumn:JSONPath=.spec.endpoint,description="The endpoint where the resource is supposed to be provisioned",name="Endpoint",type=string
 // Database is the Schema for the database API
 type Database struct {
 	metav1.TypeMeta   `json:",inline"`
