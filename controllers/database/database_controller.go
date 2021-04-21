@@ -148,7 +148,7 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// Create
 	// Check conditions, if database is ready, skip
 	if meta.IsStatusConditionTrue(obj.Status.Conditions, TypeReady) {
-		logger.V(2).Info("")
+		logger.V(1).Info("Create operation skipped because the resource is in Ready state.")
 		return ctrl.Result{}, nil
 	}
 	if err := r.createDb(obj); err.IsNotEmpty() {

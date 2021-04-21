@@ -303,7 +303,11 @@ func getProductionLogger(level int) logr.Logger {
 
 // traceLevelFunc configures a zapcore.LevelEncoder to print "trace" as level field value in log outputs.
 func traceLevelFunc(lvl zapcore.Level, encoder zapcore.PrimitiveArrayEncoder) {
-	if lvl == TraceLevel { encoder.AppendString("trace") }
+	if lvl == TraceLevel {
+		encoder.AppendString("trace")
+	} else {
+		encoder.AppendString(lvl.String())
+	}
 }
 
 func fatalError(err error, msg string, values ...interface{}) {
