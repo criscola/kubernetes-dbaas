@@ -39,14 +39,10 @@ func Register(dbms database.Dbms, dbClass databaseclassv1.DatabaseClass) error {
 	return nil
 }
 
-// GetConnByEndpointName tries to get a connection by endpoint name.
+// GetConnByEndpointName tries to get a connection by endpoint name. It returns an error if a connection related to
+// endpointName is not found in the pool.
 func GetConnByEndpointName(endpointName string) (*database.DbmsConn, error) {
 	if conn, ok := pool[endpointName]; ok {
-		// Extra check in case the connection has gone down, probably unnecessary because database/sql reopens
-		// db connections when necessary.
-		if err := conn.dbmsConn.Ping(); err != nil {
-			return nil, err
-		}
 		return conn.dbmsConn, nil
 	}
 	return nil, fmt.Errorf("entry '%s' not found in dbms pool", endpointName)

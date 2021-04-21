@@ -83,10 +83,7 @@ func (r *DatabaseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // move the current state of the cluster closer to the desired state.
 func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger = r.Log.WithValues("database", req.NamespacedName)
-	logger.V(0).Info("Test0")
-	logger.V(1).Info("Test1")
-	logger.V(2).Info("Test2")
-	logger.V(3).Info("Reconcile called")
+	logger.V(2).Info("Reconcile called")
 
 	obj := &databasev1.Database{}
 	err := r.Get(ctx, req.NamespacedName, obj)
@@ -111,7 +108,7 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// Update condition field
 	if meta.FindStatusCondition(obj.Status.Conditions, TypeReady) == nil {
 		logger.V(3).Info("Updating ConditionStatus")
-		if err = r.updateReadyCondition(obj, metav1.ConditionUnknown, RsnDbOpQueueSucc, RsnDbOpQueueSucck); err != nil {
+		if err = r.updateReadyCondition(obj, metav1.ConditionUnknown, RsnDbOpQueueSucc, MsgDbOpQueueSucc); err != nil {
 			r.EventRecorder.Event(obj, Warning, RsnDbUpdateFail, MsgDbUpdateFail)
 			logger.Error(err, MsgDbUpdateFail)
 			return ctrl.Result{Requeue: true}, nil
@@ -229,14 +226,10 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError {
 	loggingKv = append(loggingKv, EndpointName, obj.Spec.Endpoint)
 
 	// Execute operation on DBMS
-	conn, simpleErr := pool.GetConnByEndpointName(obj.Spec.Endpoint)
-	if simpleErr != nil {
-		return ReconcileError{
-			Reason:         RsnDbmsEndpointConnFail,
-			Message:        MsgDbmsEndpointConnFail,
-			Err:            simpleErr,
-			AdditionalInfo: loggingKv,
-		}
+	// Check preconditions
+	var conn *database.DbmsConn
+	if conn, err = r.getDbmsConnectionByEndpointName(obj.Spec.Endpoint); err.IsNotEmpty() {
+		return err.With(loggingKv)
 	}
 	output := conn.CreateDb(createOp)
 	if output.Err != nil {
@@ -299,11 +292,16 @@ func (r *DatabaseReconciler) deleteDb(obj *databasev1.Database) ReconcileError {
 	loggingKv = append(loggingKv, EndpointName, obj.Spec.Endpoint)
 
 	// Execute operation on DBMS
-	conn, simpleErr := pool.GetConnByEndpointName(obj.Spec.Endpoint)
+	// Check preconditions
+	var conn *database.DbmsConn
+	if conn, err = r.getDbmsConnectionByEndpointName(obj.Spec.Endpoint); err.IsNotEmpty() {
+		return err.With(loggingKv)
+	}
+	conn, simpleErr = pool.GetConnByEndpointName(obj.Spec.Endpoint)
 	if simpleErr != nil {
 		return ReconcileError{
-			Reason:         RsnDbmsEndpointConnFail,
-			Message:        MsgDbmsEndpointConnFail,
+			Reason:         RsnDbmsEndpointNotFound,
+			Message:        MsgDbmsEndpointNotFound,
 			Err:            simpleErr,
 			AdditionalInfo: loggingKv,
 		}
@@ -352,6 +350,27 @@ func (r *DatabaseReconciler) getDbmsClassFromDb(obj *databasev1.Database) (datab
 		}
 	}
 	return dbClass, ReconcileError{}
+}
+
+func (r *DatabaseReconciler) getDbmsConnectionByEndpointName(endpointName string) (*database.DbmsConn, ReconcileError) {
+	// Check if the endpoint is currently stored in the connection pool
+	conn, simpleErr := pool.GetConnByEndpointName(endpointName)
+	if simpleErr != nil {
+		return nil, ReconcileError{
+			Reason:         RsnDbmsEndpointNotFound,
+			Message:        MsgDbmsEndpointNotFound,
+			Err:            simpleErr,
+		}
+	}
+	// Make a first check to acknowledge whether the connection looks alive
+	if simpleErr = conn.Ping(); simpleErr != nil {
+		return nil, ReconcileError{
+			Reason:         RsnDbmsConnFail,
+			Message:        MsgDbmsConnFail,
+			Err:            simpleErr,
+		}
+	}
+	return conn, ReconcileError{}
 }
 
 // defaultErrHandling sets the obj Conditions type Ready to false and sets the relative fields error and message,
@@ -495,7 +514,7 @@ func (r ReconcileError) IsNotEmpty() bool {
 }
 
 // With creates a copy of the receiver and appends values to its AdditionalInfo field.
-func (r ReconcileError) With(values ...interface{}) ReconcileError {
+func (r ReconcileError) With(values []interface{}) ReconcileError {
 	return ReconcileError{
 		Reason:         r.Reason,
 		Message:        r.Message,

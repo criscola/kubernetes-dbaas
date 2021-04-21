@@ -18,6 +18,10 @@ package cmd
 import (
 	"context"
 	"github.com/bedag/kubernetes-dbaas/pkg/config"
+	"github.com/go-logr/logr"
+	"github.com/go-logr/zapr"
+	uzap "go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	//"context"
 	"fmt"
 	operatorconfigv1 "github.com/bedag/kubernetes-dbaas/apis/config/v1"
@@ -36,8 +40,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -47,10 +49,12 @@ import (
 )
 
 const (
+	TraceLevel 		 = -2
+
 	LoadConfigKey    = "load-config"
 	DebugKey         = "debug"
 	WebhookEnableKey = "enable-webhooks"
-	ZapLogLevelKey   = "log-level"
+	ZapLogLevelKey   = "zap-log-level"
 
 	// Flag overrides for flags specified in OperatorConfig
 	MetricsBindAddressKey     = "metrics.bindAddress"
@@ -102,7 +106,7 @@ func init() {
 
 func initFlags() {
 	rootCmd.PersistentFlags().String(LoadConfigKey, "", "The location of the Operator's config file")
-	rootCmd.PersistentFlags().Bool(DebugKey, false, "Enable debug mode for development purposes. If set, --log-level value defaults to 3")
+	rootCmd.PersistentFlags().Bool(DebugKey, false, "Enable debug mode for development purposes. If set, --log-level value defaults to 2")
 	rootCmd.PersistentFlags().Bool(WebhookEnableKey, true, "Enable webhooks servers.")
 	rootCmd.PersistentFlags().String(MetricsBindAddressKey, ":8080", "The address the metric endpoint binds to")
 	rootCmd.PersistentFlags().String(HealthProbeBindAddressKey, ":8081", "The address the probe endpoint binds to")
@@ -110,7 +114,7 @@ func initFlags() {
 		"Enabling this will ensure there is only one active controller manager")
 	rootCmd.PersistentFlags().String(LeaderElectResName, "bfa62c96.dbaas.bedag.ch", "The resource name to lock during election cycles")
 	rootCmd.PersistentFlags().Int(WebhookPortKey, 9443, "The port the webhook server binds to")
-	rootCmd.PersistentFlags().Int(ZapLogLevelKey, 1, "The verbosity of the logger from 0 (less verbose) to 3")
+	rootCmd.PersistentFlags().Int(ZapLogLevelKey, 1, "The verbosity of the logging output. Can be one out of: 0 info, 1 debug, 2 trace. If debug mode is on, defaults to 1")
 
 	// Bind all flags to Viper
 	rootCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
@@ -143,19 +147,17 @@ func initConfigFile() {
 // initLogger initializes the Operator's logger.
 func initLogger() {
 	// Distinguish between 'debug' and 'production' setting.
+	level := viper.GetInt(ZapLogLevelKey) - 2 * viper.GetInt(ZapLogLevelKey)
 	if viper.GetBool(DebugKey) {
 		fmt.Println("setting up logger in debug mode...")
-		// TODO: https://github.com/operator-framework/operator-sdk/issues/4771
-		//devModeOpt := zap.UseDevMode(true)
-		//opts := []zap.Opts{devModeOpt}
-		//if !viper.IsSet(ZapLogLevelKey) {
-		//	opts = append(opts, )
-		//}
-		//ctrl.SetLogger(zap.New())
-		ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+		// Check if default is set
+		if !viper.IsSet(ZapLogLevelKey) {
+			level = -1
+		}
+		ctrl.SetLogger(getDevelopmentLogger(level))
 	} else {
 		fmt.Println("setting up logger in production mode...")
-		ctrl.SetLogger(zap.New())
+		ctrl.SetLogger(getProductionLogger(level))
 	}
 }
 
@@ -252,6 +254,48 @@ func registerEndpoints() {
 			fatalError(err, "problem registering dbms endpoint", "databaseClassName", dbClass.Name)
 		}
 	}
+}
+
+// getDevelopmentLogger returns a json logger configured for production. Level must be a negative number.
+func getDevelopmentLogger(level int) logr.Logger {
+	if level > 0 {
+		panic("logr logging levels cannot be negative")
+	}
+	zapLevel := zapcore.Level(level)
+	atomicLevel := uzap.NewAtomicLevel()
+	encoderCfg := uzap.NewDevelopmentEncoderConfig()
+
+	encoderCfg.EncodeLevel = traceLevelFunc
+	logger := uzap.New(zapcore.NewCore(
+		zapcore.NewConsoleEncoder(encoderCfg),
+		zapcore.Lock(os.Stdout),
+		atomicLevel,
+	))
+	atomicLevel.SetLevel(zapLevel)
+	return zapr.NewLogger(logger)
+}
+
+// getProductionLogger returns a console logger configured for development. Level must be a negative number.
+func getProductionLogger(level int) logr.Logger {
+	if level > 0 {
+		panic("logr logging levels cannot be negative")
+	}
+	zapLevel := zapcore.Level(level)
+	atomicLevel := uzap.NewAtomicLevel()
+	encoderCfg := uzap.NewProductionEncoderConfig()
+	encoderCfg.EncodeLevel = traceLevelFunc
+	logger := uzap.New(zapcore.NewCore(
+		zapcore.NewJSONEncoder(encoderCfg),
+		zapcore.Lock(os.Stdout),
+		atomicLevel,
+	))
+	atomicLevel.SetLevel(zapLevel)
+	return zapr.NewLogger(logger)
+}
+
+// traceLevelFunc configures a zapcore.LevelEncoder to print "trace" as level field value in log outputs.
+func traceLevelFunc(lvl zapcore.Level, encoder zapcore.PrimitiveArrayEncoder) {
+	if lvl == TraceLevel { encoder.AppendString("trace") }
 }
 
 func fatalError(err error, msg string, values ...interface{}) {

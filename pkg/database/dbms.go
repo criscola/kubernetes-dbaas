@@ -83,6 +83,7 @@ type Endpoint struct {
 // driver://username:password@host/instance?param1=value&param2=value
 //
 // See the individual Driver implementations.
+// TODO: Refactor
 func New(dsn Dsn) (*DbmsConn, error) {
 	var dbmsConn *DbmsConn
 
