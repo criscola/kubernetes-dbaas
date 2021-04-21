@@ -108,7 +108,7 @@ func init() {
 
 func initFlags() {
 	rootCmd.PersistentFlags().String(LoadConfigKey, "", "The location of the Operator's config file")
-	rootCmd.PersistentFlags().Bool(DebugKey, false, "Enable debug mode for development purposes. If set, --log-level value defaults to 2")
+	rootCmd.PersistentFlags().Bool(DebugKey, false, "Enable debug mode for development purposes. If set, --log-level defaults to 1")
 	rootCmd.PersistentFlags().Bool(WebhookEnableKey, true, "Enable webhooks servers.")
 	rootCmd.PersistentFlags().String(MetricsBindAddressKey, ":8080", "The address the metric endpoint binds to")
 	rootCmd.PersistentFlags().String(HealthProbeBindAddressKey, ":8081", "The address the probe endpoint binds to")
@@ -116,7 +116,7 @@ func initFlags() {
 		"Enabling this will ensure there is only one active controller manager")
 	rootCmd.PersistentFlags().String(LeaderElectResName, "bfa62c96.dbaas.bedag.ch", "The resource name to lock during election cycles")
 	rootCmd.PersistentFlags().Int(WebhookPortKey, 9443, "The port the webhook server binds to")
-	rootCmd.PersistentFlags().Int(ZapLogLevelKey, 1, "The verbosity of the logging output. Can be one out of: 0 info, 1 debug, 2 trace. If debug mode is on, defaults to 1")
+	rootCmd.PersistentFlags().Int(ZapLogLevelKey, 0, "The verbosity of the logging output. Can be one out of: 0 info, 1 debug, 2 trace. If debug mode is on, defaults to 1")
 
 	// Bind all flags to Viper
 	rootCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
