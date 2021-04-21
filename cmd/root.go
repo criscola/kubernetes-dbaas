@@ -22,6 +22,8 @@ import (
 	"github.com/go-logr/zapr"
 	uzap "go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"time"
+
 	//"context"
 	"fmt"
 	operatorconfigv1 "github.com/bedag/kubernetes-dbaas/apis/config/v1"
@@ -54,7 +56,7 @@ const (
 	LoadConfigKey    = "load-config"
 	DebugKey         = "debug"
 	WebhookEnableKey = "enable-webhooks"
-	ZapLogLevelKey   = "zap-log-level"
+	ZapLogLevelKey   = "log-level"
 
 	// Flag overrides for flags specified in OperatorConfig
 	MetricsBindAddressKey     = "metrics.bindAddress"
@@ -147,7 +149,10 @@ func initConfigFile() {
 // initLogger initializes the Operator's logger.
 func initLogger() {
 	// Distinguish between 'debug' and 'production' setting.
-	level := viper.GetInt(ZapLogLevelKey) - 2 * viper.GetInt(ZapLogLevelKey)
+	level := viper.GetInt(ZapLogLevelKey)
+	if level > 0 {
+		level -=  2 * level
+	}
 	if viper.GetBool(DebugKey) {
 		fmt.Println("setting up logger in debug mode...")
 		// Check if default is set
@@ -284,6 +289,9 @@ func getProductionLogger(level int) logr.Logger {
 	atomicLevel := uzap.NewAtomicLevel()
 	encoderCfg := uzap.NewProductionEncoderConfig()
 	encoderCfg.EncodeLevel = traceLevelFunc
+	encoderCfg.EncodeTime = func(ts time.Time, encoder zapcore.PrimitiveArrayEncoder) {
+		encoder.AppendString(ts.UTC().Format(time.RFC3339Nano))
+	}
 	logger := uzap.New(zapcore.NewCore(
 		zapcore.NewJSONEncoder(encoderCfg),
 		zapcore.Lock(os.Stdout),
