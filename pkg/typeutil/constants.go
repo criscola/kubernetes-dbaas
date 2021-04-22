@@ -26,13 +26,17 @@ const (
 	RsnDbCreateSucc         = "DatabaseCreateSuccess"
 	RsnDbOpQueueSucc        = "DatabaseQueueSuccess"
 	RsnDbmsConnFail			= "DbmsConnectionFailed"
+	RsnSecretCreateSucc		= "SecretCreateSuccess"
+	RsnSecretUpdateSucc     = "SecretUpdateSuccess"
+	RsnSecretUpdateFail     = "SecretUpdateFailed"
+	RsnSecretGetFail 		= "SecretGetFailed"
+	RsnReadyCondUpdateFail  = "ReadyConditionUpdateFailed"
 
 	// Human-readable messages
-	MsgDbProvisionSucc      = "database instance provisioned successfully on dbms endpoint"
+	MsgDbCreateSucc      = "database instance provisioned successfully on dbms endpoint"
 	MsgDbDeleted            = "database resource not found. Ignoring since object must be deleted"
 	MsgDbGetFail            = "database resource get failed"
-	MsgDbProvisionFail      = "failed to provision database resource"
-	MsgDbUpdateFail         = "could not update resource after removing finalizer"
+	MsgDbUpdateFail         = "could not update database resource, retrying"
 	MsgDbCreateInProg       = "database instance is being provisioned on dbms endpoint"
 	MsgDbmsConfigGetFail    = "could not retrieve dbms list from operator config"
 	MsgDbcConfigGetFail     = "could not retrieve databaseclass name from dbms config"
@@ -48,6 +52,11 @@ const (
 	MsgDbSpecParseFail      = "could not parse spec field of database resource during operation values creation"
 	MsgDbOpQueueSucc        = "database operation queued successfully"
 	MsgDbmsConnFail 	    = "could not establish connection to dbms endpoint"
+	MsgSecretCreateSucc     = "secret created successfully"
+	MsgSecretUpdateSucc     = "secret updated successfully"
+	MsgSecretUpdateFail	    = "secret update failed"
+	MsgSecretGetFail        = "secret get failed"
+	MsgReadyCondUpdateFail  = "could not update ready condition of resource"
 
 	// Event types
 	Normal  = "Normal"

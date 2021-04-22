@@ -30,18 +30,24 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/client-go/tools/record"
 	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"strings"
 
 	databasev1 "github.com/bedag/kubernetes-dbaas/apis/database/v1"
 	databaseclassv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclass/v1"
 )
 
 const (
+	InfoLevel			   = 0
+	DebugLevel			   = 1
+	TraceLevel			   = 2
+
 	DatabaseControllerName = "database-controller"
 	DatabaseClass          = "databaseclass"
 	EndpointName           = "endpoint-name"
@@ -83,7 +89,7 @@ func (r *DatabaseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // move the current state of the cluster closer to the desired state.
 func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger = r.Log.WithValues("database", req.NamespacedName)
-	logger.V(2).Info("Reconcile called")
+	logger.V(TraceLevel).Info("Reconcile called")
 
 	obj := &databasev1.Database{}
 	err := r.Get(ctx, req.NamespacedName, obj)
@@ -92,11 +98,11 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			logger.V(2).Info(MsgDbDeleted)
+			logger.V(TraceLevel).Info(MsgDbDeleted)
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		r.defaultErrHandling(obj, ReconcileError{
+		r.handleReconcileError(obj, ReconcileError{
 			Reason:         RsnDbGetFail,
 			Message:        MsgDbGetFail,
 			Err:            err,
@@ -107,10 +113,14 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// Set reason to unknown to indicate the resource was correctly received by a controller but no action was resolved yet
 	// Update condition field
 	if meta.FindStatusCondition(obj.Status.Conditions, TypeReady) == nil {
-		logger.V(3).Info("Updating ConditionStatus")
+		logger.V(TraceLevel).Info("Updating ConditionStatus")
 		if err = r.updateReadyCondition(obj, metav1.ConditionUnknown, RsnDbOpQueueSucc, MsgDbOpQueueSucc); err != nil {
-			r.EventRecorder.Event(obj, Warning, RsnDbUpdateFail, MsgDbUpdateFail)
-			logger.Error(err, MsgDbUpdateFail)
+			r.handleReconcileError(obj, ReconcileError{
+				Reason:  RsnReadyCondUpdateFail,
+				Message: MsgReadyCondUpdateFail,
+				Err:     err,
+			})
+
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
@@ -122,23 +132,26 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			// Run finalization logic for DatabaseFinalizer. If the
 			// finalization logic fails, don't remove the finalizer so
 			// that we can retry during the next reconciliation.
-			logger.V(2).Info("Finalizing database resource")
+			logger.V(TraceLevel).Info("Finalizing database resource")
 			if err := r.deleteDb(obj); err.IsNotEmpty() {
-				r.defaultErrHandling(obj, err)
+				r.handleReconcileError(obj, err)
 				return reconcile.Result{Requeue: true}, nil
 			}
 
 			// Remove databaseFinalizer. Once all finalizers have been
 			// removed, the object will be deleted.
-			logger.V(2).Info("Removing finalizer")
+			logger.V(TraceLevel).Info("Removing finalizer")
 			controllerutil.RemoveFinalizer(obj, databaseFinalizer)
 			if err := r.Update(ctx, obj); err != nil {
-				r.defaultErrHandling(obj, ReconcileError{
-					Reason:         RsnDbUpdateFail,
-					Message:        MsgDbUpdateFail,
-					Err:            err,
-					AdditionalInfo: stringsToInterfaceSlice("finalizer", databaseFinalizer),
-				})
+				if !shouldIgnoreUpdateErr(err) {
+					r.handleReconcileError(obj, ReconcileError{
+						Reason:         RsnDbUpdateFail,
+						Message:        MsgDbUpdateFail,
+						Err:            err,
+						AdditionalInfo: stringsToInterfaceSlice("finalizer", databaseFinalizer),
+					})
+				}
+
 				return reconcile.Result{Requeue: true}, nil
 			}
 		}
@@ -148,45 +161,40 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// Create
 	// Check conditions, if database is ready, skip
 	if meta.IsStatusConditionTrue(obj.Status.Conditions, TypeReady) {
-		logger.V(1).Info("Create operation skipped because the resource is in Ready state.")
+		logger.V(TraceLevel).Info("Create operation skipped because the resource is already in Ready state")
 		return ctrl.Result{}, nil
 	}
 	if err := r.createDb(obj); err.IsNotEmpty() {
-		r.defaultErrHandling(obj, err)
+		r.handleReconcileError(obj, err)
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// If finalizer is not present, add finalizer to resource
 	if !contains(obj.GetFinalizers(), databaseFinalizer) {
-		logger.V(2).Info("Adding finalizer")
+		logger.V(TraceLevel).Info("Adding finalizer")
 		if err := r.addFinalizer(obj); err != nil {
-			r.defaultErrHandling(obj, ReconcileError{
+			r.handleReconcileError(obj, ReconcileError{
 				Reason:         RsnDbUpdateFail,
 				Message:        MsgDbUpdateFail,
 				Err:            err,
+				AdditionalInfo: stringsToInterfaceSlice("finalizer", databaseFinalizer),
 			})
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
 
-	logger.Info("Updating ConditionStatus")
-	if err := r.updateReadyCondition(obj, metav1.ConditionTrue, RsnCreate, MsgDbProvisionSucc); err != nil {
-		r.defaultErrHandling(obj, ReconcileError{
-			Reason:         RsnDbUpdateFail,
-			Message:        MsgDbUpdateFail,
-			Err:            err,
-		})
+	logger.V(TraceLevel).Info("Updating ConditionStatus")
+	if err := r.updateReadyCondition(obj, metav1.ConditionTrue, RsnDbCreateSucc, MsgDbCreateSucc); err != nil {
+		r.handleReadyConditionError(obj, err)
 		return ctrl.Result{Requeue: true}, nil
 	}
-	logger.V(3).Info("Reached end of reconcile")
+	logger.V(TraceLevel).Info("Reached end of reconcile")
 	return ctrl.Result{}, nil
 }
 
 // addFinalizer adds a finalizer to a Database resource.
 func (r *DatabaseReconciler) addFinalizer(obj *databasev1.Database) error {
 	controllerutil.AddFinalizer(obj, databaseFinalizer)
-
-	// Update CR
 	return r.Update(context.Background(), obj)
 }
 
@@ -242,15 +250,13 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError {
 		}
 	}
 
+	// Log success
+	r.logInfoEvent(obj, RsnDbCreateSucc, MsgDbCreateSucc)
+
 	// Create Secret
-	simpleErr = r.createSecret(obj, dbClass.Spec.Driver, output)
-	if simpleErr != nil {
-		return ReconcileError{
-			Reason:         RsnSecretCreateFail,
-			Message:        MsgSecretCreateFail,
-			Err:            simpleErr,
-			AdditionalInfo: loggingKv,
-		}
+	err = r.createSecret(obj, dbClass.Spec.Driver, output)
+	if err.IsNotEmpty() {
+		return err.With(loggingKv)
 	}
 
 	return ReconcileError{}
@@ -261,9 +267,9 @@ func (r *DatabaseReconciler) deleteDb(obj *databasev1.Database) ReconcileError {
 	logger.Info(MsgDbDeleteInProg)
 	r.EventRecorder.Event(obj, Normal, RsnDbDeleteInProg, MsgDbDeleteInProg)
 
-	dbClass, err := r.getDbmsClassFromDb(obj)
-	if err.IsNotEmpty() {
-		return err
+	dbClass, reconcileErr := r.getDbmsClassFromDb(obj)
+	if reconcileErr.IsNotEmpty() {
+		return reconcileErr
 	}
 	loggingKv := stringsToInterfaceSlice(DatabaseClass, dbClass.Name, database.OperationsConfigKey, database.DeleteMapKey)
 
@@ -277,16 +283,16 @@ func (r *DatabaseReconciler) deleteDb(obj *databasev1.Database) ReconcileError {
 			AdditionalInfo: loggingKv,
 		}
 	}
-	opValues, err := newOpValuesFromResource(obj)
-	if err.IsNotEmpty() {
-		return err.With(loggingKv)
+	opValues, reconcileErr := newOpValuesFromResource(obj)
+	if reconcileErr.IsNotEmpty() {
+		return reconcileErr.With(loggingKv)
 	}
-	deleteOp, simpleErr := deleteOpTemplate.RenderOperation(opValues)
-	if simpleErr != nil {
+	deleteOp, err := deleteOpTemplate.RenderOperation(opValues)
+	if err != nil {
 		return ReconcileError{
 			Reason:         RsnOpRenderFail,
 			Message:        MsgOpRenderFail,
-			Err:            simpleErr,
+			Err:            err,
 			AdditionalInfo: loggingKv,
 		}
 	}
@@ -295,15 +301,15 @@ func (r *DatabaseReconciler) deleteDb(obj *databasev1.Database) ReconcileError {
 	// Execute operation on DBMS
 	// Check preconditions
 	var conn *database.DbmsConn
-	if conn, err = r.getDbmsConnectionByEndpointName(obj.Spec.Endpoint); err.IsNotEmpty() {
-		return err.With(loggingKv)
+	if conn, reconcileErr = r.getDbmsConnectionByEndpointName(obj.Spec.Endpoint); reconcileErr.IsNotEmpty() {
+		return reconcileErr.With(loggingKv)
 	}
-	conn, simpleErr = pool.GetConnByEndpointName(obj.Spec.Endpoint)
-	if simpleErr != nil {
+	conn, err = pool.GetConnByEndpointName(obj.Spec.Endpoint)
+	if err != nil {
 		return ReconcileError{
 			Reason:         RsnDbmsEndpointNotFound,
 			Message:        MsgDbmsEndpointNotFound,
-			Err:            simpleErr,
+			Err:            err,
 			AdditionalInfo: loggingKv,
 		}
 	}
@@ -374,24 +380,23 @@ func (r *DatabaseReconciler) getDbmsConnectionByEndpointName(endpointName string
 	return conn, ReconcileError{}
 }
 
-// defaultErrHandling sets the obj Conditions type Ready to false and sets the relative fields error and message,
+// handleReconcileError sets the obj Conditions type Ready to false and sets the relative fields error and message,
 // it records a Warning event with reason and message for the given obj and logs err (if present) and message to the
 // global logger.
-func (r *DatabaseReconciler) defaultErrHandling(obj *databasev1.Database, err ReconcileError) {
+// It ignores optimistic locking error, see shouldIgnoreUpdateErr. 
+func (r *DatabaseReconciler) handleReconcileError(obj *databasev1.Database, err ReconcileError) {
+	if shouldIgnoreUpdateErr(err.Err) {
+		logger.V(TraceLevel).Info(err.Err.Error())
+		return
+	}
 	keyAndValuesLen := len(err.AdditionalInfo)
-	if keyAndValuesLen%2 != 0 {
-		panic("odd number of keyAndValues provided!")
+	if keyAndValuesLen % 2 != 0 {
+		logger.Error(nil, "odd number of keyAndValues provided!", err.AdditionalInfo...)
+		// Set length to 0 so additional values are ignored
+		keyAndValuesLen = 0
 	}
 	if keyAndValuesLen > 0 {
-		eventMessage := fmt.Sprintf("%s: ", err.Message)
-		for i := 0; i < keyAndValuesLen; i += 2 {
-			if i != keyAndValuesLen-2 {
-				eventMessage += fmt.Sprintf(`{"%s": "%v"}, `, err.AdditionalInfo[i], err.AdditionalInfo[i+1])
-				continue
-			}
-			eventMessage += fmt.Sprintf(`{"%s": "%v"}`, err.AdditionalInfo[i], err.AdditionalInfo[i+1])
-		}
-		r.EventRecorder.Event(obj, Warning, err.Reason, eventMessage)
+		r.EventRecorder.Event(obj, Warning, err.Reason, formatEventMessage(err.Message, err.AdditionalInfo))
 		logger.Error(err.Err, err.Message, err.AdditionalInfo...)
 	} else {
 		r.EventRecorder.Event(obj, Warning, err.Reason, err.Message)
@@ -402,10 +407,34 @@ func (r *DatabaseReconciler) defaultErrHandling(obj *databasev1.Database, err Re
 	}
 }
 
-// createSecret creates a new K8s secret owned by owner with the data contained in output and dsn.
-func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, driver string, output database.OpOutput) error {
-	var ownerRefs []metav1.OwnerReference
+// handleReadyConditionError records an event of type Warning to obj using RsnReadyCondUpdateFail, MsgReadyCondUpdateFail
+// and additionalInfo. additionalInfo is formatted as JSON and attached to the event message.
+// An error log using message and additionalInfo is written using the global logger.
+// It ignores optimistic locking error, see shouldIgnoreUpdateErr. 
+func (r *DatabaseReconciler) handleReadyConditionError(obj *databasev1.Database, err error, additionalInfo ...interface{}) {
+	if shouldIgnoreUpdateErr(err) {
+		logger.V(TraceLevel).Info(err.Error())
+		return
+	}
+	eventMessage := formatEventMessage(MsgReadyCondUpdateFail, additionalInfo...)
+	r.EventRecorder.Event(obj, Warning, RsnReadyCondUpdateFail, eventMessage)
+	logger.Error(err, MsgReadyCondUpdateFail, additionalInfo...)
+}
 
+// logInfoEvent records an event of type Normal to obj using reason, message and additionalInfo. additionalInfo is formatted
+// as JSON and attached to the event message. An info log using message and additionalInfo is written using the global logger
+func (r *DatabaseReconciler) logInfoEvent(obj *databasev1.Database, reason, message string, additionalInfo ...interface{}) {
+	logger.V(TraceLevel).Info("logging info event")
+	eventMessage := formatEventMessage(message, additionalInfo...)
+	r.EventRecorder.Event(obj, Normal, reason, eventMessage)
+	logger.Info(message, additionalInfo...)
+}
+
+// createSecret creates a new K8s secret owned by owner with the data contained in output and dsn.
+func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, driver string, output database.OpOutput) ReconcileError {
+	logger.V(DebugLevel).Info("Creating secret for database resource")
+
+	var ownerRefs []metav1.OwnerReference
 	ownerRefs = append(ownerRefs, metav1.OwnerReference{
 		APIVersion: owner.APIVersion,
 		Kind:       owner.Kind,
@@ -414,9 +443,11 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, driver str
 		Controller: &[]bool{true}[0], // sets this controller as owner
 	})
 
+	secretName := owner.Name + "-credentials"
+	loggingKv := stringsToInterfaceSlice("secret", secretName)
 	newSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            owner.Name + "-credentials",
+			Name:            secretName,
 			Namespace:       owner.Namespace,
 			OwnerReferences: ownerRefs,
 		},
@@ -429,22 +460,74 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, driver str
 			"dsn":      database.NewDsn(driver, output.Out[0], output.Out[1], output.Out[3], output.Out[4], output.Out[2]).String(),
 		},
 	}
-
 	oldSecret := corev1.Secret{}
 	key := client.ObjectKey{
 		Namespace: owner.Namespace,
-		Name:      owner.Name + "-credentials",
+		Name: secretName,
 	}
+
 	err := r.Client.Get(context.Background(), key, &oldSecret)
 	if err != nil {
 		if k8sError.IsNotFound(err) {
-			return r.Client.Create(context.Background(), newSecret)
+			if err := r.Client.Create(context.Background(), newSecret); err != nil {
+				return ReconcileError{
+					Reason:         MsgSecretCreateFail,
+					Message:        MsgSecretCreateFail,
+					Err:            err,
+					AdditionalInfo: loggingKv,
+				}
+			}
+			r.logInfoEvent(owner, RsnSecretCreateSucc, MsgSecretCreateSucc, loggingKv...)
+			return ReconcileError{}
 		}
-		return err
+		return ReconcileError{
+			Reason: RsnSecretGetFail,
+			Message: MsgSecretGetFail,
+			Err: err,
+			AdditionalInfo: loggingKv,
+		}
 	}
 
-	// Secret exists, overwrite
-	return r.Client.Update(context.Background(), newSecret)
+	// Secret exists already, update (e.g. credential rotation)
+	if err = r.Client.Update(context.Background(), newSecret); err != nil {
+		return ReconcileError{
+			Reason: RsnSecretUpdateFail,
+			Message: MsgSecretUpdateFail,
+			Err: err,
+			AdditionalInfo: loggingKv,
+		}
+	}
+
+	r.logInfoEvent(owner, RsnSecretUpdateSucc, MsgSecretUpdateSucc, loggingKv...)
+	return ReconcileError{}
+}
+
+// updateReadyCondition updates the Ready Condition status of obj.
+func (r *DatabaseReconciler) updateReadyCondition(obj *databasev1.Database, status metav1.ConditionStatus, reason, message string) error {
+	meta.SetStatusCondition(&obj.Status.Conditions, metav1.Condition{
+		Type:    TypeReady,
+		Status:  status,
+		Reason:  reason,
+		Message: message,
+	})
+
+	// Update condition field
+	return r.Client.Status().Update(context.Background(), obj)
+}
+
+// IsNotEmpty checks if r is not empty using reflect.DeepEqual. Needed because field AdditionalInfo is not comparable.
+func (r ReconcileError) IsNotEmpty() bool {
+	return !reflect.DeepEqual(r, ReconcileError{})
+}
+
+// With creates a copy of the receiver and appends values to its AdditionalInfo field.
+func (r ReconcileError) With(values []interface{}) ReconcileError {
+	return ReconcileError{
+		Reason:         r.Reason,
+		Message:        r.Message,
+		Err:            r.Err,
+		AdditionalInfo: append(r.AdditionalInfo, values...),
+	}
 }
 
 // newOpValuesFromResource constructs a database.OpValues struct starting from a Database resource.
@@ -478,17 +561,47 @@ func newOpValuesFromResource(obj *databasev1.Database) (database.OpValues, Recon
 	}, ReconcileError{}
 }
 
-// updateReadyCondition updates the Ready Condition status of obj.
-func (r *DatabaseReconciler) updateReadyCondition(obj *databasev1.Database, status metav1.ConditionStatus, reason, message string) error {
-	meta.SetStatusCondition(&obj.Status.Conditions, metav1.Condition{
-		Type:    TypeReady,
-		Status:  status,
-		Reason:  reason,
-		Message: message,
-	})
+// formatEventMessage formats an event message with key and values formatted as a json key-value structure. If keyAndValues
+// is empty, it returns the message back.
+func formatEventMessage(message string, keyAndValues ...interface{}) string {
+	if len(keyAndValues) > 0 {
+		extraValues := formatKeyAndValuesAsJson(keyAndValues)
+		if extraValues != "" {
+			return fmt.Sprintf("%s: %s", message, extraValues)
+		}
+	}
+	return message
+}
 
-	// Update condition field
-	return r.Client.Status().Update(context.Background(), obj)
+// formatKeyAndValuesAsJson converts a slice of interface{} into a json key-value string. Keys need to be strings by JSON's convention.
+func formatKeyAndValuesAsJson(keyAndValues []interface{}) string {
+	keyAndValuesLen := len(keyAndValues)
+	if keyAndValuesLen % 2 != 0 {
+		logger.Error(fmt.Errorf("expected an even number of arguments, provided: %d", keyAndValuesLen),
+			"odd number of keyAndValues provided!", keyAndValues...)
+		// Set length to 0 so additional values are ignored
+		keyAndValuesLen = 0
+	}
+	if keyAndValuesLen > 0 {
+		keyAndValuesMap := make(map[string]interface{}, keyAndValuesLen/2)
+		for i := 0; i < keyAndValuesLen; i += 2 {
+			key, ok := keyAndValues[i].(string)
+			if !ok {
+				logger.Error(fmt.Errorf("expected key at position %d to be string, provided: %T", i, keyAndValues[i]),
+					"keys must be strings!", keyAndValues...)
+				// Set length to 0 so additional values are ignored
+				keyAndValuesLen = 0
+			}
+			keyAndValuesMap[key] = keyAndValues[i+1]
+		}
+		str, err := json.Marshal(keyAndValuesMap)
+		if err != nil {
+			logger.Error(err, "cannot marshal keyAndValues to JSON")
+			return ""
+		}
+		return string(str)
+	}
+	return ""
 }
 
 // contains is a very small utility function which returns true if s has been found in list.
@@ -509,17 +622,13 @@ func stringsToInterfaceSlice(values ...string) []interface{} {
 	return y
 }
 
-// IsNotEmpty checks if r is not empty using reflect.DeepEqual. Needed because field AdditionalInfo is not comparable.
-func (r ReconcileError) IsNotEmpty() bool {
-	return !reflect.DeepEqual(r, ReconcileError{})
-}
-
-// With creates a copy of the receiver and appends values to its AdditionalInfo field.
-func (r ReconcileError) With(values []interface{}) ReconcileError {
-	return ReconcileError{
-		Reason:         r.Reason,
-		Message:        r.Message,
-		Err:            r.Err,
-		AdditionalInfo: append(r.AdditionalInfo, values...),
+// shouldIgnoreUpdateErr checks if an error message is generated due to the optimistic locking mechanism of Kubernetes API.
+// This specific error is innocuous and should be generally ignored.
+// See https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+func shouldIgnoreUpdateErr(err error) bool {
+	if strings.Contains(err.Error(), genericregistry.OptimisticLockErrorMsg) {
+		// do manaul retry without error
+		return true
 	}
+	return false
 }
