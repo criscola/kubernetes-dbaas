@@ -107,12 +107,13 @@ make deploy IMG=yourrepo/imagename
 | `--enable-webhooks`                        	| Enables webhooks servers (default true)                                                                                               	                   |
 | `--health.healthProbeBindAddress <string>` 	| The address the probe endpoint binds to (default ":8081")                                                                                                    |
 | `-h`, `--help`                               	| help for kubedbaas                                                                                                                                           |
-| `--leaderElection.leaderElect`             	| Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager  (default true)                         |
+| `--leaderElection.leaderElect`         | Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager  (default true)                                |
 | `--leaderElection.resourceName <string>`   	| The resource name to lock during election cycles (default "bfa62c96.dbaas.bedag.ch")                                                                         |
 | `--load-config <string>`                   	| Location of the Operator's config file                                                                                                                       |
 | `--metrics.bindAddress <string>`           	| The address the metric endpoint binds to (default "127.0.0.1:8080")                                                                  	                       |
 | `--webhook.port <int>`                       	| The port the webhook server binds to (default 9443)                                                                                  	             	       |
-| `--log-level <int>`                       	| The verbosity of the logging output. Can be one out of: `0` info, `1` debug, `2` trace. If debug mode is on, defaults to `1` (default 0)         |                                                                       	|
+| `--log-level <int>`                       	| The verbosity of the logging output. Can be one out of: `0` info, `1` debug, `2` trace. If debug mode is on, defaults to `1` (default 0)                     |                                                                       	|
+| `--disable-stacktrace`                       	| Disable stacktrace printing in logger errors (default false)                                                                                  	           |
 
 The order of precedence is `flags > config file > defaults`. Environment variables are not read.
 
@@ -124,8 +125,18 @@ You can troubleshoot problems in two ways:
 To avoid leaking possibly sensitive information, events do not contain the full error, only a message along with some
 pertinent values if present.
 
-You can also control the verbosity of the logger by setting the `--log-level <int>` flag to a value from 0 (only strictly
-necessary logs) to 3 (very verbose). By default, this value is set to 1.
+You can control the verbosity of the logger by setting the `--log-level <int>` flag.
+
+- `0`: Info level
+- `1`: Debug Level
+- `2`: Trace level
+
+Errors are always logged.
+
+Sampling is enabled in production mode for every log entry with same level and message. The first 100 entries in one second
+are logged, after that only one entry is logged every 100 entries until the next second.
+
+Stacktraces are attached to error logs in both production and development mode.
 
 ## Known problems
 
