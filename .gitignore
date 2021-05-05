@@ -23,3 +23,6 @@ testbin/*
 *.swp
 *.swo
 *~
+
+# don't push your config publicly
+config.yaml
