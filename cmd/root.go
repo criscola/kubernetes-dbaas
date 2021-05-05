@@ -17,12 +17,9 @@ package cmd
 
 import (
 	"context"
+	"github.com/bedag/kubernetes-dbaas/internal/logging"
 	"github.com/bedag/kubernetes-dbaas/pkg/config"
 	"github.com/go-logr/logr"
-	"github.com/go-logr/zapr"
-	uzap "go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"time"
 
 	//"context"
 	"fmt"
@@ -51,12 +48,11 @@ import (
 )
 
 const (
-	TraceLevel 		 = -2
-
 	LoadConfigKey    = "load-config"
 	DebugKey         = "debug"
 	WebhookEnableKey = "enable-webhooks"
 	ZapLogLevelKey   = "log-level"
+	DisableStackTrace = "disable-stacktrace"
 
 	// Flag overrides for flags specified in OperatorConfig
 	MetricsBindAddressKey     = "metrics.bindAddress"
@@ -117,6 +113,7 @@ func initFlags() {
 	rootCmd.PersistentFlags().String(LeaderElectResName, "bfa62c96.dbaas.bedag.ch", "The resource name to lock during election cycles")
 	rootCmd.PersistentFlags().Int(WebhookPortKey, 9443, "The port the webhook server binds to")
 	rootCmd.PersistentFlags().Int(ZapLogLevelKey, 0, "The verbosity of the logging output. Can be one out of: 0 info, 1 debug, 2 trace. If debug mode is on, defaults to 1")
+	rootCmd.PersistentFlags().Bool(DisableStackTrace, false, "Disable stacktrace printing in logger errors")
 
 	// Bind all flags to Viper
 	rootCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
@@ -151,19 +148,22 @@ func initLogger() {
 	// Distinguish between 'debug' and 'production' setting.
 	level := viper.GetInt(ZapLogLevelKey)
 	if level > 0 {
-		level -=  2 * level
+		level -= 2 * level
 	}
+
+	var logger logr.Logger
 	if viper.GetBool(DebugKey) {
-		fmt.Println("setting up logger in debug mode...")
+		fmt.Println("setting up logger in development mode...")
 		// Check if default is set
 		if !viper.IsSet(ZapLogLevelKey) {
 			level = -1
 		}
-		ctrl.SetLogger(getDevelopmentLogger(level))
+		logger = logging.GetDevelopmentLogger(level, viper.GetBool(DisableStackTrace))
 	} else {
 		fmt.Println("setting up logger in production mode...")
-		ctrl.SetLogger(getProductionLogger(level))
+		logger = logging.GetProductionLogger(level, viper.GetBool(DisableStackTrace))
 	}
+	ctrl.SetLogger(logger)
 }
 
 // loadOperator registers all the Manager's controllers, webhooks and starts them.
@@ -258,55 +258,6 @@ func registerEndpoints() {
 		if err := pool.Register(dbmsConfigEntry, dbClass); err != nil {
 			fatalError(err, "problem registering dbms endpoint", "databaseClassName", dbClass.Name)
 		}
-	}
-}
-
-// getDevelopmentLogger returns a json logger configured for production. Level must be a negative number.
-func getDevelopmentLogger(level int) logr.Logger {
-	if level > 0 {
-		panic("logr logging levels cannot be negative")
-	}
-	zapLevel := zapcore.Level(level)
-	atomicLevel := uzap.NewAtomicLevel()
-	encoderCfg := uzap.NewDevelopmentEncoderConfig()
-
-	encoderCfg.EncodeLevel = traceLevelFunc
-	logger := uzap.New(zapcore.NewCore(
-		zapcore.NewConsoleEncoder(encoderCfg),
-		zapcore.Lock(os.Stdout),
-		atomicLevel,
-	))
-	atomicLevel.SetLevel(zapLevel)
-	return zapr.NewLogger(logger)
-}
-
-// getProductionLogger returns a console logger configured for development. Level must be a negative number.
-func getProductionLogger(level int) logr.Logger {
-	if level > 0 {
-		panic("logr logging levels cannot be negative")
-	}
-	zapLevel := zapcore.Level(level)
-	atomicLevel := uzap.NewAtomicLevel()
-	encoderCfg := uzap.NewProductionEncoderConfig()
-	encoderCfg.EncodeLevel = traceLevelFunc
-	encoderCfg.EncodeTime = func(ts time.Time, encoder zapcore.PrimitiveArrayEncoder) {
-		encoder.AppendString(ts.UTC().Format(time.RFC3339Nano))
-	}
-	logger := uzap.New(zapcore.NewCore(
-		zapcore.NewJSONEncoder(encoderCfg),
-		zapcore.Lock(os.Stdout),
-		atomicLevel,
-	))
-	atomicLevel.SetLevel(zapLevel)
-	return zapr.NewLogger(logger)
-}
-
-// traceLevelFunc configures a zapcore.LevelEncoder to print "trace" as level field value in log outputs.
-func traceLevelFunc(lvl zapcore.Level, encoder zapcore.PrimitiveArrayEncoder) {
-	if lvl == TraceLevel {
-		encoder.AppendString("trace")
-	} else {
-		encoder.AppendString(lvl.String())
 	}
 }
 
