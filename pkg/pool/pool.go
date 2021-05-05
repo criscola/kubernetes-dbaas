@@ -28,7 +28,7 @@ func Register(dbms database.Dbms, dbClass databaseclassv1.DatabaseClass) error {
 				"of endpoints", endpoint.Name)
 		}
 
-		conn, err := database.New(endpoint.Dsn)
+		conn, err := database.NewDbmsConn(driver, endpoint.Dsn)
 		if err != nil {
 			return fmt.Errorf("problem opening connection to endpoint: %s", err)
 		}
