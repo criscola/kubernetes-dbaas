@@ -79,15 +79,15 @@ type Endpoint struct {
 	Dsn  Dsn    `json:"dsn"`
 }
 
-// New initializes a Dbms instance based on a map of Operation. It expects a dsn like that:
+// NewDbmsConn initializes a Dbms instance based on a map of Operation. It expects a dsn like that:
 // driver://username:password@host/instance?param1=value&param2=value
 //
 // See the individual Driver implementations.
 // TODO: Refactor
-func New(dsn Dsn) (*DbmsConn, error) {
+func NewDbmsConn(driver string, dsn Dsn) (*DbmsConn, error) {
 	var dbmsConn *DbmsConn
 
-	switch dsn.GetDriver() {
+	switch driver {
 	case Sqlserver:
 		sqlserverConn, err := NewMssqlConn(dsn)
 		if err != nil {
@@ -113,7 +113,7 @@ func New(dsn Dsn) (*DbmsConn, error) {
 
 // RenderOperation renders "actions" specified through the use of the Go text/template format. It renders Input of
 // the receiver. Data to be inserted is taken directly from values. See OpValues. If the rendering is successful, the
-// method returns a rendered Operation, if an error is generated, it is returned along with an empty Operation struct.
+// method returns ah na rendered Operation, if an error is generated, it is returned along with an empty Operation struct.
 // Keys which are specified but not found generate an error (i.e. no unreferenced keys are allowed).
 func (op *Operation) RenderOperation(values OpValues) (Operation, error) {
 	// Get inputs
