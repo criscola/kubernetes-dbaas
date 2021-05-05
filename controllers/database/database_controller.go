@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/bedag/kubernetes-dbaas/internal/logging"
 	"github.com/bedag/kubernetes-dbaas/pkg/config"
 	"github.com/bedag/kubernetes-dbaas/pkg/database"
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
@@ -44,9 +45,9 @@ import (
 )
 
 const (
-	InfoLevel			   = 0
-	DebugLevel			   = 1
-	TraceLevel			   = 2
+	InfoLevel  = logging.InfoLevel
+	DebugLevel = logging.ZapDebugLevel
+	TraceLevel = logging.ZapTraceLevel
 
 	DatabaseControllerName = "database-controller"
 	DatabaseClass          = "databaseclass"
@@ -103,9 +104,9 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 		// Error reading the object - requeue the request.
 		r.handleReconcileError(obj, ReconcileError{
-			Reason:         RsnDbGetFail,
-			Message:        MsgDbGetFail,
-			Err:            err,
+			Reason:  RsnDbGetFail,
+			Message: MsgDbGetFail,
+			Err:     err,
 		})
 		return reconcile.Result{Requeue: true}, nil
 	}
@@ -326,7 +327,7 @@ func (r *DatabaseReconciler) deleteDb(obj *databasev1.Database) ReconcileError {
 }
 
 func (r *DatabaseReconciler) getDbmsClassFromDb(obj *databasev1.Database) (databaseclassv1.DatabaseClass, ReconcileError) {
-	// Get DatabaseClass name from DBMS config
+	// Get DatabaseClass name from DBMS s
 	dbmsList, err := config.GetDbmsList()
 	if err != nil {
 		return databaseclassv1.DatabaseClass{}, ReconcileError{
@@ -342,7 +343,7 @@ func (r *DatabaseReconciler) getDbmsClassFromDb(obj *databasev1.Database) (datab
 			Reason:         RsnDbcConfigGetFail,
 			Message:        MsgDbcConfigGetFail,
 			Err:            err,
-			AdditionalInfo: stringsToInterfaceSlice(DatabaseClass, dbClassName, EndpointName, obj.Spec.Endpoint),
+			AdditionalInfo: stringsToInterfaceSlice(EndpointName, obj.Spec.Endpoint),
 		}
 	}
 
@@ -364,17 +365,17 @@ func (r *DatabaseReconciler) getDbmsConnectionByEndpointName(endpointName string
 	conn, simpleErr := pool.GetConnByEndpointName(endpointName)
 	if simpleErr != nil {
 		return nil, ReconcileError{
-			Reason:         RsnDbmsEndpointNotFound,
-			Message:        MsgDbmsEndpointNotFound,
-			Err:            simpleErr,
+			Reason:  RsnDbmsEndpointNotFound,
+			Message: MsgDbmsEndpointNotFound,
+			Err:     simpleErr,
 		}
 	}
 	// Make a first check to acknowledge whether the connection looks alive
 	if simpleErr = conn.Ping(); simpleErr != nil {
 		return nil, ReconcileError{
-			Reason:         RsnDbmsConnFail,
-			Message:        MsgDbmsConnFail,
-			Err:            simpleErr,
+			Reason:  RsnDbmsConnFail,
+			Message: MsgDbmsConnFail,
+			Err:     simpleErr,
 		}
 	}
 	return conn, ReconcileError{}
@@ -383,20 +384,20 @@ func (r *DatabaseReconciler) getDbmsConnectionByEndpointName(endpointName string
 // handleReconcileError sets the obj Conditions type Ready to false and sets the relative fields error and message,
 // it records a Warning event with reason and message for the given obj and logs err (if present) and message to the
 // global logger.
-// It ignores optimistic locking error, see shouldIgnoreUpdateErr. 
+// It ignores optimistic locking error, see shouldIgnoreUpdateErr.
 func (r *DatabaseReconciler) handleReconcileError(obj *databasev1.Database, err ReconcileError) {
 	if shouldIgnoreUpdateErr(err.Err) {
 		logger.V(TraceLevel).Info(err.Err.Error())
 		return
 	}
 	keyAndValuesLen := len(err.AdditionalInfo)
-	if keyAndValuesLen % 2 != 0 {
+	if keyAndValuesLen%2 != 0 {
 		logger.Error(nil, "odd number of keyAndValues provided!", err.AdditionalInfo...)
 		// Set length to 0 so additional values are ignored
 		keyAndValuesLen = 0
 	}
 	if keyAndValuesLen > 0 {
-		r.EventRecorder.Event(obj, Warning, err.Reason, formatEventMessage(err.Message, err.AdditionalInfo))
+		r.EventRecorder.Event(obj, Warning, err.Reason, formatEventMessage(err.Message, err.AdditionalInfo...))
 		logger.Error(err.Err, err.Message, err.AdditionalInfo...)
 	} else {
 		r.EventRecorder.Event(obj, Warning, err.Reason, err.Message)
@@ -410,7 +411,7 @@ func (r *DatabaseReconciler) handleReconcileError(obj *databasev1.Database, err 
 // handleReadyConditionError records an event of type Warning to obj using RsnReadyCondUpdateFail, MsgReadyCondUpdateFail
 // and additionalInfo. additionalInfo is formatted as JSON and attached to the event message.
 // An error log using message and additionalInfo is written using the global logger.
-// It ignores optimistic locking error, see shouldIgnoreUpdateErr. 
+// It ignores optimistic locking error, see shouldIgnoreUpdateErr.
 func (r *DatabaseReconciler) handleReadyConditionError(obj *databasev1.Database, err error, additionalInfo ...interface{}) {
 	if shouldIgnoreUpdateErr(err) {
 		logger.V(TraceLevel).Info(err.Error())
@@ -463,7 +464,7 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, driver str
 	oldSecret := corev1.Secret{}
 	key := client.ObjectKey{
 		Namespace: owner.Namespace,
-		Name: secretName,
+		Name:      secretName,
 	}
 
 	err := r.Client.Get(context.Background(), key, &oldSecret)
@@ -481,9 +482,9 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, driver str
 			return ReconcileError{}
 		}
 		return ReconcileError{
-			Reason: RsnSecretGetFail,
-			Message: MsgSecretGetFail,
-			Err: err,
+			Reason:         RsnSecretGetFail,
+			Message:        MsgSecretGetFail,
+			Err:            err,
 			AdditionalInfo: loggingKv,
 		}
 	}
@@ -491,9 +492,9 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, driver str
 	// Secret exists already, update (e.g. credential rotation)
 	if err = r.Client.Update(context.Background(), newSecret); err != nil {
 		return ReconcileError{
-			Reason: RsnSecretUpdateFail,
-			Message: MsgSecretUpdateFail,
-			Err: err,
+			Reason:         RsnSecretUpdateFail,
+			Message:        MsgSecretUpdateFail,
+			Err:            err,
 			AdditionalInfo: loggingKv,
 		}
 	}
@@ -576,7 +577,7 @@ func formatEventMessage(message string, keyAndValues ...interface{}) string {
 // formatKeyAndValuesAsJson converts a slice of interface{} into a json key-value string. Keys need to be strings by JSON's convention.
 func formatKeyAndValuesAsJson(keyAndValues []interface{}) string {
 	keyAndValuesLen := len(keyAndValues)
-	if keyAndValuesLen % 2 != 0 {
+	if keyAndValuesLen%2 != 0 {
 		logger.Error(fmt.Errorf("expected an even number of arguments, provided: %d", keyAndValuesLen),
 			"odd number of keyAndValues provided!", keyAndValues...)
 		// Set length to 0 so additional values are ignored
