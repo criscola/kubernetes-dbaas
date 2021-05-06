@@ -24,32 +24,31 @@ func NewMssqlConn(dsn Dsn) (*MssqlConn, error) {
 // CreateDb attempts to create a new database as specified in the operation parameter. It returns an OpOutput with the
 // result of the call.
 func (c *MssqlConn) CreateDb(operation Operation) OpOutput {
-	var username string
-	var password string
-	var dbName string
-	var fqdn string
-	var port string
-
 	var inputParams []interface{}
 	for k, v := range operation.Inputs {
 		inputParams = append(inputParams, sql.Named(k, v))
 	}
-	inputParams = append(inputParams,
-		sql.Named(operation.Outputs[UserMapKey], sql.Out{Dest: &username}),
-		sql.Named(operation.Outputs[PassMapKey], sql.Out{Dest: &password}),
-		sql.Named(operation.Outputs[DbNameMapKey], sql.Out{Dest: &dbName}),
-		sql.Named(operation.Outputs[FqdnMapKey], sql.Out{Dest: &fqdn}),
-		sql.Named(operation.Outputs[PortMapKey], sql.Out{Dest: &port}))
 
-	_, err := c.c.Exec(operation.Name, inputParams...)
+	rows, err := c.c.Query(operation.Name, inputParams...)
 	if err != nil {
-		return OpOutput{nil, err}
+		return OpOutput{Result: nil, Err: err}
 	}
 
-	return OpOutput{[]string{username, password, dbName, fqdn, port}, nil}
+	var key string
+	var value string
+	result := make(map[string]string)
+	for rows.Next() {
+		err = rows.Scan(&key, &value)
+		if err != nil {
+			return OpOutput{nil, err}
+		}
+		result[key] = value
+	}
+
+	return OpOutput{result, nil}
 }
 
-// DeleteDb attemps to delete a database instance as specified in the operation parameter. It returns an OpOutput with the
+// DeleteDb attempts to delete a database instance as specified in the operation parameter. It returns an OpOutput with the
 // result of the call.
 func (c *MssqlConn) DeleteDb(operation Operation) OpOutput {
 	var inputParams []interface{}
