@@ -79,6 +79,9 @@ type Endpoint struct {
 	Dsn  Dsn    `json:"dsn"`
 }
 
+// +kubebuilder:object:generate=true
+type SecretFormat map[string]string
+
 // NewDbmsConn initializes a Dbms instance based on a map of Operation. It expects a dsn like that:
 // driver://username:password@host/instance?param1=value&param2=value
 //
@@ -123,28 +126,16 @@ func (op *Operation) RenderOperation(values OpValues) (Operation, error) {
 	if err != nil {
 		return Operation{}, err
 	}
-	// Setup the template to be rendered based on the inputs
-	tmpl, err := template.New("spParam").Parse(string(stringInputs))
-	if err != nil {
-		return Operation{}, err
-	}
-	tmpl.Option(ErrorOnMissingKeyOption)
-	// Create a new buffer for the rendering result
-	renderedInputsBuf := bytes.NewBufferString("")
-	// Render each templated value by taking the values from the OpValues struct
-	err = tmpl.Execute(renderedInputsBuf, values)
-	if err != nil {
-		return Operation{}, err
-	}
-	var renderedInputs map[string]string
-	err = json.Unmarshal([]byte(renderedInputsBuf.String()), &renderedInputs)
-	if err != nil {
-		return Operation{}, err
-	}
+	renderedInputsString, err := RenderGoTemplate(string(stringInputs), values, ErrorOnMissingKeyOption)
 
+	var renderedInputsMap map[string]string
+	err = json.Unmarshal([]byte(renderedInputsString), &renderedInputsMap)
+	if err != nil {
+		return Operation{}, err
+	}
 	renderedOp := Operation{
 		Name:    op.Name,
-		Inputs:  renderedInputs,
+		Inputs:  renderedInputsMap,
 		Outputs: op.Outputs,
 	}
 
@@ -168,6 +159,47 @@ func (e Endpoint) IsNamePresent() bool {
 // IsDsnPresent return true if an endpoint dsn is not empty, else it returns false.
 func (e Endpoint) IsDsnPresent() bool {
 	return e.Dsn != ""
+}
+
+func (s SecretFormat) RenderSecretFormat(createOpOutput OpOutput) (SecretFormat, error) {
+	// Get inputs
+	inputs := createOpOutput.Out
+	// Transform map[string]string to a single json string
+	stringInputs, err := json.Marshal(inputs)
+	if err != nil {
+		return Operation{}, err
+	}
+	renderedInputsString, err := RenderGoTemplate(string(stringInputs), values, ErrorOnMissingKeyOption)
+
+	var renderedInputsMap map[string]string
+	err = json.Unmarshal([]byte(renderedInputsString), &renderedInputsMap)
+	if err != nil {
+		return Operation{}, err
+	}
+	renderedOp := Operation{
+		Name:    op.Name,
+		Inputs:  renderedInputsMap,
+		Outputs: op.Outputs,
+	}
+
+	return renderedOp, nil
+}
+
+func RenderGoTemplate(templatedString string, values interface{}, options ...string) (string, error) {
+	// Setup the template to be rendered based on the inputs
+	tmpl, err := template.New("gotmpl").Parse(templatedString)
+	if err != nil {
+		return "", err
+	}
+	tmpl.Option(options...)
+	// Create a new buffer for the rendering result
+	renderedInputsBuf := bytes.NewBufferString("")
+	// Render each templated value by taking the values from values
+	err = tmpl.Execute(renderedInputsBuf, values)
+	if err != nil {
+		return "", err
+	}
+	return renderedInputsBuf.String(), nil
 }
 
 // contains is a very small utility function which returns true if s has been found in list.

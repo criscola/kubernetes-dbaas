@@ -27,7 +27,8 @@ import (
 // DatabaseClassSpec defines the desired state of DatabaseClass
 type DatabaseClassSpec struct {
 	Driver     string                         `json:"driver,omitempty"`
-	Operations map[string]*database.Operation `json:"operations,omitempty"`
+	Operations map[string]database.Operation `json:"operations,omitempty"`
+	SecretFormat database.SecretFormat			  `json:"secretFormat,omitempty"`
 }
 
 // +kubebuilder:object:root=true

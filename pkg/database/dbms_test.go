@@ -15,7 +15,7 @@ const (
 
 func TestDatabase(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Books Suite")
+	RunSpecs(t, "Database package suite")
 }
 
 var _ = Describe(FormatTestDesc(Unit, "RenderOperation"), func() {
@@ -60,7 +60,7 @@ var _ = Describe(FormatTestDesc(Unit, "RenderOperation"), func() {
 		}
 
 		// Prepare comparison data for assertions
-		operationAssertionData := database.Operation{
+		operationAssertion := database.Operation{
 			Name:    operationNameBasicCorrect,
 			Inputs: map[string]string{
 				"name": "TestDb",
@@ -79,7 +79,7 @@ var _ = Describe(FormatTestDesc(Unit, "RenderOperation"), func() {
 		})
 
 		It("renders an Operation correctly", func() {
-			Expect(renderedOperation).To(Equal(operationAssertionData))
+			Expect(renderedOperation).To(Equal(operationAssertion))
 		})
 	})
 })

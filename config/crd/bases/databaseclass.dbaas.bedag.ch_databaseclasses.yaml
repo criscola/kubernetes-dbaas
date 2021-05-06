@@ -58,6 +58,10 @@ spec:
                       type: object
                   type: object
                 type: object
+              secretFormat:
+                additionalProperties:
+                  type: string
+                type: object
             type: object
         type: object
     served: true

@@ -19,3 +19,10 @@ spec:
       name: sp_delete
       inputs:
         k8sName: "{{ .Metadata.name }}"
+  secretFormat:
+    username: "{{ .Result.username }}"
+    password: "{{ .Result.password }}"
+    port: "{{ .Result.port }}"
+    dbName: "{{ .Result.dbName }}"
+    server: "{{ .Result.fqdn }}"
+    dsn: "psql://{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}/{{ .Result.dbName }}"
