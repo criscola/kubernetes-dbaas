@@ -6,16 +6,17 @@ spec:
   driver: "sqlserver"
   operations:
     create:
-      name: sp_create
+      name: "sp_create_rowset_EAV"
       inputs:
         k8sName: "{{ .Metadata.name }}"
-      outputs:
-        password: password
-        username: username
-        dbName: dbName
-        fqdn: fqdn
-        port: port
     delete:
-      name: sp_delete
+      name: "sp_delete"
       inputs:
         k8sName: "{{ .Metadata.name }}"
+  secretFormat:
+    username: "{{ .Result.username }}"
+    password: "{{ .Result.password }}"
+    port: "{{ .Result.port }}"
+    dbName: "{{ .Result.dbName }}"
+    server: "{{ .Result.fqdn }}"
+    dsn: "psql://{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}/{{ .Result.dbName }}"

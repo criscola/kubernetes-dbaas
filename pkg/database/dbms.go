@@ -43,14 +43,13 @@ type DbmsConn struct {
 type Operation struct {
 	Name    string            `json:"name,omitempty"`
 	Inputs  map[string]string `json:"inputs,omitempty"`
-	Outputs map[string]string `json:"outputs,omitempty"`
 }
 
 // OpOutput represents the return values of an operation. If the operation generates an error, it must be set in the Err
 // field. If Err is nil, the operation is assumed to be successful.
 type OpOutput struct {
-	Out []string // May be changed to interface{} if typing is needed
-	Err error
+	Result map[string]string
+	Err    error
 }
 
 // OpValues represent the input values of an operation.
@@ -78,6 +77,9 @@ type Endpoint struct {
 	Name string `json:"name"`
 	Dsn  Dsn    `json:"dsn"`
 }
+
+// +kubebuilder:object:generate=true
+type SecretFormat map[string]string
 
 // NewDbmsConn initializes a Dbms instance based on a map of Operation. It expects a dsn like that:
 // driver://username:password@host/instance?param1=value&param2=value
@@ -115,37 +117,24 @@ func NewDbmsConn(driver string, dsn Dsn) (*DbmsConn, error) {
 // the receiver. Data to be inserted is taken directly from values. See OpValues. If the rendering is successful, the
 // method returns ah na rendered Operation, if an error is generated, it is returned along with an empty Operation struct.
 // Keys which are specified but not found generate an error (i.e. no unreferenced keys are allowed).
-func (op *Operation) RenderOperation(values OpValues) (Operation, error) {
-	// Get inputs
-	inputs := op.Inputs
+func (op Operation) RenderOperation(values OpValues) (Operation, error) {
 	// Transform map[string]string to a single json string
-	stringInputs, err := json.Marshal(inputs)
+	operationTemplate, err := json.Marshal(op.Inputs)
 	if err != nil {
 		return Operation{}, err
 	}
-	// Setup the template to be rendered based on the inputs
-	tmpl, err := template.New("spParam").Parse(string(stringInputs))
+	renderedInputsString, err := RenderGoTemplate(string(operationTemplate), values, ErrorOnMissingKeyOption)
 	if err != nil {
 		return Operation{}, err
 	}
-	tmpl.Option(ErrorOnMissingKeyOption)
-	// Create a new buffer for the rendering result
-	renderedInputsBuf := bytes.NewBufferString("")
-	// Render each templated value by taking the values from the OpValues struct
-	err = tmpl.Execute(renderedInputsBuf, values)
+	var renderedInputsMap map[string]string
+	err = json.Unmarshal([]byte(renderedInputsString), &renderedInputsMap)
 	if err != nil {
 		return Operation{}, err
 	}
-	var renderedInputs map[string]string
-	err = json.Unmarshal([]byte(renderedInputsBuf.String()), &renderedInputs)
-	if err != nil {
-		return Operation{}, err
-	}
-
 	renderedOp := Operation{
 		Name:    op.Name,
-		Inputs:  renderedInputs,
-		Outputs: op.Outputs,
+		Inputs:  renderedInputsMap,
 	}
 
 	return renderedOp, nil
@@ -168,6 +157,43 @@ func (e Endpoint) IsNamePresent() bool {
 // IsDsnPresent return true if an endpoint dsn is not empty, else it returns false.
 func (e Endpoint) IsDsnPresent() bool {
 	return e.Dsn != ""
+}
+
+func (s SecretFormat) RenderSecretFormat(createOpOutput OpOutput) (SecretFormat, error) {
+	// Transform map[string]string to a single json string
+	stringInputs, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+	renderedInputsString, err := RenderGoTemplate(string(stringInputs), createOpOutput, ErrorOnMissingKeyOption)
+	if err != nil {
+		return nil, err
+	}
+	var renderedInputsMap map[string]string
+	err = json.Unmarshal([]byte(renderedInputsString), &renderedInputsMap)
+	if err != nil {
+		return nil, err
+	}
+	renderedSecretFormat := SecretFormat(renderedInputsMap)
+
+	return renderedSecretFormat, nil
+}
+
+func RenderGoTemplate(templatedString string, values interface{}, options ...string) (string, error) {
+	// Setup the template to be rendered based on the inputs
+	tmpl, err := template.New("gotmpl").Parse(templatedString)
+	if err != nil {
+		return "", err
+	}
+	tmpl.Option(options...)
+	// Create a new buffer for the rendering result
+	renderedInputsBuf := bytes.NewBufferString("")
+	// Render each templated value by taking the values from values
+	err = tmpl.Execute(renderedInputsBuf, values)
+	if err != nil {
+		return "", err
+	}
+	return renderedInputsBuf.String(), nil
 }
 
 // contains is a very small utility function which returns true if s has been found in list.

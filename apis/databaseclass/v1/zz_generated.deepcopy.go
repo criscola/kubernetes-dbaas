@@ -88,17 +88,16 @@ func (in *DatabaseClassSpec) DeepCopyInto(out *DatabaseClassSpec) {
 	*out = *in
 	if in.Operations != nil {
 		in, out := &in.Operations, &out.Operations
-		*out = make(map[string]*database.Operation, len(*in))
+		*out = make(map[string]database.Operation, len(*in))
 		for key, val := range *in {
-			var outVal *database.Operation
-			if val == nil {
-				(*out)[key] = nil
-			} else {
-				in, out := &val, &outVal
-				*out = new(database.Operation)
-				(*in).DeepCopyInto(*out)
-			}
-			(*out)[key] = outVal
+			(*out)[key] = *val.DeepCopy()
+		}
+	}
+	if in.SecretFormat != nil {
+		in, out := &in.SecretFormat, &out.SecretFormat
+		*out = make(database.SecretFormat, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
 		}
 	}
 }
