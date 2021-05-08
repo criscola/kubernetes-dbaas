@@ -180,6 +180,7 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				r.handleReconcileError(obj, err)
 				return ctrl.Result{Requeue: true}, nil
 			}
+			r.logInfoEvent(obj, RsnDbRotateSucc, MsgDbRotateSucc)
 		} else {
 			// Database is ready and credentials shouldn't be rotated, nothing else to do
 			return ctrl.Result{}, nil

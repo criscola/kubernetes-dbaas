@@ -33,7 +33,7 @@ const (
 	RsnReadyCondUpdateFail  = "ReadyConditionUpdateFailed"
 	RsnSecretRenderFail		= "SecretRenderFailed"
 	RsnDbRotateInProg 		= "DatabaseRotateInProgress"
-
+	RsnDbRotateSucc			= "DatabaseRotateSuccess"
 
 	// Human-readable messages
 	MsgDbCreateSucc         = "database instance provisioned successfully on dbms endpoint"
@@ -61,8 +61,8 @@ const (
 	MsgSecretGetFail        = "secret get failed"
 	MsgReadyCondUpdateFail  = "could not update ready condition of resource"
 	MsgSecretRenderFail		= "could not render secret data"
-	MsgDbRotateInProg		= "database password rotation in progress"
-
+	MsgDbRotateInProg		= "database credentials rotation in progress"
+	MsgDbRotateSucc 		= "database credentials rotation completed"
 
 	// Event types
 	Normal  = "Normal"
