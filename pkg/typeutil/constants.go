@@ -31,6 +31,7 @@ const (
 	RsnSecretUpdateFail     = "SecretUpdateFailed"
 	RsnSecretGetFail        = "SecretGetFailed"
 	RsnReadyCondUpdateFail  = "ReadyConditionUpdateFailed"
+	RsnSecretRenderFail		= "SecretRenderFailed"
 
 	// Human-readable messages
 	MsgDbCreateSucc         = "database instance provisioned successfully on dbms endpoint"
@@ -57,6 +58,7 @@ const (
 	MsgSecretUpdateFail     = "secret update failed"
 	MsgSecretGetFail        = "secret get failed"
 	MsgReadyCondUpdateFail  = "could not update ready condition of resource"
+	MsgSecretRenderFail		= "could not render secret data"
 
 	// Event types
 	Normal  = "Normal"

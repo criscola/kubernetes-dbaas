@@ -255,7 +255,7 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError {
 	r.logInfoEvent(obj, RsnDbCreateSucc, MsgDbCreateSucc)
 
 	// Create Secret
-	err = r.createSecret(obj, dbClass.Spec.Driver, output)
+	err = r.createSecret(obj, dbClass.Spec.SecretFormat, output)
 	if err.IsNotEmpty() {
 		return err.With(loggingKv)
 	}
@@ -432,7 +432,7 @@ func (r *DatabaseReconciler) logInfoEvent(obj *databasev1.Database, reason, mess
 }
 
 // createSecret creates a new K8s secret owned by owner with the data contained in output and dsn.
-func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, driver string, output database.OpOutput) ReconcileError {
+func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretFormat database.SecretFormat, output database.OpOutput) ReconcileError {
 	logger.V(DebugLevel).Info("Creating secret for database resource")
 
 	var ownerRefs []metav1.OwnerReference
@@ -446,20 +446,26 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, driver str
 
 	secretName := owner.Name + "-credentials"
 	loggingKv := stringsToInterfaceSlice("secret", secretName)
+
+	// Render secret
+	secretData, err := secretFormat.RenderSecretFormat(output)
+	if err != nil {
+		return ReconcileError{
+			Reason: RsnSecretRenderFail,
+			Message: MsgSecretRenderFail,
+			Err: err,
+			AdditionalInfo: loggingKv,
+		}
+	}
+
 	newSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            secretName,
 			Namespace:       owner.Namespace,
 			OwnerReferences: ownerRefs,
 		},
-		StringData: map[string]string{
-			"username": output.Out[0],
-			"password": output.Out[1],
-			"host":     output.Out[3],
-			"port":     output.Out[4],
-			"dbName":   output.Out[2],
-			"dsn":      database.NewDsn(driver, output.Out[0], output.Out[1], output.Out[3], output.Out[4], output.Out[2]).String(),
-		},
+		// TODO: Pass SecretFormat here
+		StringData: secretData,
 	}
 	oldSecret := corev1.Secret{}
 	key := client.ObjectKey{
@@ -467,7 +473,7 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, driver str
 		Name:      secretName,
 	}
 
-	err := r.Client.Get(context.Background(), key, &oldSecret)
+	err = r.Client.Get(context.Background(), key, &oldSecret)
 	if err != nil {
 		if k8sError.IsNotFound(err) {
 			if err := r.Client.Create(context.Background(), newSecret); err != nil {

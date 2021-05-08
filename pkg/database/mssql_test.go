@@ -5,15 +5,9 @@ import (
 	. "github.com/bedag/kubernetes-dbaas/pkg/test"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testing"
 )
 
 const spNameEav = "sp_create_rowset_EAV"
-
-func TestMssqlConn_CreateDb(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Database package suite")
-}
 
 var _ = Describe(FormatTestDesc(Integration, "SQLServer CreateDb"), func() {
 	// Setting up connection to DBMS

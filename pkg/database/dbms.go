@@ -43,14 +43,13 @@ type DbmsConn struct {
 type Operation struct {
 	Name    string            `json:"name,omitempty"`
 	Inputs  map[string]string `json:"inputs,omitempty"`
-	Outputs map[string]string `json:"outputs,omitempty"`
 }
 
 // OpOutput represents the return values of an operation. If the operation generates an error, it must be set in the Err
 // field. If Err is nil, the operation is assumed to be successful.
 type OpOutput struct {
-	Out []string // May be changed to interface{} if typing is needed
-	Err error
+	Result map[string]string
+	Err    error
 }
 
 // OpValues represent the input values of an operation.
@@ -118,16 +117,16 @@ func NewDbmsConn(driver string, dsn Dsn) (*DbmsConn, error) {
 // the receiver. Data to be inserted is taken directly from values. See OpValues. If the rendering is successful, the
 // method returns ah na rendered Operation, if an error is generated, it is returned along with an empty Operation struct.
 // Keys which are specified but not found generate an error (i.e. no unreferenced keys are allowed).
-func (op *Operation) RenderOperation(values OpValues) (Operation, error) {
-	// Get inputs
-	inputs := op.Inputs
+func (op Operation) RenderOperation(values OpValues) (Operation, error) {
 	// Transform map[string]string to a single json string
-	stringInputs, err := json.Marshal(inputs)
+	operationTemplate, err := json.Marshal(op.Inputs)
 	if err != nil {
 		return Operation{}, err
 	}
-	renderedInputsString, err := RenderGoTemplate(string(stringInputs), values, ErrorOnMissingKeyOption)
-
+	renderedInputsString, err := RenderGoTemplate(string(operationTemplate), values, ErrorOnMissingKeyOption)
+	if err != nil {
+		return Operation{}, err
+	}
 	var renderedInputsMap map[string]string
 	err = json.Unmarshal([]byte(renderedInputsString), &renderedInputsMap)
 	if err != nil {
@@ -136,7 +135,6 @@ func (op *Operation) RenderOperation(values OpValues) (Operation, error) {
 	renderedOp := Operation{
 		Name:    op.Name,
 		Inputs:  renderedInputsMap,
-		Outputs: op.Outputs,
 	}
 
 	return renderedOp, nil
@@ -162,27 +160,23 @@ func (e Endpoint) IsDsnPresent() bool {
 }
 
 func (s SecretFormat) RenderSecretFormat(createOpOutput OpOutput) (SecretFormat, error) {
-	// Get inputs
-	inputs := createOpOutput.Out
 	// Transform map[string]string to a single json string
-	stringInputs, err := json.Marshal(inputs)
+	stringInputs, err := json.Marshal(s)
 	if err != nil {
-		return Operation{}, err
+		return nil, err
 	}
-	renderedInputsString, err := RenderGoTemplate(string(stringInputs), values, ErrorOnMissingKeyOption)
-
+	renderedInputsString, err := RenderGoTemplate(string(stringInputs), createOpOutput, ErrorOnMissingKeyOption)
+	if err != nil {
+		return nil, err
+	}
 	var renderedInputsMap map[string]string
 	err = json.Unmarshal([]byte(renderedInputsString), &renderedInputsMap)
 	if err != nil {
-		return Operation{}, err
+		return nil, err
 	}
-	renderedOp := Operation{
-		Name:    op.Name,
-		Inputs:  renderedInputsMap,
-		Outputs: op.Outputs,
-	}
+	renderedSecretFormat := SecretFormat(renderedInputsMap)
 
-	return renderedOp, nil
+	return renderedSecretFormat, nil
 }
 
 func RenderGoTemplate(templatedString string, values interface{}, options ...string) (string, error) {
