@@ -24,10 +24,7 @@ func NewMssqlConn(dsn Dsn) (*MssqlConn, error) {
 // CreateDb attempts to create a new database as specified in the operation parameter. It returns an OpOutput with the
 // result of the call.
 func (c *MssqlConn) CreateDb(operation Operation) OpOutput {
-	var inputParams []interface{}
-	for k, v := range operation.Inputs {
-		inputParams = append(inputParams, sql.Named(k, v))
-	}
+	inputParams := getQueryInputs(operation.Inputs)
 
 	rows, err := c.c.Query(operation.Name, inputParams...)
 	if err != nil {
@@ -51,17 +48,33 @@ func (c *MssqlConn) CreateDb(operation Operation) OpOutput {
 // DeleteDb attempts to delete a database instance as specified in the operation parameter. It returns an OpOutput with the
 // result of the call.
 func (c *MssqlConn) DeleteDb(operation Operation) OpOutput {
-	var inputParams []interface{}
-	for k, v := range operation.Inputs {
-		inputParams = append(inputParams, sql.Named(k, v))
-	}
+	inputParams := getQueryInputs(operation.Inputs)
 
 	_, err := c.c.Exec(operation.Name, inputParams...)
 	if err != nil {
 		return OpOutput{nil, err}
 	}
 
-	return OpOutput{nil, nil}
+	return OpOutput{}
+}
+
+func (c *MssqlConn) Rotate(operation Operation) OpOutput {
+	inputParams := getQueryInputs(operation.Inputs)
+
+	_, err := c.c.Exec(operation.Name, inputParams...)
+	if err != nil {
+		return OpOutput{nil, err}
+	}
+
+	return OpOutput{}
+}
+
+func getQueryInputs(values map[string]string) []interface{} {
+	var inputParams []interface{}
+	for k, v := range values {
+		inputParams = append(inputParams, sql.Named(k, v))
+	}
+	return inputParams
 }
 
 // Ping returns an error if a connection cannot be established with the DBMS, else it returns nil.

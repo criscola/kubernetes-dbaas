@@ -37,6 +37,12 @@ func (c *PsqlConn) DeleteDb(operation Operation) OpOutput {
 	return OpOutput{}
 }
 
+func (c *PsqlConn) Rotate(operation Operation) OpOutput {
+	log.Fatal("psql driver not yet implemented")
+	// TODO: Implement
+	return OpOutput{}
+}
+
 func (c *PsqlConn) Ping() error {
 	return c.c.Ping()
 }

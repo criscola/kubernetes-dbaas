@@ -52,7 +52,9 @@ const (
 	DatabaseControllerName = "database-controller"
 	DatabaseClass          = "databaseclass"
 	EndpointName           = "endpoint-name"
+	SecretName			   = "secret-name"
 	databaseFinalizer      = "finalizer.database.bedag.ch"
+	rotateAnnotationKey	   = "dbaas.bedag.ch/rotate"
 )
 
 type ReconcileError struct {
@@ -159,12 +161,32 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return reconcile.Result{}, nil
 	}
 
-	// Create
-	// Check conditions, if database is ready, skip
+	// If Database is ready
 	if meta.IsStatusConditionTrue(obj.Status.Conditions, TypeReady) {
-		logger.V(TraceLevel).Info("Create operation skipped because the resource is already in Ready state")
-		return ctrl.Result{}, nil
+		logger.V(TraceLevel).Info("Database is in Ready state")
+		// Check if Database credentials should be rotated
+		shouldRotate, err := r.shouldRotate(obj)
+		if err.IsNotEmpty() {
+			r.handleReconcileError(obj, err)
+			return ctrl.Result{Requeue: true}, nil
+		}
+		if shouldRotate {
+			// Update Ready condition to false, Database credentials must be rotated
+			if err := r.updateReadyCondition(obj, metav1.ConditionFalse, RsnDbRotateInProg, MsgDbRotateInProg); err != nil {
+				r.handleReadyConditionError(obj, err)
+				return ctrl.Result{Requeue: true}, nil
+			}
+			if err := r.rotate(obj); err.IsNotEmpty() {
+				r.handleReconcileError(obj, err)
+				return ctrl.Result{Requeue: true}, nil
+			}
+		} else {
+			// Database is ready and credentials shouldn't be rotated, nothing else to do
+			return ctrl.Result{}, nil
+		}
 	}
+
+	// Create
 	if err := r.createDb(obj); err.IsNotEmpty() {
 		r.handleReconcileError(obj, err)
 		return ctrl.Result{Requeue: true}, nil
@@ -201,8 +223,7 @@ func (r *DatabaseReconciler) addFinalizer(obj *databasev1.Database) error {
 
 // createDb creates a new Database instance on the external provisioner based on the Database data.
 func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError {
-	logger.Info(MsgDbCreateInProg)
-	r.EventRecorder.Event(obj, Normal, RsnDbCreateInProg, MsgDbCreateInProg)
+	r.logInfoEvent(obj, RsnDbCreateInProg, MsgDbCreateInProg)
 
 	dbClass, err := r.getDbmsClassFromDb(obj)
 	if err.IsNotEmpty() {
@@ -265,8 +286,7 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError {
 
 // deleteDb deletes the database instance on the external provisioner.
 func (r *DatabaseReconciler) deleteDb(obj *databasev1.Database) ReconcileError {
-	logger.Info(MsgDbDeleteInProg)
-	r.EventRecorder.Event(obj, Normal, RsnDbDeleteInProg, MsgDbDeleteInProg)
+	r.logInfoEvent(obj, RsnDbDeleteInProg, MsgDbDeleteInProg)
 
 	dbClass, reconcileErr := r.getDbmsClassFromDb(obj)
 	if reconcileErr.IsNotEmpty() {
@@ -315,6 +335,66 @@ func (r *DatabaseReconciler) deleteDb(obj *databasev1.Database) ReconcileError {
 		}
 	}
 	output := conn.DeleteDb(deleteOp)
+	if output.Err != nil {
+		return ReconcileError{
+			Reason:         RsnDbDeleteFail,
+			Message:        MsgDbDeleteFail,
+			Err:            output.Err,
+			AdditionalInfo: loggingKv,
+		}
+	}
+	return ReconcileError{}
+}
+
+// rotate rotates the database credentials on the external provisioner.
+func (r *DatabaseReconciler) rotate(obj *databasev1.Database) ReconcileError {
+	r.logInfoEvent(obj, RsnDbRotateInProg, MsgDbRotateInProg)
+
+	dbClass, reconcileErr := r.getDbmsClassFromDb(obj)
+	if reconcileErr.IsNotEmpty() {
+		return reconcileErr
+	}
+	loggingKv := stringsToInterfaceSlice(DatabaseClass, dbClass.Name, database.OperationsConfigKey, database.RotateMapKey)
+	rotateOpTemplate, exists := dbClass.Spec.Operations[database.RotateMapKey]
+	if !exists {
+		return ReconcileError{
+			Reason:         RsnOpNotSupported,
+			Message:        MsgOpNotSupported,
+			Err:            nil,
+			AdditionalInfo: loggingKv,
+		}
+	}
+	opValues, reconcileErr := newOpValuesFromResource(obj)
+	if reconcileErr.IsNotEmpty() {
+		return reconcileErr.With(loggingKv)
+	}
+	rotateOp, err := rotateOpTemplate.RenderOperation(opValues)
+	if err != nil {
+		return ReconcileError{
+			Reason:         RsnOpRenderFail,
+			Message:        MsgOpRenderFail,
+			Err:            err,
+			AdditionalInfo: loggingKv,
+		}
+	}
+	loggingKv = append(loggingKv, EndpointName, obj.Spec.Endpoint)
+
+	// Execute operation on DBMS
+	// Check preconditions
+	var conn *database.DbmsConn
+	if conn, reconcileErr = r.getDbmsConnectionByEndpointName(obj.Spec.Endpoint); reconcileErr.IsNotEmpty() {
+		return reconcileErr.With(loggingKv)
+	}
+	conn, err = pool.GetConnByEndpointName(obj.Spec.Endpoint)
+	if err != nil {
+		return ReconcileError{
+			Reason:         RsnDbmsEndpointNotFound,
+			Message:        MsgDbmsEndpointNotFound,
+			Err:            err,
+			AdditionalInfo: loggingKv,
+		}
+	}
+	output := conn.Rotate(rotateOp)
 	if output.Err != nil {
 		return ReconcileError{
 			Reason:         RsnDbDeleteFail,
@@ -417,6 +497,8 @@ func (r *DatabaseReconciler) handleReadyConditionError(obj *databasev1.Database,
 		logger.V(TraceLevel).Info(err.Error())
 		return
 	}
+	// In the grim situation where the Ready condition cannot be updated, dump everything to the resource event stream
+	// and logger
 	eventMessage := formatEventMessage(MsgReadyCondUpdateFail, additionalInfo...)
 	r.EventRecorder.Event(obj, Warning, RsnReadyCondUpdateFail, eventMessage)
 	logger.Error(err, MsgReadyCondUpdateFail, additionalInfo...)
@@ -425,7 +507,6 @@ func (r *DatabaseReconciler) handleReadyConditionError(obj *databasev1.Database,
 // logInfoEvent records an event of type Normal to obj using reason, message and additionalInfo. additionalInfo is formatted
 // as JSON and attached to the event message. An info log using message and additionalInfo is written using the global logger
 func (r *DatabaseReconciler) logInfoEvent(obj *databasev1.Database, reason, message string, additionalInfo ...interface{}) {
-	logger.V(TraceLevel).Info("logging info event")
 	eventMessage := formatEventMessage(message, additionalInfo...)
 	r.EventRecorder.Event(obj, Normal, reason, eventMessage)
 	logger.Info(message, additionalInfo...)
@@ -444,7 +525,7 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretForm
 		Controller: &[]bool{true}[0], // sets this controller as owner
 	})
 
-	secretName := owner.Name + "-credentials"
+	secretName := formatSecretName(owner)
 	loggingKv := stringsToInterfaceSlice("secret", secretName)
 
 	// Render secret
@@ -458,13 +539,13 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretForm
 		}
 	}
 
+	// Create new Secret
 	newSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            secretName,
 			Namespace:       owner.Namespace,
 			OwnerReferences: ownerRefs,
 		},
-		// TODO: Pass SecretFormat here
 		StringData: secretData,
 	}
 	oldSecret := corev1.Secret{}
@@ -473,8 +554,10 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretForm
 		Name:      secretName,
 	}
 
+	// Get old Secret if present
 	err = r.Client.Get(context.Background(), key, &oldSecret)
 	if err != nil {
+		// If Secret was not found, it must be created
 		if k8sError.IsNotFound(err) {
 			if err := r.Client.Create(context.Background(), newSecret); err != nil {
 				return ReconcileError{
@@ -496,6 +579,8 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretForm
 	}
 
 	// Secret exists already, update (e.g. credential rotation)
+	// Don't overwrite empty values
+	newSecret.StringData = secretFormat.From(oldSecret.StringData)
 	if err = r.Client.Update(context.Background(), newSecret); err != nil {
 		return ReconcileError{
 			Reason:         RsnSecretUpdateFail,
@@ -522,6 +607,36 @@ func (r *DatabaseReconciler) updateReadyCondition(obj *databasev1.Database, stat
 	return r.Client.Status().Update(context.Background(), obj)
 }
 
+// shouldRotate returns true if there isn't any Secret associated with the given Database object, or if the rotate
+// annotation is present. It returns false otherwise, or if an error was generated during the check execution.
+func (r *DatabaseReconciler) shouldRotate(obj *databasev1.Database) (bool, ReconcileError) {
+	logger.V(TraceLevel).Info("Checking if credentials should be rotated")
+	secretName := formatSecretName(obj)
+	loggingKv := stringsToInterfaceSlice(SecretName, secretName)
+
+	// If Secret of Database is not present, it must be recreated through credentials rotation
+	var secret corev1.Secret
+	secretObjKey := client.ObjectKey{Namespace: obj.Namespace, Name: formatSecretName(obj)}
+	if err := r.Client.Get(context.Background(), secretObjKey, &secret); err != nil {
+		if k8sError.IsNotFound(err) {
+			// Secret for given object is not present, it must be recreated
+			return true, ReconcileError{}
+		}
+		// Another error was generated while getting the Secret, return it
+		return false, ReconcileError{
+			Reason:         RsnSecretGetFail,
+			Message:        MsgSecretGetFail,
+			Err:            err,
+			AdditionalInfo: loggingKv,
+		}
+	}
+	// secret is present, check if rotate annotation is present, if yes, rotate, else, just keep going
+	if val, ok := obj.Annotations[rotateAnnotationKey]; ok && val == "" {
+		return true, ReconcileError{}
+	}
+	return false, ReconcileError{}
+}
+
 // IsNotEmpty checks if r is not empty using reflect.DeepEqual. Needed because field AdditionalInfo is not comparable.
 func (r ReconcileError) IsNotEmpty() bool {
 	return !reflect.DeepEqual(r, ReconcileError{})
@@ -535,6 +650,11 @@ func (r ReconcileError) With(values []interface{}) ReconcileError {
 		Err:            r.Err,
 		AdditionalInfo: append(r.AdditionalInfo, values...),
 	}
+}
+
+// formatSecretName returns the name of a Database's Secret resource.
+func formatSecretName(obj *databasev1.Database) string {
+	return obj.Name+"-credentials"
 }
 
 // newOpValuesFromResource constructs a database.OpValues struct starting from a Database resource.
@@ -633,6 +753,9 @@ func stringsToInterfaceSlice(values ...string) []interface{} {
 // This specific error is innocuous and should be generally ignored.
 // See https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
 func shouldIgnoreUpdateErr(err error) bool {
+	if err == nil {
+		return false
+	}
 	if strings.Contains(err.Error(), genericregistry.OptimisticLockErrorMsg) {
 		// do manaul retry without error
 		return true

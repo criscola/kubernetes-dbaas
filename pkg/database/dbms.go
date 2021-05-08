@@ -12,6 +12,7 @@ const (
 	Psql                    = "psql"
 	CreateMapKey            = "create"
 	DeleteMapKey            = "delete"
+	RotateMapKey			= "rotate"
 	OperationsConfigKey     = "operations"
 	K8sMapKey               = "k8sName"
 	UserMapKey              = "username"
@@ -29,6 +30,7 @@ const (
 type Driver interface {
 	CreateDb(operation Operation) OpOutput
 	DeleteDb(operation Operation) OpOutput
+	Rotate(operation Operation) OpOutput
 	Ping() error
 }
 
@@ -177,6 +179,17 @@ func (s SecretFormat) RenderSecretFormat(createOpOutput OpOutput) (SecretFormat,
 	renderedSecretFormat := SecretFormat(renderedInputsMap)
 
 	return renderedSecretFormat, nil
+}
+
+// From merges the receiver with toMerge. s values are overwritten by toMerge values when they have same key.
+// New k-v pairs are added to the result. Empty strings in toMerge are ignored (not overwritten nor added to the result).
+func (s SecretFormat) From(toMerge map[string]string) SecretFormat {
+	for k, v := range toMerge {
+		if v != "" {
+			s[k] = v
+		}
+	}
+	return s
 }
 
 func RenderGoTemplate(templatedString string, values interface{}, options ...string) (string, error) {

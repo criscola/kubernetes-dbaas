@@ -13,6 +13,10 @@ spec:
       name: "sp_delete"
       inputs:
         k8sName: "{{ .Metadata.name }}"
+    rotate:
+      name: "sp_rotate"
+      inputs:
+        k8sName: "{{ .Metadata.name }}"
   secretFormat:
     username: "{{ .Result.username }}"
     password: "{{ .Result.password }}"
