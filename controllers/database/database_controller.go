@@ -183,6 +183,7 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			r.logInfoEvent(obj, RsnDbRotateSucc, MsgDbRotateSucc)
 		} else {
 			// Database is ready and credentials shouldn't be rotated, nothing else to do
+			logger.V(TraceLevel).Info("Credentials should not be rotated, nothing left to do")
 			return ctrl.Result{}, nil
 		}
 	}
@@ -404,6 +405,22 @@ func (r *DatabaseReconciler) rotate(obj *databasev1.Database) ReconcileError {
 			AdditionalInfo: loggingKv,
 		}
 	}
+
+	// Remove annotation if present
+	if isRotateAnnotationTrue(obj) {
+		logger.V(TraceLevel).Info("Removing rotate annotation")
+		delete(obj.GetAnnotations(), rotateAnnotationKey)
+		err := r.Client.Update(context.Background(), obj)
+		if err != nil {
+			return ReconcileError{
+				Reason:         RsnDbUpdateFail,
+				Message:        MsgDbUpdateFail,
+				Err:            err,
+				AdditionalInfo: loggingKv,
+			}
+		}
+	}
+
 	return ReconcileError{}
 }
 
@@ -632,7 +649,7 @@ func (r *DatabaseReconciler) shouldRotate(obj *databasev1.Database) (bool, Recon
 		}
 	}
 	// secret is present, check if rotate annotation is present, if yes, rotate, else, just keep going
-	if val, ok := obj.Annotations[rotateAnnotationKey]; ok && val == "" {
+	if isRotateAnnotationTrue(obj) {
 		return true, ReconcileError{}
 	}
 	return false, ReconcileError{}
@@ -651,6 +668,14 @@ func (r ReconcileError) With(values []interface{}) ReconcileError {
 		Err:            r.Err,
 		AdditionalInfo: append(r.AdditionalInfo, values...),
 	}
+}
+
+// isRotateAnnotationTrue checks whether the rotate annotation is present and set to true or ""
+func isRotateAnnotationTrue(obj *databasev1.Database) bool {
+	if val, ok := obj.Annotations[rotateAnnotationKey]; ok && val == "" || val == "true" {
+		return true
+	}
+	return false
 }
 
 // formatSecretName returns the name of a Database's Secret resource.

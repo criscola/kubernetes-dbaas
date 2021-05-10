@@ -16,5 +16,5 @@ insert @t values('password', 'testpassword')
 insert @t values('dbName', @k8sName)
 insert @t values('fqdn', 'localhost')
 insert @t values('port', '1433')
-  
+
 select * from @t

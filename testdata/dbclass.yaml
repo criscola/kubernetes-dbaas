@@ -23,4 +23,4 @@ spec:
     port: "{{ .Result.port }}"
     dbName: "{{ .Result.dbName }}"
     server: "{{ .Result.fqdn }}"
-    dsn: "psql://{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}/{{ .Result.dbName }}"
+    dsn: "sqlserver://{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}/{{ .Result.dbName }}"
