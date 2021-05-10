@@ -7,11 +7,14 @@ import (
 )
 
 type TestType string
+type TestAttribute string
 
 const (
 	Unit        TestType = "u"
 	Integration TestType = "i"
 	E2e         TestType = "e2e"
+
+	Slow		TestAttribute = "slow"
 )
 
 // FormatTestDesc should be used throughout the project to format test descriptions for the Ginkgo testing
@@ -21,11 +24,11 @@ const (
 // TODO: The primitivity of Ginkgo's test runner is a long-standing issue of its 1.x version, see https://github.com/onsi/ginkgo/issues/664
 // and https://github.com/onsi/ginkgo/issues/144. This function will likely become obsolete from the 2.x version of
 // Ginkgo.
-func FormatTestDesc(label TestType, description string, extras ...string) string {
+func FormatTestDesc(label TestType, description string, extras ...TestAttribute) string {
 	var extraStrings string
 	if len(extras) > 0 {
 		for _, s := range extras {
-			extraStrings += "[" + s + "] "
+			extraStrings += "[" + string(s) + "] "
 		}
 	}
 	extraStrings = strings.TrimRight(extraStrings, " ")

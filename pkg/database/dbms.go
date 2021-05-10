@@ -14,12 +14,6 @@ const (
 	DeleteMapKey            = "delete"
 	RotateMapKey			= "rotate"
 	OperationsConfigKey     = "operations"
-	K8sMapKey               = "k8sName"
-	UserMapKey              = "username"
-	PassMapKey              = "password"
-	DbNameMapKey            = "dbName"
-	FqdnMapKey              = "fqdn"
-	PortMapKey              = "port"
 	ErrorOnMissingKeyOption = "missingkey=error"
 	DbmsConfigKey           = "dbms"
 )
