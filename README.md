@@ -19,7 +19,7 @@ There are many cases where a company can't or doesn't want to host their preciou
 
 - Go 1.15 or newer
 - operator-sdk v1.5.x 
-- Kubernetes v1.19.0 or newer
+- Kubernetes v1.21.0 or newer
 - Helm v3
 
 ## Features
