@@ -53,6 +53,7 @@ const (
 	WebhookEnableKey = "enable-webhooks"
 	ZapLogLevelKey   = "log-level"
 	DisableStackTrace = "disable-stacktrace"
+	RpsKey 			  = "rps"
 
 	// Flag overrides for flags specified in OperatorConfig
 	MetricsBindAddressKey     = "metrics.bindAddress"
@@ -114,6 +115,7 @@ func initFlags() {
 	rootCmd.PersistentFlags().Int(WebhookPortKey, 9443, "The port the webhook server binds to")
 	rootCmd.PersistentFlags().Int(ZapLogLevelKey, 0, "The verbosity of the logging output. Can be one out of: 0 info, 1 debug, 2 trace. If debug mode is on, defaults to 1")
 	rootCmd.PersistentFlags().Bool(DisableStackTrace, false, "Disable stacktrace printing in logger errors")
+	rootCmd.PersistentFlags().Int(RpsKey, 0, "The number of operation executed per second per endpoint. If set to 0, operations won't be rate-limited.")
 
 	// Bind all flags to Viper
 	rootCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
@@ -255,7 +257,7 @@ func registerEndpoints() {
 				dbmsConfigEntry.DatabaseClassName)
 		}
 
-		if err := pool.Register(dbmsConfigEntry, dbClass); err != nil {
+		if err := pool.Register(dbmsConfigEntry, dbClass, viper.GetInt(RpsKey)); err != nil {
 			fatalError(err, "problem registering dbms endpoint", "databaseClassName", dbClass.Name)
 		}
 	}

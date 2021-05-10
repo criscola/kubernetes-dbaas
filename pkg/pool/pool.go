@@ -13,13 +13,13 @@ var pool dbmsPool
 type dbmsPool map[string]dbmsPoolEntry
 
 type dbmsPoolEntry struct {
-	dbmsConn *database.DbmsConn
+	dbmsConn *database.RateLimitedDbmsConn
 	dsn      string
 	driver   string
 }
 
 // Register registers a new database.Dbms in the pool.
-func Register(dbms database.Dbms, dbClass databaseclassv1.DatabaseClass) error {
+func Register(dbms database.Dbms, dbClass databaseclassv1.DatabaseClass, rps int) error {
 	// Get driver from DatabaseClass.
 	driver := dbClass.Spec.Driver
 	for _, endpoint := range dbms.Endpoints {
@@ -32,8 +32,10 @@ func Register(dbms database.Dbms, dbClass databaseclassv1.DatabaseClass) error {
 		if err != nil {
 			return fmt.Errorf("problem opening connection to endpoint: %s", err)
 		}
+		rateLimitedConn, err := database.NewRateLimitedDbmsConn(conn, rps)
+
 		// Add entry to pool
-		pool[endpoint.Name] = dbmsPoolEntry{conn, endpoint.Dsn.String(), driver}
+		pool[endpoint.Name] = dbmsPoolEntry{rateLimitedConn, endpoint.Dsn.String(), driver}
 	}
 
 	return nil
@@ -41,7 +43,7 @@ func Register(dbms database.Dbms, dbClass databaseclassv1.DatabaseClass) error {
 
 // GetConnByEndpointName tries to get a connection by endpoint name. It returns an error if a connection related to
 // endpointName is not found in the pool.
-func GetConnByEndpointName(endpointName string) (*database.DbmsConn, error) {
+func GetConnByEndpointName(endpointName string) (*database.RateLimitedDbmsConn, error) {
 	if conn, ok := pool[endpointName]; ok {
 		return conn.dbmsConn, nil
 	}

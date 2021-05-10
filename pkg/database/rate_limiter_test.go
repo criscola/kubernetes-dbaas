@@ -13,7 +13,10 @@ var _ = Describe(FormatTestDesc(Integration, "NewRateLimitedDbmsConn", Slow), fu
 	// Create a connection
 	// Setting up connection to DBMS
 	dsn := "sqlserver://sa:Password&1@localhost:1433"
-	conn, err := database.NewRateLimitedDbmsConn("sqlserver", database.Dsn(dsn), 1)
+	conn, err := database.NewMssqlConn(database.Dsn(dsn))
+	Expect(err).ToNot(HaveOccurred())
+
+	rateLimitedConn, err := database.NewRateLimitedDbmsConn(conn, 1)
 	Expect(err).ToNot(HaveOccurred())
 
 	createOperation := database.Operation{
@@ -35,7 +38,7 @@ var _ = Describe(FormatTestDesc(Integration, "NewRateLimitedDbmsConn", Slow), fu
 					defer func() { callTimes = append(callTimes, time.Now()) }()
 					defer wg.Done()
 
-					conn.CreateDb(createOperation)
+					rateLimitedConn.CreateDb(createOperation)
 				}()
 			}
 			wg.Wait()

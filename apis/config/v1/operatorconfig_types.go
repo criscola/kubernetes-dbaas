@@ -33,6 +33,10 @@ type OperatorConfig struct {
 	// ControllerManagerConfigurationSpec returns the configurations for controllers
 	cfg.ControllerManagerConfigurationSpec `json:",inline"`
 
+	// rps configures the rate limiter to allow only a certain amount of operations per second per endpoint. If set to 0,
+	// operations won't be rate-limited.
+	int `json:"rps,omitempty"`
+
 	// +kubebuilder:kubebuilder:validation:MinItems=1
 	// DbmsList returns the configuration for the database endpoints.
 	database.DbmsList `json:"dbms"`
