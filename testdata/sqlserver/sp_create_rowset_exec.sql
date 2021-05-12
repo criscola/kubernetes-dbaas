@@ -1,1 +1,1 @@
-EXEC sp_create_rowset_EAV 'testdb'
+EXEC sp_create_rowset_EAV 'myDatabase'

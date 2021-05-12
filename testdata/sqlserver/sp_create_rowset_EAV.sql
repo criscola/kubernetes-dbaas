@@ -1,12 +1,10 @@
 create proc sp_create_rowset_EAV (@k8sName varchar(max))
 as
 declare @sql varchar(max)
-declare @tempDbName varchar(255)
---set @tempDbName=CONCAT('', (SELECT LEFT(CONVERT(varchar(255), @k8sName),8)))
 
-IF COUNT((DB_ID(@tempDbName))) = 0
+IF COUNT((DB_ID(@k8sName))) = 0
     BEGIN
-        set @sql = CONCAT('create database ',@tempDbName)
+        set @sql = CONCAT('create database ',@k8sName)
         exec (@sql)
     END
 
