@@ -1,0 +1,1 @@
+select * from sp_create_db_rowset_eav('mytest');
