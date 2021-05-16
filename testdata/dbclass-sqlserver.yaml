@@ -1,7 +1,7 @@
 apiVersion: databaseclass.dbaas.bedag.ch/v1
 kind: DatabaseClass
 metadata:
-  name: databaseclass-sample
+  name: databaseclass-sample-sqlserver
 spec:
   driver: "sqlserver"
   operations:
@@ -23,4 +23,4 @@ spec:
     port: "{{ .Result.port }}"
     dbName: "{{ .Result.dbName }}"
     server: "{{ .Result.fqdn }}"
-    dsn: "sqlserver://{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}/{{ .Result.dbName }}"
+    dsn: "sqlserver://{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}:{{ .Result.port }}/{{ .Result.dbName }}"

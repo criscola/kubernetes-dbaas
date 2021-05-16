@@ -37,7 +37,7 @@ func (conn *RateLimitedDbmsConn) CreateDb(operation Operation) OpOutput {
 
 func (conn *RateLimitedDbmsConn) DeleteDb(operation Operation) OpOutput {
 	conn.limiter.Take()
-	return conn.Driver.CreateDb(operation)
+	return conn.Driver.DeleteDb(operation)
 }
 
 func (conn *RateLimitedDbmsConn) Ping() error {

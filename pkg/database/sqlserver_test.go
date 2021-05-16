@@ -7,8 +7,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const spNameEav = "sp_create_rowset_EAV"
-
 var _ = Describe(FormatTestDesc(Integration, "SQLServer CreateDb"), func() {
 	// Setting up connection to DBMS
 	dsn := "sqlserver://sa:Password&1@localhost:1433"
@@ -37,7 +35,8 @@ var _ = Describe(FormatTestDesc(Integration, "SQLServer CreateDb"), func() {
 		}
 
 		// Execute tested operation
-		result := conn.CreateDb(createOperation)
+		var result database.OpOutput
+		result = conn.CreateDb(createOperation)
 
 		It("should not return an error", func() {
 			Expect(result.Err).ToNot(HaveOccurred())

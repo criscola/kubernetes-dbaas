@@ -260,7 +260,7 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError {
 
 	// Execute operation on DBMS
 	// Check preconditions
-	var conn *database.DbmsConn
+	var conn *database.RateLimitedDbmsConn
 	if conn, err = r.getDbmsConnectionByEndpointName(obj.Spec.Endpoint); err.IsNotEmpty() {
 		return err.With(loggingKv)
 	}
@@ -323,7 +323,7 @@ func (r *DatabaseReconciler) deleteDb(obj *databasev1.Database) ReconcileError {
 
 	// Execute operation on DBMS
 	// Check preconditions
-	var conn *database.DbmsConn
+	var conn *database.RateLimitedDbmsConn
 	if conn, reconcileErr = r.getDbmsConnectionByEndpointName(obj.Spec.Endpoint); reconcileErr.IsNotEmpty() {
 		return reconcileErr.With(loggingKv)
 	}
@@ -383,7 +383,7 @@ func (r *DatabaseReconciler) rotate(obj *databasev1.Database) ReconcileError {
 
 	// Execute operation on DBMS
 	// Check preconditions
-	var conn *database.DbmsConn
+	var conn *database.RateLimitedDbmsConn
 	if conn, reconcileErr = r.getDbmsConnectionByEndpointName(obj.Spec.Endpoint); reconcileErr.IsNotEmpty() {
 		return reconcileErr.With(loggingKv)
 	}
@@ -458,7 +458,7 @@ func (r *DatabaseReconciler) getDbmsClassFromDb(obj *databasev1.Database) (datab
 	return dbClass, ReconcileError{}
 }
 
-func (r *DatabaseReconciler) getDbmsConnectionByEndpointName(endpointName string) (*database.DbmsConn, ReconcileError) {
+func (r *DatabaseReconciler) getDbmsConnectionByEndpointName(endpointName string) (*database.RateLimitedDbmsConn, ReconcileError) {
 	// Check if the endpoint is currently stored in the connection pool
 	conn, simpleErr := pool.GetConnByEndpointName(endpointName)
 	if simpleErr != nil {
@@ -598,7 +598,7 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretForm
 
 	// Secret exists already, update (e.g. credential rotation)
 	// Don't overwrite empty values
-	newSecret.StringData = secretFormat.From(oldSecret.StringData)
+	newSecret.StringData = secretData.From(oldSecret.StringData)
 	if err = r.Client.Update(context.Background(), newSecret); err != nil {
 		return ReconcileError{
 			Reason:         RsnSecretUpdateFail,

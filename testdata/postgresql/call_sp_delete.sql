@@ -1,1 +1,1 @@
-select sp_delete('mytest');
+select sp_delete('database-sample-456');

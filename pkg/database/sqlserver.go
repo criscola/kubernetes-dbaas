@@ -69,15 +69,14 @@ func (c *MssqlConn) Rotate(operation Operation) OpOutput {
 	return OpOutput{}
 }
 
+func (c *MssqlConn) Ping() error {
+ 	return c.c.Ping()
+}
+
 func getQueryInputs(values map[string]string) []interface{} {
 	var inputParams []interface{}
 	for k, v := range values {
 		inputParams = append(inputParams, sql.Named(k, v))
 	}
 	return inputParams
-}
-
-// Ping returns an error if a connection cannot be established with the DBMS, else it returns nil.
-func (c *MssqlConn) Ping() error {
-	return c.c.Ping()
 }
