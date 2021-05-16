@@ -136,13 +136,15 @@ func (op Operation) RenderOperation(values OpValues) (Operation, error) {
 	return renderedOp, nil
 }
 
-func (c DbmsList) GetDatabaseClassNameByEndpointName(endpointName string) (string, error) {
+// GetDatabaseClassNameByEndpointName performs a linear search on the receiver in search of endpointName. If an entry
+// is found, it is returned.
+func (c DbmsList) GetDatabaseClassNameByEndpointName(endpointName string) string {
 	for _, dbms := range c {
 		if contains(dbms.Endpoints, endpointName) {
-			return dbms.DatabaseClassName, nil
+			return dbms.DatabaseClassName
 		}
 	}
-	return "", fmt.Errorf("could not find any DatabaseClass for endpoint '%s'", endpointName)
+	return ""
 }
 
 // IsNamePresent return true if an endpoint name is not empty, else it returns false.
@@ -155,6 +157,7 @@ func (e Endpoint) IsDsnPresent() bool {
 	return e.Dsn != ""
 }
 
+// RenderSecretFormat renders a secret from OpOutput.Result create operation.
 func (s SecretFormat) RenderSecretFormat(createOpOutput OpOutput) (SecretFormat, error) {
 	// Transform map[string]string to a single json string
 	stringInputs, err := json.Marshal(s)
@@ -186,9 +189,10 @@ func (s SecretFormat) From(toMerge map[string]string) SecretFormat {
 	return s
 }
 
-func RenderGoTemplate(templatedString string, values interface{}, options ...string) (string, error) {
+// RenderGoTemplate takes the text to be parsed as a Go template and values to be rendered. For options see template.Option.
+func RenderGoTemplate(text string, values interface{}, options ...string) (string, error) {
 	// Setup the template to be rendered based on the inputs
-	tmpl, err := template.New("gotmpl").Parse(templatedString)
+	tmpl, err := template.New("gotmpl").Parse(text)
 	if err != nil {
 		return "", err
 	}

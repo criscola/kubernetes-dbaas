@@ -435,12 +435,12 @@ func (r *DatabaseReconciler) getDbmsClassFromDb(obj *databasev1.Database) (datab
 		}
 	}
 	// Get DatabaseClass resource from api server
-	dbClassName, err := dbmsList.GetDatabaseClassNameByEndpointName(obj.Spec.Endpoint)
+	dbClassName := dbmsList.GetDatabaseClassNameByEndpointName(obj.Spec.Endpoint)
 	if err != nil {
 		return databaseclassv1.DatabaseClass{}, ReconcileError{
 			Reason:         RsnDbcConfigGetFail,
 			Message:        MsgDbcConfigGetFail,
-			Err:            err,
+			Err:            fmt.Errorf("could not find any DatabaseClass for endpoint '%s'", obj.Spec.Endpoint),
 			AdditionalInfo: stringsToInterfaceSlice(EndpointName, obj.Spec.Endpoint),
 		}
 	}
@@ -534,19 +534,9 @@ func (r *DatabaseReconciler) logInfoEvent(obj *databasev1.Database, reason, mess
 func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretFormat database.SecretFormat, output database.OpOutput) ReconcileError {
 	logger.V(DebugLevel).Info("Creating secret for database resource")
 
-	var ownerRefs []metav1.OwnerReference
-	ownerRefs = append(ownerRefs, metav1.OwnerReference{
-		APIVersion: owner.APIVersion,
-		Kind:       owner.Kind,
-		Name:       owner.Name,
-		UID:        owner.UID,
-		Controller: &[]bool{true}[0], // sets this controller as owner
-	})
-
+	// Init vars
 	secretName := formatSecretName(owner)
 	loggingKv := stringsToInterfaceSlice("secret", secretName)
-
-	// Render secret
 	secretData, err := secretFormat.RenderSecretFormat(output)
 	if err != nil {
 		return ReconcileError{
@@ -556,9 +546,15 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretForm
 			AdditionalInfo: loggingKv,
 		}
 	}
-
-	// Create new Secret
-	newSecret := &corev1.Secret{
+	var ownerRefs []metav1.OwnerReference
+	ownerRefs = append(ownerRefs, metav1.OwnerReference{
+		APIVersion: owner.APIVersion,
+		Kind:       owner.Kind,
+		Name:       owner.Name,
+		UID:        owner.UID,
+		Controller: &[]bool{true}[0], // sets this controller as owner
+	})
+	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            secretName,
 			Namespace:       owner.Namespace,
@@ -566,18 +562,18 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretForm
 		},
 		StringData: secretData,
 	}
-	oldSecret := corev1.Secret{}
 	key := client.ObjectKey{
 		Namespace: owner.Namespace,
 		Name:      secretName,
 	}
-
+	oldSecret := corev1.Secret{}
 	// Get old Secret if present
 	err = r.Client.Get(context.Background(), key, &oldSecret)
 	if err != nil {
 		// If Secret was not found, it must be created
 		if k8sError.IsNotFound(err) {
-			if err := r.Client.Create(context.Background(), newSecret); err != nil {
+			// Create new Secret
+			if err := r.Client.Create(context.Background(), secret); err != nil {
 				return ReconcileError{
 					Reason:         MsgSecretCreateFail,
 					Message:        MsgSecretCreateFail,
@@ -588,6 +584,7 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretForm
 			r.logInfoEvent(owner, RsnSecretCreateSucc, MsgSecretCreateSucc, loggingKv...)
 			return ReconcileError{}
 		}
+		// Return error
 		return ReconcileError{
 			Reason:         RsnSecretGetFail,
 			Message:        MsgSecretGetFail,
@@ -595,11 +592,10 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretForm
 			AdditionalInfo: loggingKv,
 		}
 	}
-
 	// Secret exists already, update (e.g. credential rotation)
 	// Don't overwrite empty values
-	newSecret.StringData = secretData.From(oldSecret.StringData)
-	if err = r.Client.Update(context.Background(), newSecret); err != nil {
+	secret.StringData = secretData.From(oldSecret.StringData)
+	if err = r.Client.Update(context.Background(), secret); err != nil {
 		return ReconcileError{
 			Reason:         RsnSecretUpdateFail,
 			Message:        MsgSecretUpdateFail,
@@ -678,7 +674,7 @@ func isRotateAnnotationTrue(obj *databasev1.Database) bool {
 	return false
 }
 
-// formatSecretName returns the name of a Database's Secret resource.
+// formatSecretName returns the name of a Database's Secret resource as it should appear in metadata.name.
 func formatSecretName(obj *databasev1.Database) string {
 	return obj.Name+"-credentials"
 }
@@ -783,7 +779,7 @@ func shouldIgnoreUpdateErr(err error) bool {
 		return false
 	}
 	if strings.Contains(err.Error(), genericregistry.OptimisticLockErrorMsg) {
-		// do manaul retry without error
+		// do manual retry without error
 		return true
 	}
 	return false
