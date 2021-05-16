@@ -1,9 +1,9 @@
 apiVersion: databaseclass.dbaas.bedag.ch/v1
 kind: DatabaseClass
 metadata:
-  name: databaseclass-sample-psql
+  name: databaseclass-sample-mariadb
 spec:
-  driver: "psql"
+  driver: "mariadb"
   operations:
     create:
       name: "sp_create_db_rowset_eav"

@@ -2,7 +2,6 @@ package database_test
 
 import (
 	"github.com/bedag/kubernetes-dbaas/pkg/database"
-	"github.com/bedag/kubernetes-dbaas/pkg/database/sqlserver"
 	. "github.com/bedag/kubernetes-dbaas/pkg/test"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,7 +15,7 @@ var _ = Describe(FormatTestDesc(Integration, "NewRateLimitedDbmsConn", Slow), fu
 	// Create a connection
 	// Setting up connection to DBMS
 	dsn := "sqlserver://sa:Password&1@localhost:1433"
-	conn, err := sqlserver.NewMssqlConn(database.Dsn(dsn))
+	conn, err := database.NewMssqlConn(database.Dsn(dsn))
 	Expect(err).ToNot(HaveOccurred())
 
 	rateLimitedConn, err := database.NewRateLimitedDbmsConn(conn, 1)

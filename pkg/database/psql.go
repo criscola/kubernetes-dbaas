@@ -11,7 +11,7 @@ type PsqlConn struct {
 	c *pgx.Conn
 }
 
-// NewPsqlConn constructs a new PostgreSQL connection from a given dsn.
+// NewPsqlConn opens a new PostgreSQL connection from a given dsn.
 func NewPsqlConn(dsn string) (*PsqlConn, error) {
 	dbConn, err := pgx.Connect(context.Background(), dsn)
 	if err != nil {
@@ -46,7 +46,7 @@ func (c *PsqlConn) CreateDb(operation Operation) OpOutput {
 }
 
 // DeleteDb attempts to delete a database instance as specified in the operation parameter. It returns an OpOutput with the
-// result of the call.
+// result of the call if present.
 func (c *PsqlConn) DeleteDb(operation Operation) OpOutput {
 	_, err := c.c.Exec(context.Background(), getPsqlVoidOpQuery(operation))
 	if err != nil {
@@ -56,6 +56,7 @@ func (c *PsqlConn) DeleteDb(operation Operation) OpOutput {
 	return OpOutput{}
 }
 
+// Rotate attempts to rotate the credentials of a connection.
 func (c *PsqlConn) Rotate(operation Operation) OpOutput {
 	_, err := c.c.Exec(context.Background(), getPsqlVoidOpQuery(operation))
 	if err != nil {

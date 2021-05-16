@@ -7,6 +7,7 @@ require (
 	github.com/denisenkom/go-mssqldb v0.9.0
 	github.com/go-logr/logr v0.4.0
 	github.com/go-logr/zapr v0.4.0
+	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/jackc/pgx/v4 v4.11.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/onsi/ginkgo v1.16.1

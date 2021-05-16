@@ -2,6 +2,7 @@ package database
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"text/template"
@@ -9,7 +10,9 @@ import (
 
 const (
 	Sqlserver               = "sqlserver"
-	Psql                    = "psql"
+	Psql                    = "postgres"
+	Mysql					= "mysql"
+	Mariadb					= "mariadb"
 	CreateMapKey            = "create"
 	DeleteMapKey            = "delete"
 	RotateMapKey			= "rotate"
@@ -77,12 +80,12 @@ type Endpoint struct {
 // +kubebuilder:object:generate=true
 type SecretFormat map[string]string
 
-// NewDbmsConn initializes a Dbms instance based on a map of Operation. It expects a dsn like that:
+// New initializes a Dbms instance based on a map of Operation. It expects a dsn like that:
 // driver://username:password@host/instance?param1=value&param2=value
 //
 // See the individual Driver implementations.
 // TODO: Refactor
-func NewDbmsConn(driver string, dsn Dsn) (*DbmsConn, error) {
+func New(driver string, dsn Dsn) (*DbmsConn, error) {
 	var dbmsConn *DbmsConn
 
 	switch driver {
@@ -98,6 +101,12 @@ func NewDbmsConn(driver string, dsn Dsn) (*DbmsConn, error) {
 			return nil, err
 		}
 		dbmsConn = &DbmsConn{psqlConn}
+	case Mysql, Mariadb:
+		mysqlConn, err := NewMysqlConn(dsn.String())
+		if err != nil {
+			return nil, err
+		}
+		dbmsConn = &DbmsConn{mysqlConn}
 	default:
 		return nil, fmt.Errorf("invalid dsn '%s': driver not found", dsn)
 	}
@@ -215,4 +224,13 @@ func contains(list []Endpoint, s string) bool {
 		}
 	}
 	return false
+}
+
+// getQueryInputs returns a slice of sql.Named(k, v) from values where k is the key and v is the value.
+func getQueryInputs(values map[string]string) []interface{} {
+	var inputParams []interface{}
+	for k, v := range values {
+		inputParams = append(inputParams, sql.Named(k, v))
+	}
+	return inputParams
 }

@@ -2,28 +2,28 @@ package database
 
 import (
 	"database/sql"
-	_ "github.com/denisenkom/go-mssqldb"
+	_ "github.com/go-sql-driver/mysql"
 )
 
-// MssqlConn represents a connection to a SQL Server DBMS.
-type MssqlConn struct {
+// MysqlConn represents a connection to a MySQL DBMS.
+type MysqlConn struct {
 	c *sql.DB
 }
 
-// NewMssqlConn opens a new SQL Server connection from a given dsn.
-func NewMssqlConn(dsn Dsn) (*MssqlConn, error) {
-	dbConn, err := sql.Open("sqlserver", dsn.String())
+// NewMysqlConn opens a new SQL Server connection from a given dsn.
+func NewMysqlConn(dsn string) (*MysqlConn, error) {
+	dbConn, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
 	}
 
-	conn := MssqlConn{dbConn}
+	conn := MysqlConn{dbConn}
 	return &conn, nil
 }
 
 // CreateDb attempts to create a new database as specified in the operation parameter. It returns an OpOutput with the
 // result of the call.
-func (c *MssqlConn) CreateDb(operation Operation) OpOutput {
+func (c *MysqlConn) CreateDb(operation Operation) OpOutput {
 	inputParams := getQueryInputs(operation.Inputs)
 
 	rows, err := c.c.Query(operation.Name, inputParams...)
@@ -46,8 +46,8 @@ func (c *MssqlConn) CreateDb(operation Operation) OpOutput {
 }
 
 // DeleteDb attempts to delete a database instance as specified in the operation parameter. It returns an OpOutput with the
-// result of the call.
-func (c *MssqlConn) DeleteDb(operation Operation) OpOutput {
+// result of the call if present.
+func (c *MysqlConn) DeleteDb(operation Operation) OpOutput {
 	inputParams := getQueryInputs(operation.Inputs)
 
 	_, err := c.c.Exec(operation.Name, inputParams...)
@@ -59,7 +59,7 @@ func (c *MssqlConn) DeleteDb(operation Operation) OpOutput {
 }
 
 // Rotate attempts to rotate the credentials of a connection.
-func (c *MssqlConn) Rotate(operation Operation) OpOutput {
+func (c *MysqlConn) Rotate(operation Operation) OpOutput {
 	inputParams := getQueryInputs(operation.Inputs)
 
 	_, err := c.c.Exec(operation.Name, inputParams...)
@@ -70,6 +70,8 @@ func (c *MssqlConn) Rotate(operation Operation) OpOutput {
 	return OpOutput{}
 }
 
-func (c *MssqlConn) Ping() error {
- 	return c.c.Ping()
+// Ping returns an error if a connection cannot be established with the DBMS, else it returns nil.
+func (c *MysqlConn) Ping() error {
+	return c.c.Ping()
 }
+
