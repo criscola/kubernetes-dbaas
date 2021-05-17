@@ -51,8 +51,8 @@ var _ = Describe(FormatTestDesc(Integration, "NewRateLimitedDbmsConn", Slow), fu
 			})
 			It("should execute each operation with a pause of at least 1 second in-between", func() {
 				for i := 0; i < len(callTimes) - 1; i++ {
-					diff := int(callTimes[1].Sub(callTimes[0]).Seconds())  // truncate float
-					Expect(diff).To(BeNumerically(">=", 1))
+					diff := callTimes[1].Sub(callTimes[0]).Seconds()
+					Expect(diff).To(BeNumerically(">=", 0.9)) // tolerance of 0.1s
 				}
 			})
 		})
