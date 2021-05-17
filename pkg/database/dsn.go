@@ -1,19 +1,46 @@
 package database
 
-import "strings"
+import "github.com/xo/dburl"
 
 type Dsn string
 
-func (s Dsn) GetDriver() string {
-	return strings.Split(string(s), ":")[0]
+func(dsn Dsn) GenMysql() (string, error) {
+	u, err := dburl.Parse(dsn.String())
+	if err != nil {
+		return "", err
+	}
+	parsedDsn, err := dburl.GenMySQL(u)
+	if err != nil {
+		return "", err
+	}
+	return parsedDsn, nil
 }
 
-// NewDsn initialized a new Dsn string.
-func NewDsn(driver, username, password, host, port, dbName string) Dsn {
-	return Dsn(driver + "://" + username + ":" + password + "@" + host + ":" + port + "/" + dbName)
+func(dsn Dsn) GenSqlserver() (string, error) {
+	u, err := dburl.Parse(dsn.String())
+	if err != nil {
+		return "", err
+	}
+	parsedDsn, err := dburl.GenSQLServer(u)
+	if err != nil {
+		return "", err
+	}
+	return parsedDsn, nil
+}
+
+func(dsn Dsn) GenPostgres() (string, error) {
+	u, err := dburl.Parse(dsn.String())
+	if err != nil {
+		return "", err
+	}
+	parsedDsn, err := dburl.GenPostgres(u)
+	if err != nil {
+		return "", err
+	}
+	return parsedDsn, nil
 }
 
 // String returns a string from a Dsn.
-func (s Dsn) String() string {
-	return string(s)
+func (dsn Dsn) String() string {
+	return string(dsn)
 }

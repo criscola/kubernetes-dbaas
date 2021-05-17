@@ -84,25 +84,36 @@ type SecretFormat map[string]string
 // driver://username:password@host/instance?param1=value&param2=value
 //
 // See the individual Driver implementations.
-// TODO: Refactor
 func New(driver string, dsn Dsn) (*DbmsConn, error) {
 	var dbmsConn *DbmsConn
 
 	switch driver {
 	case Sqlserver:
-		sqlserverConn, err := NewMssqlConn(dsn)
+		parsedDsn, err := dsn.GenSqlserver()
+		if err != nil {
+			return nil, err
+		}
+		sqlserverConn, err := NewMssqlConn(parsedDsn)
 		if err != nil {
 			return nil, err
 		}
 		dbmsConn = &DbmsConn{sqlserverConn}
 	case Psql:
-		psqlConn, err := NewPsqlConn(dsn.String())
+		parsedDsn, err := dsn.GenSqlserver()
+		if err != nil {
+			return nil, err
+		}
+		psqlConn, err := NewPsqlConn(parsedDsn)
 		if err != nil {
 			return nil, err
 		}
 		dbmsConn = &DbmsConn{psqlConn}
 	case Mysql, Mariadb:
-		mysqlConn, err := NewMysqlConn(dsn.String())
+		parsedDsn, err := dsn.GenMysql()
+		if err != nil {
+			return nil, err
+		}
+		mysqlConn, err := NewMysqlConn(parsedDsn)
 		if err != nil {
 			return nil, err
 		}

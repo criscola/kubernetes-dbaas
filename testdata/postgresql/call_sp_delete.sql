@@ -1,1 +1,1 @@
-select sp_delete('database-sample-456');
+select sp_delete(k8sName := 'database-sample-456');

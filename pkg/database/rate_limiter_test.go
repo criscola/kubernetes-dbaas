@@ -12,10 +12,11 @@ import (
 const spNameEav = "sp_create_rowset_EAV"
 
 var _ = Describe(FormatTestDesc(Integration, "NewRateLimitedDbmsConn", Slow), func() {
-	// Create a connection
 	// Setting up connection to DBMS
-	dsn := "sqlserver://sa:Password&1@localhost:1433"
-	conn, err := database.NewMssqlConn(database.Dsn(dsn))
+	dsn, err := database.Dsn("sqlserver://sa:Password&1@localhost:1433").GenMysql()
+	Expect(err).ToNot(HaveOccurred())
+
+	conn, err := database.NewMssqlConn(dsn)
 	Expect(err).ToNot(HaveOccurred())
 
 	rateLimitedConn, err := database.NewRateLimitedDbmsConn(conn, 1)
@@ -48,10 +49,10 @@ var _ = Describe(FormatTestDesc(Integration, "NewRateLimitedDbmsConn", Slow), fu
 			It("should not take less than 9 seconds", func() {
 				Expect(elapsedSeconds).NotTo(BeNumerically("<", 9))
 			})
-			It("should execute each operation with a pause of 1 second in-between", func() {
+			It("should execute each operation with a pause of at least 1 second in-between", func() {
 				for i := 0; i < len(callTimes) - 1; i++ {
 					diff := int(callTimes[1].Sub(callTimes[0]).Seconds())  // truncate float
-					Expect(diff).To(BeNumerically("==", 1))
+					Expect(diff).To(BeNumerically(">=", 1))
 				}
 			})
 		})

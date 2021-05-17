@@ -16,7 +16,7 @@ insert into t values('username', 'testuser');
 insert into t values('password', 'testpassword');
 insert into t values('dbName', k8sName);
 insert into t values('fqdn', 'localhost');
-insert into t values('port', '1433');
+insert into t values('port', '5432');
 
 return query execute 'select * from t';
 end;

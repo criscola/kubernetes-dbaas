@@ -11,8 +11,8 @@ type MssqlConn struct {
 }
 
 // NewMssqlConn opens a new SQL Server connection from a given dsn.
-func NewMssqlConn(dsn Dsn) (*MssqlConn, error) {
-	dbConn, err := sql.Open("sqlserver", dsn.String())
+func NewMssqlConn(dsn string) (*MssqlConn, error) {
+	dbConn, err := sql.Open("sqlserver", dsn)
 	if err != nil {
 		return nil, err
 	}

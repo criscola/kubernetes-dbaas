@@ -23,4 +23,4 @@ spec:
     port: "{{ .Result.port }}"
     dbName: "{{ .Result.dbName }}"
     server: "{{ .Result.fqdn }}"
-    dsn: "mariadb://{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}:{{ .Result.port }}/{{ .Result.dbName }}"
+    dsn: "{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}:{{ .Result.port }}/{{ .Result.dbName }}"

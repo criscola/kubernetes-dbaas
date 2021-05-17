@@ -7,10 +7,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe(FormatTestDesc(Integration, "SQLServer CreateDb"), func() {
+var _ = Describe(FormatTestDesc(Integration, "Sqlserver CreateDb"), func() {
 	// Setting up connection to DBMS
-	dsn := "sqlserver://sa:Password&1@localhost:1433"
-	conn, err := database.NewMssqlConn(database.Dsn(dsn))
+	dsn, err := database.Dsn("sqlserver://sa:Password&1@localhost:1433").GenSqlserver()
+	Expect(err).ToNot(HaveOccurred())
+
+	conn, err := database.NewMssqlConn(dsn)
 	Expect(err).ToNot(HaveOccurred())
 
 	Context("when Operation is defined correctly", func() {
@@ -18,7 +20,7 @@ var _ = Describe(FormatTestDesc(Integration, "SQLServer CreateDb"), func() {
 		createOperation := database.Operation{
 			Name: spNameEav,
 			Inputs: map[string]string{
-				"k8sName": "integrTestDb",
+				"k8sName": "myTestDb",
 			},
 		}
 
@@ -27,7 +29,7 @@ var _ = Describe(FormatTestDesc(Integration, "SQLServer CreateDb"), func() {
 			Result: map[string]string{
 				"username": "testuser",
 				"password": "testpassword",
-				"dbName": "integrTestDb",
+				"dbName": "myTestDb",
 				"fqdn": "localhost",
 				"port": "1433",
 			},
