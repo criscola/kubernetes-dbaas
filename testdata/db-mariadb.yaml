@@ -1,0 +1,8 @@
+apiVersion: database.dbaas.bedag.ch/v1
+kind: Database
+metadata:
+  name: database-sample-789
+spec:
+  endpoint: us-mariadb-test
+  params:
+    toast: french
