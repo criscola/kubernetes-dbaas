@@ -1,6 +1,7 @@
 package database_test
 
 import (
+	"fmt"
 	"github.com/bedag/kubernetes-dbaas/pkg/database"
 	. "github.com/bedag/kubernetes-dbaas/pkg/test"
 	. "github.com/onsi/ginkgo"
@@ -72,6 +73,32 @@ var _ = Describe(FormatTestDesc(Integration, "Mariadb CreateDb"), func() {
 
 		It("should return an error", func() {
 			Expect(result.Err).To(HaveOccurred())
+		})
+	})
+})
+
+var _ = Describe(FormatTestDesc(Unit, "GetMysqlOpQuery"), func() {
+	Context("when Operation is defined correctly", func() {
+		By("having 5 inputs")
+		// Prepare test data
+		createOperation := database.Operation{
+			Name: mysqlCreateOpName,
+			Inputs: map[string]string{
+				"4": "param4",
+				"0": "param0",
+				"1": "param1",
+				"3": "param3",
+				"2": "param2",
+			},
+		}
+
+		outputAssert := fmt.Sprintf("CALL %s('param0', 'param1', 'param2', 'param3', 'param4')", mysqlCreateOpName)
+
+		// Execute tested operation
+		val, _ := database.GetMysqlOpQuery(createOperation)
+
+		It("should match the expected output", func() {
+			Expect(val).To(Equal(outputAssert))
 		})
 	})
 })

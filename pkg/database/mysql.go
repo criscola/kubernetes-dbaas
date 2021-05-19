@@ -26,7 +26,7 @@ func NewMysqlConn(dsn string) (*MysqlConn, error) {
 // CreateDb attempts to create a new database as specified in the operation parameter. It returns an OpOutput with the
 // result of the call.
 func (c *MysqlConn) CreateDb(operation Operation) OpOutput {
-	sp, err := getMysqlOpQuery(operation)
+	sp, err := GetMysqlOpQuery(operation)
 	if err != nil {
 		return OpOutput{
 			Result: nil,
@@ -56,7 +56,7 @@ func (c *MysqlConn) CreateDb(operation Operation) OpOutput {
 // DeleteDb attempts to delete a database instance as specified in the operation parameter. It returns an OpOutput with the
 // result of the call if present.
 func (c *MysqlConn) DeleteDb(operation Operation) OpOutput {
-	sp, err := getMysqlOpQuery(operation)
+	sp, err := GetMysqlOpQuery(operation)
 	if err != nil {
 		return OpOutput{
 			Result: nil,
@@ -73,7 +73,7 @@ func (c *MysqlConn) DeleteDb(operation Operation) OpOutput {
 
 // Rotate attempts to rotate the credentials of a connection.
 func (c *MysqlConn) Rotate(operation Operation) OpOutput {
-	sp, err := getMysqlOpQuery(operation)
+	sp, err := GetMysqlOpQuery(operation)
 	if err != nil {
 		return OpOutput{
 			Result: nil,
@@ -93,7 +93,10 @@ func (c *MysqlConn) Ping() error {
 	return c.c.Ping()
 }
 
-func getMysqlOpQuery(operation Operation) (string, error) {
+// GetMysqlOpQuery constructs a CALL query from the specified operation. Keys of operation.Inputs must be integers, they
+// are converted from string to int and then used to sort the parameters in the stored procedure call. If keys are not
+// specified as integers, an error is returned.
+func GetMysqlOpQuery(operation Operation) (string, error) {
 	inputs, err := getMysqlInputs(operation.Inputs)
 	if err != nil {
 		return "", err
@@ -122,9 +125,9 @@ func getMysqlInputs(inputs map[string]string) (string, error) {
 
 	var result string
 	for _, param := range sortedParams {
-		result = fmt.Sprintf("'%s', ", param)
+		result = fmt.Sprintf("%s, '%s'", result, param)
 	}
-	result = result[:len(result)-2]
+	result = result[2:]
 
 	return result, nil
 }

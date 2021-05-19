@@ -85,7 +85,7 @@ func getPsqlInputs(values map[string]string) string {
 	}
 	var result string
 	for k, v := range values {
-		result = fmt.Sprintf("%s := '%s', %s", k, v, result)
+		result = fmt.Sprintf("%s := '%s', %s", k, v, result) // params specified on reverse order on purpose as a sanity check for postgres
 	}
 
 	result = result[:len(result)-2]
