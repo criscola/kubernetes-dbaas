@@ -7,6 +7,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const sqlserverCreateOpName = "sp_create_rowset_EAV"
+
 var _ = Describe(FormatTestDesc(Integration, "Sqlserver CreateDb"), func() {
 	// Setting up connection to DBMS
 	dsn, err := database.Dsn("sqlserver://sa:Password&1@localhost:1433").GenSqlserver()
@@ -18,7 +20,7 @@ var _ = Describe(FormatTestDesc(Integration, "Sqlserver CreateDb"), func() {
 	Context("when Operation is defined correctly", func() {
 		// Prepare test data
 		createOperation := database.Operation{
-			Name: spNameEav,
+			Name: sqlserverCreateOpName,
 			Inputs: map[string]string{
 				"k8sName": "myTestDb",
 			},

@@ -84,7 +84,6 @@ func getPsqlInputs(values map[string]string) string {
 		return ""
 	}
 	var result string
-
 	for k, v := range values {
 		result = fmt.Sprintf("%s := '%s', %s", k, v, result)
 	}

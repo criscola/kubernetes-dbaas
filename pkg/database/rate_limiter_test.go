@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-const spNameEav = "sp_create_rowset_EAV"
-
 var _ = Describe(FormatTestDesc(Integration, "NewRateLimitedDbmsConn", Slow), func() {
 	// Setting up connection to DBMS
 	dsn, err := database.Dsn("sqlserver://sa:Password&1@localhost:1433").GenMysql()
@@ -23,7 +21,7 @@ var _ = Describe(FormatTestDesc(Integration, "NewRateLimitedDbmsConn", Slow), fu
 	Expect(err).ToNot(HaveOccurred())
 
 	createOperation := database.Operation{
-		Name: spNameEav,
+		Name: sqlserverCreateOpName,
 		Inputs: map[string]string{
 			"k8sName": "rateLimiterTest",
 		},
