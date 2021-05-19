@@ -151,7 +151,7 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 						Reason:         RsnDbUpdateFail,
 						Message:        MsgDbUpdateFail,
 						Err:            err,
-						AdditionalInfo: stringsToInterfaceSlice("finalizer", databaseFinalizer),
+						AdditionalInfo: StringsToInterfaceSlice("finalizer", databaseFinalizer),
 					})
 				}
 
@@ -202,7 +202,7 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				Reason:         RsnDbUpdateFail,
 				Message:        MsgDbUpdateFail,
 				Err:            err,
-				AdditionalInfo: stringsToInterfaceSlice("finalizer", databaseFinalizer),
+				AdditionalInfo: StringsToInterfaceSlice("finalizer", databaseFinalizer),
 			})
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -231,7 +231,7 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError {
 	if err.IsNotEmpty() {
 		return err
 	}
-	loggingKv := stringsToInterfaceSlice(DatabaseClass, dbClass.Name, database.OperationsConfigKey, database.CreateMapKey)
+	loggingKv := StringsToInterfaceSlice(DatabaseClass, dbClass.Name, database.OperationsConfigKey, database.CreateMapKey)
 
 	// Render operation
 	createOpTemplate, exists := dbClass.Spec.Operations[database.CreateMapKey]
@@ -294,7 +294,7 @@ func (r *DatabaseReconciler) deleteDb(obj *databasev1.Database) ReconcileError {
 	if reconcileErr.IsNotEmpty() {
 		return reconcileErr
 	}
-	loggingKv := stringsToInterfaceSlice(DatabaseClass, dbClass.Name, database.OperationsConfigKey, database.DeleteMapKey)
+	loggingKv := StringsToInterfaceSlice(DatabaseClass, dbClass.Name, database.OperationsConfigKey, database.DeleteMapKey)
 
 	// Render operation
 	deleteOpTemplate, exists := dbClass.Spec.Operations[database.DeleteMapKey]
@@ -356,7 +356,7 @@ func (r *DatabaseReconciler) rotate(obj *databasev1.Database) ReconcileError {
 	if reconcileErr.IsNotEmpty() {
 		return reconcileErr
 	}
-	loggingKv := stringsToInterfaceSlice(DatabaseClass, dbClass.Name, database.OperationsConfigKey, database.RotateMapKey)
+	loggingKv := StringsToInterfaceSlice(DatabaseClass, dbClass.Name, database.OperationsConfigKey, database.RotateMapKey)
 	rotateOpTemplate, exists := dbClass.Spec.Operations[database.RotateMapKey]
 	if !exists {
 		return ReconcileError{
@@ -441,7 +441,7 @@ func (r *DatabaseReconciler) getDbmsClassFromDb(obj *databasev1.Database) (datab
 			Reason:         RsnDbcConfigGetFail,
 			Message:        MsgDbcConfigGetFail,
 			Err:            fmt.Errorf("could not find any DatabaseClass for endpoint '%s'", obj.Spec.Endpoint),
-			AdditionalInfo: stringsToInterfaceSlice(EndpointName, obj.Spec.Endpoint),
+			AdditionalInfo: StringsToInterfaceSlice(EndpointName, obj.Spec.Endpoint),
 		}
 	}
 
@@ -452,7 +452,7 @@ func (r *DatabaseReconciler) getDbmsClassFromDb(obj *databasev1.Database) (datab
 			Reason:         RsnDbcGetFail,
 			Message:        MsgDbcGetFail,
 			Err:            err,
-			AdditionalInfo: stringsToInterfaceSlice(DatabaseClass, dbClassName),
+			AdditionalInfo: StringsToInterfaceSlice(DatabaseClass, dbClassName),
 		}
 	}
 	return dbClass, ReconcileError{}
@@ -536,7 +536,7 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretForm
 
 	// Init vars
 	secretName := formatSecretName(owner)
-	loggingKv := stringsToInterfaceSlice("secret", secretName)
+	loggingKv := StringsToInterfaceSlice("secret", secretName)
 	secretData, err := secretFormat.RenderSecretFormat(output)
 	if err != nil {
 		return ReconcileError{
@@ -626,7 +626,7 @@ func (r *DatabaseReconciler) updateReadyCondition(obj *databasev1.Database, stat
 func (r *DatabaseReconciler) shouldRotate(obj *databasev1.Database) (bool, ReconcileError) {
 	logger.V(TraceLevel).Info("Checking if credentials should be rotated")
 	secretName := formatSecretName(obj)
-	loggingKv := stringsToInterfaceSlice(SecretName, secretName)
+	loggingKv := StringsToInterfaceSlice(SecretName, secretName)
 
 	// If Secret of Database is not present, it must be recreated through credentials rotation
 	var secret corev1.Secret
@@ -761,14 +761,6 @@ func contains(list []string, s string) bool {
 		}
 	}
 	return false
-}
-
-func stringsToInterfaceSlice(values ...string) []interface{} {
-	y := make([]interface{}, len(values))
-	for i, v := range values {
-		y[i] = v
-	}
-	return y
 }
 
 // shouldIgnoreUpdateErr checks if an error message is generated due to the optimistic locking mechanism of Kubernetes API.
