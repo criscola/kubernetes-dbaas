@@ -8,11 +8,11 @@ spec:
     create:
       name: "sp_create_db_rowset_eav"
       inputs:
-        k8sName: "{{ .Metadata.name }}"
+        0: "{{ .Metadata.name }}"
     delete:
       name: "sp_delete"
       inputs:
-        k8sName: "{{ .Metadata.name }}"
+        0: "{{ .Metadata.name }}"
     rotate:
       name: "sp_rotate"
       inputs:

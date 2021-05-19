@@ -1,0 +1,1 @@
+CALL sp_create_db_rowset_eav("lospollos"); 
