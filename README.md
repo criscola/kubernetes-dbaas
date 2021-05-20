@@ -17,8 +17,8 @@ There are many cases where a company can't or doesn't want to host their preciou
 
 ## Main technologies
 
-- Go 1.15 or newer
-- operator-sdk v1.5.x 
+- Go 1.16 or newer
+- operator-sdk v1.7.2 or newer 
 - Kubernetes v1.21.0 or newer
 - Helm v3
 
