@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bedag/kubernetes-dbaas/internal/logging"
-	"github.com/bedag/kubernetes-dbaas/pkg/config"
 	"github.com/bedag/kubernetes-dbaas/pkg/database"
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
 	. "github.com/bedag/kubernetes-dbaas/pkg/typeutil"
@@ -70,6 +69,8 @@ type DatabaseReconciler struct {
 	Log           logr.Logger
 	Scheme        *runtime.Scheme
 	EventRecorder record.EventRecorder
+	DbmsList database.DbmsList
+	Pool 	 pool.Pool
 }
 
 var logger logr.Logger
@@ -260,7 +261,7 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError {
 
 	// Execute operation on DBMS
 	// Check preconditions
-	var conn *database.RateLimitedDbmsConn
+	var conn database.Driver
 	if conn, err = r.getDbmsConnectionByEndpointName(obj.Spec.Endpoint); err.IsNotEmpty() {
 		return err.With(loggingKv)
 	}
@@ -323,12 +324,12 @@ func (r *DatabaseReconciler) deleteDb(obj *databasev1.Database) ReconcileError {
 
 	// Execute operation on DBMS
 	// Check preconditions
-	var conn *database.RateLimitedDbmsConn
+	var conn database.Driver
 	if conn, reconcileErr = r.getDbmsConnectionByEndpointName(obj.Spec.Endpoint); reconcileErr.IsNotEmpty() {
 		return reconcileErr.With(loggingKv)
 	}
-	conn, err = pool.GetConnByEndpointName(obj.Spec.Endpoint)
-	if err != nil {
+	conn = r.Pool.Get(obj.Spec.Endpoint)
+	if conn == nil {
 		return ReconcileError{
 			Reason:         RsnDbmsEndpointNotFound,
 			Message:        MsgDbmsEndpointNotFound,
@@ -383,12 +384,12 @@ func (r *DatabaseReconciler) rotate(obj *databasev1.Database) ReconcileError {
 
 	// Execute operation on DBMS
 	// Check preconditions
-	var conn *database.RateLimitedDbmsConn
+	var conn database.Driver
 	if conn, reconcileErr = r.getDbmsConnectionByEndpointName(obj.Spec.Endpoint); reconcileErr.IsNotEmpty() {
 		return reconcileErr.With(loggingKv)
 	}
-	conn, err = pool.GetConnByEndpointName(obj.Spec.Endpoint)
-	if err != nil {
+	conn = r.Pool.Get(obj.Spec.Endpoint)
+	if conn == nil {
 		return ReconcileError{
 			Reason:         RsnDbmsEndpointNotFound,
 			Message:        MsgDbmsEndpointNotFound,
@@ -425,18 +426,9 @@ func (r *DatabaseReconciler) rotate(obj *databasev1.Database) ReconcileError {
 }
 
 func (r *DatabaseReconciler) getDbmsClassFromDb(obj *databasev1.Database) (databaseclassv1.DatabaseClass, ReconcileError) {
-	// Get DatabaseClass name from DBMS s
-	dbmsList, err := config.GetDbmsList()
-	if err != nil {
-		return databaseclassv1.DatabaseClass{}, ReconcileError{
-			Reason:  RsnDbmsConfigGetFail,
-			Message: MsgDbmsConfigGetFail,
-			Err:     err,
-		}
-	}
 	// Get DatabaseClass resource from api server
-	dbClassName := dbmsList.GetDatabaseClassNameByEndpointName(obj.Spec.Endpoint)
-	if err != nil {
+	dbClassName := r.DbmsList.GetDatabaseClassNameByEndpointName(obj.Spec.Endpoint)
+	if dbClassName == "" {
 		return databaseclassv1.DatabaseClass{}, ReconcileError{
 			Reason:         RsnDbcConfigGetFail,
 			Message:        MsgDbcConfigGetFail,
@@ -446,7 +438,7 @@ func (r *DatabaseReconciler) getDbmsClassFromDb(obj *databasev1.Database) (datab
 	}
 
 	dbClass := databaseclassv1.DatabaseClass{}
-	err = r.Client.Get(context.Background(), client.ObjectKey{Namespace: "", Name: dbClassName}, &dbClass)
+	err := r.Client.Get(context.Background(), client.ObjectKey{Namespace: "", Name: dbClassName}, &dbClass)
 	if err != nil {
 		return databaseclassv1.DatabaseClass{}, ReconcileError{
 			Reason:         RsnDbcGetFail,
@@ -458,18 +450,18 @@ func (r *DatabaseReconciler) getDbmsClassFromDb(obj *databasev1.Database) (datab
 	return dbClass, ReconcileError{}
 }
 
-func (r *DatabaseReconciler) getDbmsConnectionByEndpointName(endpointName string) (*database.RateLimitedDbmsConn, ReconcileError) {
+func (r *DatabaseReconciler) getDbmsConnectionByEndpointName(endpointName string) (database.Driver, ReconcileError) {
 	// Check if the endpoint is currently stored in the connection pool
-	conn, simpleErr := pool.GetConnByEndpointName(endpointName)
-	if simpleErr != nil {
+	conn := r.Pool.Get(endpointName)
+	if conn == nil {
 		return nil, ReconcileError{
 			Reason:  RsnDbmsEndpointNotFound,
 			Message: MsgDbmsEndpointNotFound,
-			Err:     simpleErr,
+			Err:     nil,
 		}
 	}
 	// Make a first check to acknowledge whether the connection looks alive
-	if simpleErr = conn.Ping(); simpleErr != nil {
+	if simpleErr := conn.Ping(); simpleErr != nil {
 		return nil, ReconcileError{
 			Reason:  RsnDbmsConnFail,
 			Message: MsgDbmsConnFail,
@@ -622,7 +614,7 @@ func (r *DatabaseReconciler) updateReadyCondition(obj *databasev1.Database, stat
 }
 
 // shouldRotate returns true if there isn't any Secret associated with the given Database object, or if the rotate
-// annotation is present. It returns false otherwise, or if an error was generated during the check execution.
+// annotation is present. It returns false otherwise, or if an error was generated during execution.
 func (r *DatabaseReconciler) shouldRotate(obj *databasev1.Database) (bool, ReconcileError) {
 	logger.V(TraceLevel).Info("Checking if credentials should be rotated")
 	secretName := formatSecretName(obj)

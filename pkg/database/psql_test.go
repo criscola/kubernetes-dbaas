@@ -7,8 +7,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const psqlCreateOpName = "sp_create_db_rowset_eav"
-
 var _ = Describe(FormatTestDesc(Integration, "Postgres CreateDb"), func() {
 	// Setting up connection to DBMS
 	dsn, err := database.Dsn("postgres://postgres:Password&1@localhost:5432").GenPostgres()
@@ -19,7 +17,7 @@ var _ = Describe(FormatTestDesc(Integration, "Postgres CreateDb"), func() {
 	Context("when Operation is defined correctly", func() {
 		// Prepare test data
 		createOperation := database.Operation{
-			Name: psqlCreateOpName,
+			Name: PostgresCreateOpName,
 			Inputs: map[string]string{
 				"k8sName": "myTestDb",
 			},

@@ -8,8 +8,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const mysqlCreateOpName = "sp_create_db_rowset_eav"
-
 var _ = Describe(FormatTestDesc(Integration, "Mariadb CreateDb"), func() {
 	// Setting up connection to DBMS
 	dsn, err := database.Dsn("mariadb://root:Password&1@localhost:3306/mysql").GenMysql()
@@ -33,7 +31,7 @@ var _ = Describe(FormatTestDesc(Integration, "Mariadb CreateDb"), func() {
 	Context("when Operation is defined correctly", func() {
 		// Prepare test data
 		createOperation := database.Operation{
-			Name: mysqlCreateOpName,
+			Name: MysqlCreateOpName,
 			Inputs: map[string]string{
 				"0": "myTestDb",
 			},
@@ -61,7 +59,7 @@ var _ = Describe(FormatTestDesc(Integration, "Mariadb CreateDb"), func() {
 
 		// Prepare test data
 		createOperation := database.Operation{
-			Name: mysqlCreateOpName,
+			Name: MysqlCreateOpName,
 			Inputs: map[string]string{
 				"k8sName": "myTestDb",
 			},
@@ -82,7 +80,7 @@ var _ = Describe(FormatTestDesc(Unit, "GetMysqlOpQuery"), func() {
 		By("having 5 inputs")
 		// Prepare test data
 		createOperation := database.Operation{
-			Name: mysqlCreateOpName,
+			Name: MysqlCreateOpName,
 			Inputs: map[string]string{
 				"4": "param4",
 				"0": "param0",
@@ -92,7 +90,7 @@ var _ = Describe(FormatTestDesc(Unit, "GetMysqlOpQuery"), func() {
 			},
 		}
 
-		outputAssert := fmt.Sprintf("CALL %s('param0', 'param1', 'param2', 'param3', 'param4')", mysqlCreateOpName)
+		outputAssert := fmt.Sprintf("CALL %s('param0', 'param1', 'param2', 'param3', 'param4')", MysqlCreateOpName)
 
 		// Execute tested operation
 		val, _ := database.GetMysqlOpQuery(createOperation)

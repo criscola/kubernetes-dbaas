@@ -14,14 +14,14 @@ var _ = Describe(FormatTestDesc(Integration, "NewRateLimitedDbmsConn", Slow), fu
 	dsn, err := database.Dsn("sqlserver://sa:Password&1@localhost:1433").GenMysql()
 	Expect(err).ToNot(HaveOccurred())
 
-	conn, err := database.NewMssqlConn(dsn)
+	conn, err := database.NewSqlserverConn(dsn)
 	Expect(err).ToNot(HaveOccurred())
 
 	rateLimitedConn, err := database.NewRateLimitedDbmsConn(conn, 1)
 	Expect(err).ToNot(HaveOccurred())
 
 	createOperation := database.Operation{
-		Name: sqlserverCreateOpName,
+		Name: SqlserverCreateOpName,
 		Inputs: map[string]string{
 			"k8sName": "rateLimiterTest",
 		},

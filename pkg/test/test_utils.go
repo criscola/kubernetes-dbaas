@@ -15,6 +15,10 @@ const (
 	E2e         TestType = "e2e"
 
 	Slow		TestAttribute = "slow"
+
+	PostgresCreateOpName  = "sp_create_db_rowset_eav"
+	MysqlCreateOpName     = "sp_create_db_rowset_eav"
+	SqlserverCreateOpName = "sp_create_rowset_EAV"
 )
 
 // FormatTestDesc should be used throughout the project to format test descriptions for the Ginkgo testing

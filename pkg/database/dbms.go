@@ -10,12 +10,12 @@ import (
 
 const (
 	Sqlserver               = "sqlserver"
-	Psql                    = "postgres"
-	Mysql					= "mysql"
-	Mariadb					= "mariadb"
+	Postgres                = "postgres"
+	Mysql                   = "mysql"
+	Mariadb                 = "mariadb"
 	CreateMapKey            = "create"
 	DeleteMapKey            = "delete"
-	RotateMapKey			= "rotate"
+	RotateMapKey            = "rotate"
 	OperationsConfigKey     = "operations"
 	ErrorOnMissingKeyOption = "missingkey=error"
 	DbmsConfigKey           = "dbms"
@@ -91,17 +91,17 @@ func New(driver string, dsn Dsn) (*DbmsConn, error) {
 	case Sqlserver:
 		parsedDsn, err := dsn.GenSqlserver()
 		if err != nil {
-			return nil, err
+			return nil, formatDsnParseError(err)
 		}
-		sqlserverConn, err := NewMssqlConn(parsedDsn)
+		sqlserverConn, err := NewSqlserverConn(parsedDsn)
 		if err != nil {
 			return nil, err
 		}
 		dbmsConn = &DbmsConn{sqlserverConn}
-	case Psql:
-		parsedDsn, err := dsn.GenSqlserver()
+	case Postgres:
+		parsedDsn, err := dsn.GenPostgres()
 		if err != nil {
-			return nil, err
+			return nil, formatDsnParseError(err)
 		}
 		psqlConn, err := NewPsqlConn(parsedDsn)
 		if err != nil {
@@ -111,7 +111,7 @@ func New(driver string, dsn Dsn) (*DbmsConn, error) {
 	case Mysql, Mariadb:
 		parsedDsn, err := dsn.GenMysql()
 		if err != nil {
-			return nil, err
+			return nil, formatDsnParseError(err)
 		}
 		mysqlConn, err := NewMysqlConn(parsedDsn)
 		if err != nil {
@@ -244,4 +244,8 @@ func getQueryInputs(values map[string]string) []interface{} {
 		inputParams = append(inputParams, sql.Named(k, v))
 	}
 	return inputParams
+}
+
+func formatDsnParseError(err error) error {
+	return fmt.Errorf("error parsing dsn: %s", err)
 }

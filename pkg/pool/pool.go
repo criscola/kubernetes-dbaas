@@ -3,53 +3,66 @@ package pool
 
 import (
 	"fmt"
-	databaseclassv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclass/v1"
 	"github.com/bedag/kubernetes-dbaas/pkg/database"
 )
 
-var pool dbmsPool
-
-// key is the endpoint name.
-type dbmsPool map[string]dbmsPoolEntry
-
-type dbmsPoolEntry struct {
-	dbmsConn *database.RateLimitedDbmsConn
-	dsn      string
-	driver   string
+// Entry is the generic interface for a pool entry.
+type Pool interface {
+	Get(name string) Entry
+	Open(name string, driver string, dsn database.Dsn) error
 }
 
-// Register registers a new database.Dbms in the pool.
-func Register(dbms database.Dbms, dbClass databaseclassv1.DatabaseClass, rps int) error {
-	// Get driver from DatabaseClass.
-	driver := dbClass.Spec.Driver
-	for _, endpoint := range dbms.Endpoints {
-		if _, exists := pool[endpoint.Name]; exists {
-			return fmt.Errorf("%s is already present in the pool. Endpoint names must be unique within the list "+
-				"of endpoints", endpoint.Name)
-		}
+type Entry interface {
+	database.Driver
+}
 
-		conn, err := database.New(driver, endpoint.Dsn)
-		if err != nil {
-			return fmt.Errorf("problem opening connection to endpoint: %s", err)
-		}
-		rateLimitedConn, err := database.NewRateLimitedDbmsConn(conn, rps)
+// DbmsPool is a map of pool entries identified by a unique name.
+type DbmsPool struct {
+	entries map[string]Entry
+	rps int
+}
 
-		// Add entry to pool
-		pool[endpoint.Name] = dbmsPoolEntry{rateLimitedConn, endpoint.Dsn.String(), driver}
+func (pool DbmsPool) Get(name string) Entry {
+	return pool.entries[name]
+}
+
+// Conn represents a standard Dbms connection.
+type DbmsEntry struct {
+	Entry
+	driver   string
+	dsn      database.Dsn
+}
+
+func NewDbmsPool(rps int) DbmsPool {
+	return DbmsPool{
+		entries: make(map[string]Entry),
+		rps: rps,
 	}
+}
 
+func (pool DbmsPool) OpenForDbms(dbms database.Dbms, driver string) error {
+	for _, endpoint := range dbms.Endpoints {
+		if err := pool.Open(endpoint.Name, driver, endpoint.Dsn); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-// GetConnByEndpointName tries to get a connection by endpoint name. It returns an error if a connection related to
-// endpointName is not found in the pool.
-func GetConnByEndpointName(endpointName string) (*database.RateLimitedDbmsConn, error) {
-	if conn, ok := pool[endpointName]; ok {
-		return conn.dbmsConn, nil
+// Register registers a new database.Dbms in the pool.
+func (pool DbmsPool) Open(name string, driver string, dsn database.Dsn) error {
+	conn, err := database.New(driver, dsn)
+	if err != nil {
+		return fmt.Errorf("problem opening connection to endpoint with driver: '%s': %s", driver, err)
 	}
-	return nil, fmt.Errorf("entry '%s' not found in dbms pool", endpointName)
-}
-
-func init() {
-	pool = make(map[string]dbmsPoolEntry)
+	rateLimitedConn, err := database.NewRateLimitedDbmsConn(conn, pool.rps)
+	if err != nil {
+		return err
+	}
+	if _, exists := pool.entries[name]; exists {
+		return fmt.Errorf("%s is already present in the pool. Endpoint names must be unique within the list "+
+			"of endpoints", name)
+	}
+	pool.entries[name] = DbmsEntry{rateLimitedConn, driver, dsn}
+	return err
 }

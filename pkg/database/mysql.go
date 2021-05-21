@@ -125,7 +125,7 @@ func getMysqlInputs(inputs map[string]string) (string, error) {
 
 	var result string
 	for _, param := range sortedParams {
-		result = fmt.Sprintf("%s, '%s'", result, param)
+		result = fmt.Sprintf("%s, '`%s`'", result, param)
 	}
 	result = result[2:]
 

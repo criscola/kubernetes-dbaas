@@ -18,7 +18,8 @@ package cmd
 import (
 	"context"
 	"github.com/bedag/kubernetes-dbaas/internal/logging"
-	"github.com/bedag/kubernetes-dbaas/pkg/config"
+	"github.com/bedag/kubernetes-dbaas/pkg/database"
+	"github.com/bedag/kubernetes-dbaas/pkg/pool"
 	"github.com/go-logr/logr"
 
 	//"context"
@@ -27,7 +28,6 @@ import (
 	databasev1 "github.com/bedag/kubernetes-dbaas/apis/database/v1"
 	databaseclassv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclass/v1"
 	controllers "github.com/bedag/kubernetes-dbaas/controllers/database"
-	"github.com/bedag/kubernetes-dbaas/pkg/pool"
 
 	//"github.com/bedag/kubernetes-dbaas/pkg/pool"
 	"github.com/spf13/cobra"
@@ -64,6 +64,7 @@ const (
 )
 
 var (
+	dbmsPool pool.DbmsPool
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 )
@@ -202,11 +203,18 @@ func loadOperator() {
 	}
 
 	// Setup controllers
+	dbmsList, err := getDbmsList()
+	if err != nil {
+		fatalError(err, "unable to get dbms list")
+	}
+
 	if err = (&controllers.DatabaseReconciler{
 		Client:        mgr.GetClient(),
 		Log:           ctrl.Log.WithName("controllers").WithName("Database"),
 		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor(controllers.DatabaseControllerName),
+		DbmsList: dbmsList,
+		Pool: dbmsPool,
 	}).SetupWithManager(mgr); err != nil {
 		fatalError(err, "unable to create controller", "controller", "Database")
 	}
@@ -235,6 +243,17 @@ func loadOperator() {
 	}
 }
 
+// getDbmsList returns the dbms endpoint list of the operator as specified in the operator's configuration file stored
+// in Viper.
+func getDbmsList() (database.DbmsList, error) {
+	dbms := database.DbmsList{}
+	if err := viper.UnmarshalKey(database.DbmsConfigKey, &dbms); err != nil {
+		return nil, err
+	}
+
+	return dbms, nil
+}
+
 // RegisterEndpoints attempts to register the endpoints specified in the operator configuration loaded from LoadConfig.
 //
 // See pool.Register for details.
@@ -244,20 +263,20 @@ func registerEndpoints() {
 		setupLog.Error(err, "unable to create client instance")
 		os.Exit(1)
 	}
-
-	dbmsList, err := config.GetDbmsList()
+	dbmsList, err := getDbmsList()
 	if err != nil {
 		fatalError(err, "unable to retrieve dbms configuration")
 	}
-	for _, dbmsConfigEntry := range dbmsList {
+	dbmsPool = pool.NewDbmsPool(viper.GetInt(RpsKey))
+	for _, dbms := range dbmsList {
 		dbClass := databaseclassv1.DatabaseClass{}
-		err = c.Get(context.Background(), client.ObjectKey{Namespace: "", Name: dbmsConfigEntry.DatabaseClassName}, &dbClass)
+		err = c.Get(context.Background(), client.ObjectKey{Namespace: "", Name: dbms.DatabaseClassName}, &dbClass)
 		if err != nil {
 			fatalError(err, "problem getting databaseclass from api server", "databaseClassName",
-				dbmsConfigEntry.DatabaseClassName)
+				dbms.DatabaseClassName)
 		}
 
-		if err := pool.Register(dbmsConfigEntry, dbClass, viper.GetInt(RpsKey)); err != nil {
+		if err := dbmsPool.OpenForDbms(dbms, dbClass.Spec.Driver); err != nil {
 			fatalError(err, "problem registering dbms endpoint", "databaseClassName", dbClass.Name)
 		}
 	}

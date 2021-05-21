@@ -5,25 +5,25 @@ import (
 	_ "github.com/denisenkom/go-mssqldb"
 )
 
-// MssqlConn represents a connection to a SQL Server DBMS.
-type MssqlConn struct {
+// SqlserverConn represents a connection to a SQL Server DBMS.
+type SqlserverConn struct {
 	c *sql.DB
 }
 
-// NewMssqlConn opens a new SQL Server connection from a given dsn.
-func NewMssqlConn(dsn string) (*MssqlConn, error) {
+// NewSqlserverConn opens a new SQL Server connection from a given dsn.
+func NewSqlserverConn(dsn string) (*SqlserverConn, error) {
 	dbConn, err := sql.Open("sqlserver", dsn)
 	if err != nil {
 		return nil, err
 	}
 
-	conn := MssqlConn{dbConn}
+	conn := SqlserverConn{dbConn}
 	return &conn, nil
 }
 
 // CreateDb attempts to create a new database as specified in the operation parameter. It returns an OpOutput with the
 // result of the call.
-func (c *MssqlConn) CreateDb(operation Operation) OpOutput {
+func (c *SqlserverConn) CreateDb(operation Operation) OpOutput {
 	inputParams := getQueryInputs(operation.Inputs)
 
 	rows, err := c.c.Query(operation.Name, inputParams...)
@@ -47,7 +47,7 @@ func (c *MssqlConn) CreateDb(operation Operation) OpOutput {
 
 // DeleteDb attempts to delete a database instance as specified in the operation parameter. It returns an OpOutput with the
 // result of the call.
-func (c *MssqlConn) DeleteDb(operation Operation) OpOutput {
+func (c *SqlserverConn) DeleteDb(operation Operation) OpOutput {
 	inputParams := getQueryInputs(operation.Inputs)
 
 	_, err := c.c.Exec(operation.Name, inputParams...)
@@ -59,7 +59,7 @@ func (c *MssqlConn) DeleteDb(operation Operation) OpOutput {
 }
 
 // Rotate attempts to rotate the credentials of a connection.
-func (c *MssqlConn) Rotate(operation Operation) OpOutput {
+func (c *SqlserverConn) Rotate(operation Operation) OpOutput {
 	inputParams := getQueryInputs(operation.Inputs)
 
 	_, err := c.c.Exec(operation.Name, inputParams...)
@@ -70,6 +70,6 @@ func (c *MssqlConn) Rotate(operation Operation) OpOutput {
 	return OpOutput{}
 }
 
-func (c *MssqlConn) Ping() error {
+func (c *SqlserverConn) Ping() error {
  	return c.c.Ping()
 }
