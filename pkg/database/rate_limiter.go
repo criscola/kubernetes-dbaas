@@ -14,7 +14,7 @@ type RateLimitedDbmsConn struct {
 // second for this dbms connection. If rps is equal to 0, it returns a connection that is not rate-limited.
 // Rps cannot be a negative number.
 func NewRateLimitedDbmsConn(dbmsConn Driver, rps int) (*RateLimitedDbmsConn, error) {
-	if rps <= 0 {
+	if rps < 0 {
 		return nil, fmt.Errorf("rps cannot be a negative number. Rps found: %d", rps)
 	}
 	var limiter ratelimit.Limiter
