@@ -6,12 +6,13 @@ import (
 	"github.com/bedag/kubernetes-dbaas/pkg/database"
 )
 
-// Entry is the generic interface for a pool entry.
+// Pool specifies the generic interface for a Pool of DBMS connections.
 type Pool interface {
 	Get(name string) Entry
-	Open(name string, driver string, dsn database.Dsn) error
+	Register(name string, driver string, dsn database.Dsn) error
 }
 
+// Entry specifies the generic interface for an entry of DbmsPool.
 type Entry interface {
 	database.Driver
 }
@@ -22,17 +23,19 @@ type DbmsPool struct {
 	rps int
 }
 
+// Get retrieves an Entry from pool.
 func (pool DbmsPool) Get(name string) Entry {
 	return pool.entries[name]
 }
 
-// Conn represents a standard Dbms connection.
+// DbmsEntry represents a standard Dbms connection.
 type DbmsEntry struct {
 	Entry
 	driver   string
 	dsn      database.Dsn
 }
 
+// NewDbmsPool initializes a DbmsPool struct with the given rps. See also database.RateLimitedDbmsConn.
 func NewDbmsPool(rps int) DbmsPool {
 	return DbmsPool{
 		entries: make(map[string]Entry),
@@ -40,9 +43,11 @@ func NewDbmsPool(rps int) DbmsPool {
 	}
 }
 
-func (pool DbmsPool) OpenForDbms(dbms database.Dbms, driver string) error {
+// RegisterDbms is a utility function around Register. It iterates over database.Dbms.Endpoints and registers a connection for
+// each endpoint.
+func (pool DbmsPool) RegisterDbms(dbms database.Dbms, driver string) error {
 	for _, endpoint := range dbms.Endpoints {
-		if err := pool.Open(endpoint.Name, driver, endpoint.Dsn); err != nil {
+		if err := pool.Register(endpoint.Name, driver, endpoint.Dsn); err != nil {
 			return err
 		}
 	}
@@ -50,7 +55,7 @@ func (pool DbmsPool) OpenForDbms(dbms database.Dbms, driver string) error {
 }
 
 // Register registers a new database.Dbms in the pool.
-func (pool DbmsPool) Open(name string, driver string, dsn database.Dsn) error {
+func (pool DbmsPool) Register(name string, driver string, dsn database.Dsn) error {
 	conn, err := database.New(driver, dsn)
 	if err != nil {
 		return fmt.Errorf("problem opening connection to endpoint with driver: '%s': %s", driver, err)
