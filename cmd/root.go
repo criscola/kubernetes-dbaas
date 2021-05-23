@@ -276,7 +276,7 @@ func registerEndpoints() {
 				dbms.DatabaseClassName)
 		}
 
-		if err := dbmsPool.OpenForDbms(dbms, dbClass.Spec.Driver); err != nil {
+		if err := dbmsPool.RegisterDbms(dbms, dbClass.Spec.Driver); err != nil {
 			fatalError(err, "problem registering dbms endpoint", "databaseClassName", dbClass.Name)
 		}
 	}
