@@ -59,7 +59,11 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 						return err
 					}, timeout, interval).Should(BeNil())
 				})
-				By("rotating the credentials")
+				By("rotating the credentials", func() {
+					// TODO: Create Rotate sample stored procedure and then implement credential rotation
+					// TODO: Get secret data, apply rotation, get secret data again and compare it with the older data
+					// Expect password to have changed. Expect annotation to be removed.
+				})
 				By("deleting the API resource successfully", func() {
 					err = k8sClient.Delete(context.Background(), &postgresDb)
 					Expect(err).NotTo(HaveOccurred())
