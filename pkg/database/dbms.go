@@ -40,8 +40,8 @@ type DbmsConn struct {
 // Operation represents an operation performed on a DBMS identified by name and containing a map of inputs and a map
 // of outputs.
 type Operation struct {
-	Name    string            `json:"name,omitempty"`
-	Inputs  map[string]string `json:"inputs,omitempty"`
+	Name   string            `json:"name,omitempty"`
+	Inputs map[string]string `json:"inputs,omitempty"`
 }
 
 // OpOutput represents the return values of an operation. If the operation generates an error, it must be set in the Err
@@ -149,8 +149,8 @@ func (op Operation) RenderOperation(values OpValues) (Operation, error) {
 		return Operation{}, err
 	}
 	renderedOp := Operation{
-		Name:    op.Name,
-		Inputs:  renderedInputsMap,
+		Name:   op.Name,
+		Inputs: renderedInputsMap,
 	}
 
 	return renderedOp, nil

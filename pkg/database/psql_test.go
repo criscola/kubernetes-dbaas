@@ -28,9 +28,9 @@ var _ = Describe(FormatTestDesc(Integration, "Postgres CreateDb"), func() {
 			Result: map[string]string{
 				"username": "testuser",
 				"password": "testpassword",
-				"dbName": "myTestDb",
-				"fqdn": "localhost",
-				"port": "5432",
+				"dbName":   "myTestDb",
+				"fqdn":     "localhost",
+				"port":     "5432",
 			},
 			Err: nil,
 		}

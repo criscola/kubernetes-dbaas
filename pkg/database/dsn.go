@@ -4,7 +4,7 @@ import "github.com/xo/dburl"
 
 type Dsn string
 
-func(dsn Dsn) GenMysql() (string, error) {
+func (dsn Dsn) GenMysql() (string, error) {
 	u, err := dburl.Parse(dsn.String())
 	if err != nil {
 		return "", err
@@ -16,7 +16,7 @@ func(dsn Dsn) GenMysql() (string, error) {
 	return parsedDsn, nil
 }
 
-func(dsn Dsn) GenSqlserver() (string, error) {
+func (dsn Dsn) GenSqlserver() (string, error) {
 	u, err := dburl.Parse(dsn.String())
 	if err != nil {
 		return "", err
@@ -28,7 +28,7 @@ func(dsn Dsn) GenSqlserver() (string, error) {
 	return parsedDsn, nil
 }
 
-func(dsn Dsn) GenPostgres() (string, error) {
+func (dsn Dsn) GenPostgres() (string, error) {
 	u, err := dburl.Parse(dsn.String())
 	if err != nil {
 		return "", err

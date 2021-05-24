@@ -51,9 +51,9 @@ const (
 	DatabaseControllerName = "database-controller"
 	DatabaseClass          = "databaseclass"
 	EndpointName           = "endpoint-name"
-	SecretName			   = "secret-name"
+	SecretName             = "secret-name"
 	databaseFinalizer      = "finalizer.database.bedag.ch"
-	rotateAnnotationKey	   = "dbaas.bedag.ch/rotate"
+	rotateAnnotationKey    = "dbaas.bedag.ch/rotate"
 )
 
 type ReconcileError struct {
@@ -69,8 +69,8 @@ type DatabaseReconciler struct {
 	Log           logr.Logger
 	Scheme        *runtime.Scheme
 	EventRecorder record.EventRecorder
-	DbmsList database.DbmsList
-	Pool 	 pool.Pool
+	DbmsList      database.DbmsList
+	Pool          pool.Pool
 }
 
 var logger logr.Logger
@@ -527,14 +527,14 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretForm
 	logger.V(DebugLevel).Info("Creating secret for database resource")
 
 	// Init vars
-	secretName := formatSecretName(owner)
+	secretName := FormatSecretName(owner)
 	loggingKv := StringsToInterfaceSlice("secret", secretName)
 	secretData, err := secretFormat.RenderSecretFormat(output)
 	if err != nil {
 		return ReconcileError{
-			Reason: RsnSecretRenderFail,
-			Message: MsgSecretRenderFail,
-			Err: err,
+			Reason:         RsnSecretRenderFail,
+			Message:        MsgSecretRenderFail,
+			Err:            err,
 			AdditionalInfo: loggingKv,
 		}
 	}
@@ -617,12 +617,12 @@ func (r *DatabaseReconciler) updateReadyCondition(obj *databasev1.Database, stat
 // annotation is present. It returns false otherwise, or if an error was generated during execution.
 func (r *DatabaseReconciler) shouldRotate(obj *databasev1.Database) (bool, ReconcileError) {
 	logger.V(TraceLevel).Info("Checking if credentials should be rotated")
-	secretName := formatSecretName(obj)
+	secretName := FormatSecretName(obj)
 	loggingKv := StringsToInterfaceSlice(SecretName, secretName)
 
 	// If Secret of Database is not present, it must be recreated through credentials rotation
 	var secret corev1.Secret
-	secretObjKey := client.ObjectKey{Namespace: obj.Namespace, Name: formatSecretName(obj)}
+	secretObjKey := client.ObjectKey{Namespace: obj.Namespace, Name: FormatSecretName(obj)}
 	if err := r.Client.Get(context.Background(), secretObjKey, &secret); err != nil {
 		if k8sError.IsNotFound(err) {
 			// Secret for given object is not present, it must be recreated
@@ -666,9 +666,9 @@ func isRotateAnnotationTrue(obj *databasev1.Database) bool {
 	return false
 }
 
-// formatSecretName returns the name of a Database's Secret resource as it should appear in metadata.name.
-func formatSecretName(obj *databasev1.Database) string {
-	return obj.Name+"-credentials"
+// FormatSecretName returns the name of a Database's Secret resource as it should appear in metadata.name.
+func FormatSecretName(obj *databasev1.Database) string {
+	return obj.Name + "-credentials"
 }
 
 // newOpValuesFromResource constructs a database.OpValues struct starting from a Database resource.

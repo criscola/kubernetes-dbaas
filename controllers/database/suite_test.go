@@ -23,22 +23,20 @@ import (
 	databaseclassv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclass/v1"
 	. "github.com/bedag/kubernetes-dbaas/controllers/database"
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
-	"k8s.io/apimachinery/pkg/util/yaml"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"io/ioutil"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	"os"
 	"path"
 	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"testing"
 	//+kubebuilder:scaffold:imports
 )
@@ -46,25 +44,23 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
-var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
+var dbmsPool pool.DbmsPool
 var rootPath = path.Join("..", "..")
 var cfgFilepath = path.Join(rootPath, "config.yaml")
 var testdataFilepath = path.Join(rootPath, "testdata")
+var ctrlConfig = operatorconfigv1.OperatorConfig{}
 
 const (
-	DbcPostgresFilename = "dbclass-postgres.yaml"
+	DbcPostgresFilename  = "dbclass-postgres.yaml"
 	DbcSqlserverFilename = "dbclass-sqlserver.yaml"
-	DbcMariadbFilename = "dbclass-mariadb.yaml"
+	DbcMariadbFilename   = "dbclass-mariadb.yaml"
 )
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
-
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Controller Suite",
-		[]Reporter{printer.NewlineReporter{}})
+	RunSpecs(t,"Controller Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -89,84 +85,87 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	By("adding CRD schemes")
-	err = databasev1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-	err = databaseclassv1.AddToScheme(scheme.Scheme)
-	
-	Expect(err).NotTo(HaveOccurred())
-	err = operatorconfigv1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
+	By("adding CRD schemes", func() {
+		err = databasev1.AddToScheme(scheme.Scheme)
+		Expect(err).NotTo(HaveOccurred())
+		err = databaseclassv1.AddToScheme(scheme.Scheme)
+		Expect(err).NotTo(HaveOccurred())
+		err = operatorconfigv1.AddToScheme(scheme.Scheme)
+		Expect(err).NotTo(HaveOccurred())
+		//+kubebuilder:scaffold:scheme
+	})
 
-	//+kubebuilder:scaffold:scheme
+	var options manager.Options
+	By("loading the operator config from " + cfgFilepath, func() {
+		options = ctrl.Options{Scheme: scheme.Scheme}
+		dat, err := ioutil.ReadFile(cfgFilepath)
+		Expect(err).NotTo(HaveOccurred())
+		err = yaml.Unmarshal(dat, &ctrlConfig)
+		Expect(err).NotTo(HaveOccurred())
+		options, err = options.AndFrom(&ctrlConfig)
+		Expect(err).NotTo(HaveOccurred())
+	})
 
-	By("loading the operator config from " + cfgFilepath)
-	ctrlConfig := operatorconfigv1.OperatorConfig{}
-	dat, err := ioutil.ReadFile(cfgFilepath)
-	Expect(err).NotTo(HaveOccurred())
-	options := ctrl.Options{Scheme: scheme.Scheme}
-	err = yaml.Unmarshal(dat, &ctrlConfig)
-	Expect(err).NotTo(HaveOccurred())
-	options, err = options.AndFrom(&ctrlConfig)
-	Expect(err).NotTo(HaveOccurred())
+	var k8sManager ctrl.Manager
+	By("creating Manager and Client", func() {
+		k8sManager, err = ctrl.NewManager(cfg, options)
+		Expect(err).ToNot(HaveOccurred())
+		k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+		Expect(k8sClient).NotTo(BeNil())
+	})
 
-	// disable leader election
-	options.LeaderElection = false
-
-	By("creating Manager and Client")
-	k8sManager, err := ctrl.NewManager(cfg, options)
-	Expect(err).ToNot(HaveOccurred())
-	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-	Expect(k8sClient).NotTo(BeNil())
-
-	By("registering DatabaseClasses one per driver")
-	dbcSqlserver, err := getSqlserverDbc()
-	Expect(err).ToNot(HaveOccurred())
-	err = k8sClient.Create(context.Background(), &dbcSqlserver)
-	Expect(err).ToNot(HaveOccurred())
-
-	dbcPostgres, err := getPostgresDbc()
-	Expect(err).ToNot(HaveOccurred())
-	err = k8sClient.Create(context.Background(), &dbcPostgres)
-	Expect(err).ToNot(HaveOccurred())
-
-	dbcMariadb, err := getMariadbDbc()
-	Expect(err).ToNot(HaveOccurred())
-	err = k8sClient.Create(context.Background(), &dbcMariadb)
-	Expect(err).ToNot(HaveOccurred())
-
-	By("registering the pool of connections")
-	pool := pool.NewDbmsPool(0)
-	for _, dbms := range ctrlConfig.DbmsList {
-		dbc := databaseclassv1.DatabaseClass{}
-		err = k8sClient.Get(context.Background(), client.ObjectKey{Name: dbms.DatabaseClassName}, &dbc)
+	By("registering a DatabaseClasses per driver", func() {
+		dbcSqlserver, err := getSqlserverDbc()
+		Expect(err).ToNot(HaveOccurred())
+		err = k8sClient.Create(context.Background(), &dbcSqlserver)
 		Expect(err).ToNot(HaveOccurred())
 
-		err = pool.RegisterDbms(dbms, dbc.Spec.Driver)
+		dbcPostgres, err := getPostgresDbc()
 		Expect(err).ToNot(HaveOccurred())
-	}
-
-	By("starting the DatabaseReconciler instance")
-	err = (&DatabaseReconciler{
-		Client:        k8sManager.GetClient(),
-		Log:           ctrl.Log.WithName("controllers").WithName("database"),
-		Scheme:        k8sManager.GetScheme(),
-		EventRecorder: k8sManager.GetEventRecorderFor(DatabaseControllerName),
-		DbmsList:      ctrlConfig.DbmsList,
-		Pool:          pool,
-	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	go func() {
-		err = k8sManager.Start(ctrl.SetupSignalHandler())
+		err = k8sClient.Create(context.Background(), &dbcPostgres)
 		Expect(err).ToNot(HaveOccurred())
-	}()
+
+		dbcMariadb, err := getMariadbDbc()
+		Expect(err).ToNot(HaveOccurred())
+		err = k8sClient.Create(context.Background(), &dbcMariadb)
+		Expect(err).ToNot(HaveOccurred())
+	})
+
+	By("registering the pool of connections", func() {
+		dbmsPool = pool.NewDbmsPool(0)
+		for _, dbms := range ctrlConfig.DbmsList {
+			dbc := databaseclassv1.DatabaseClass{}
+			err = k8sClient.Get(context.Background(), client.ObjectKey{Name: dbms.DatabaseClassName}, &dbc)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = dbmsPool.RegisterDbms(dbms, dbc.Spec.Driver)
+			Expect(err).ToNot(HaveOccurred())
+		}
+	})
+
+	By("starting the DatabaseReconciler instance", func() {
+		err = (&DatabaseReconciler{
+			Client:        k8sManager.GetClient(),
+			Scheme:        k8sManager.GetScheme(),
+			Log:           ctrl.Log.WithName("controllers").WithName("database"),
+			EventRecorder: k8sManager.GetEventRecorderFor(DatabaseControllerName),
+			DbmsList:      ctrlConfig.DbmsList,
+			Pool:          dbmsPool,
+		}).SetupWithManager(k8sManager)
+		Expect(err).ToNot(HaveOccurred())
+
+		go func() {
+			err = k8sManager.Start(ctrl.SetupSignalHandler())
+			Expect(err).ToNot(HaveOccurred())
+		}()
+	})
 }, 60)
 
 var _ = AfterSuite(func() {
-	By("tearing down the test environment")
-	err := testEnv.Stop()
-	Expect(err).NotTo(HaveOccurred())
+	By("tearing down the test environment", func() {
+		err := testEnv.Stop()
+		Expect(err).NotTo(HaveOccurred())
+	})
 })
 
 func getSqlserverDbc() (databaseclassv1.DatabaseClass, error) {

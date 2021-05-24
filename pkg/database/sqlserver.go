@@ -71,5 +71,5 @@ func (c *SqlserverConn) Rotate(operation Operation) OpOutput {
 }
 
 func (c *SqlserverConn) Ping() error {
- 	return c.c.Ping()
+	return c.c.Ping()
 }

@@ -10,7 +10,7 @@ import (
 
 const (
 	// Test data
-	operationNameBasicCorrect      = "sp_test"
+	operationNameBasicCorrect = "sp_test"
 )
 
 func TestDatabase(t *testing.T) {
@@ -25,21 +25,21 @@ var _ = Describe(FormatTestDesc(Unit, "RenderOperation"), func() {
 		// Prepare test data
 		// Prepare correct template for templating operation to test
 		mapTemplateBasicCorrect = map[string]string{
-			"name": "{{ .Metadata.name }}",
-			"namespace": "{{ .Metadata.namespace }}",
+			"name":       "{{ .Metadata.name }}",
+			"namespace":  "{{ .Metadata.namespace }}",
 			"department": "{{ .Parameters.department }}",
-			"assignee": "{{ .Parameters.assignee }}",
+			"assignee":   "{{ .Parameters.assignee }}",
 		}
 
 		operationStructTemplatedBasicCorrect := database.Operation{
-			Name:    operationNameBasicCorrect,
-			Inputs:  mapTemplateBasicCorrect,
+			Name:   operationNameBasicCorrect,
+			Inputs: mapTemplateBasicCorrect,
 		}
 
 		// Prepare correct operation values for templated operation to test
 		opValuesBasicCorrect := database.OpValues{
 			Metadata: map[string]interface{}{
-				"name": "TestDb",
+				"name":      "TestDb",
 				"namespace": "TestDbNamespace",
 			},
 			Parameters: map[string]string{
@@ -50,10 +50,10 @@ var _ = Describe(FormatTestDesc(Unit, "RenderOperation"), func() {
 
 		// Prepare comparison data for assertions
 		operationAssertion := database.Operation{
-			Name:    operationNameBasicCorrect,
+			Name: operationNameBasicCorrect,
 			Inputs: map[string]string{
-				"name": "TestDb",
-				"namespace": "TestDbNamespace",
+				"name":       "TestDb",
+				"namespace":  "TestDbNamespace",
 				"department": "development",
 				"assignee":   "John Doe",
 			},
@@ -81,29 +81,29 @@ var _ = Describe(FormatTestDesc(Unit, "RenderSecretFormat"), func() {
 		mapInputsBasicCorrect = map[string]string{
 			"username": "{{ .Result.username }}",
 			"password": "{{ .Result.password }}",
-			"port": "{{ .Result.port }}",
-			"dbName": "{{ .Result.dbName }}",
-			"server": "{{ .Result.fqdn }}",
-			"dsn": "sqlserver://{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}/{{ .Result.dbName }}",
+			"port":     "{{ .Result.port }}",
+			"dbName":   "{{ .Result.dbName }}",
+			"server":   "{{ .Result.fqdn }}",
+			"dsn":      "sqlserver://{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}/{{ .Result.dbName }}",
 		}
 
 		createOpOutput := database.OpOutput{
 			Result: map[string]string{
 				"username": "sa",
 				"password": "Password&1",
-				"port": "1433",
-				"dbName": "testDb",
-				"fqdn": "localhost",
+				"port":     "1433",
+				"dbName":   "testDb",
+				"fqdn":     "localhost",
 			},
 		}
 
 		secretFormatAssertion := database.SecretFormat(map[string]string{
 			"username": "sa",
 			"password": "Password&1",
-			"port": "1433",
-			"dbName": "testDb",
-			"server": "localhost",
-			"dsn": "sqlserver://sa:Password&1@localhost/testDb",
+			"port":     "1433",
+			"dbName":   "testDb",
+			"server":   "localhost",
+			"dsn":      "sqlserver://sa:Password&1@localhost/testDb",
 		})
 
 		// Execute tested behavior

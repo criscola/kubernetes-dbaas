@@ -11,7 +11,7 @@ import (
 
 const (
 	// For why the distinction between logr and zap levels, see: https://github.com/operator-framework/operator-sdk/issues/4771
-	InfoLevel  = 0
+	InfoLevel      = 0
 	LogrDebugLevel = -1
 	LogrTraceLevel = -2
 

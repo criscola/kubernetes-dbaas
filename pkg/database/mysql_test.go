@@ -21,9 +21,9 @@ var _ = Describe(FormatTestDesc(Integration, "Mariadb CreateDb"), func() {
 		Result: map[string]string{
 			"username": "testuser",
 			"password": "testpassword",
-			"dbName": "myTestDb",
-			"fqdn": "localhost",
-			"port": "3306",
+			"dbName":   "myTestDb",
+			"fqdn":     "localhost",
+			"port":     "3306",
 		},
 		Err: nil,
 	}

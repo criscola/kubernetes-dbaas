@@ -20,7 +20,7 @@ type Entry interface {
 // DbmsPool is a map of pool entries identified by a unique name.
 type DbmsPool struct {
 	entries map[string]Entry
-	rps int
+	rps     int
 }
 
 // Get retrieves an Entry from pool.
@@ -31,15 +31,15 @@ func (pool DbmsPool) Get(name string) Entry {
 // DbmsEntry represents a standard Dbms connection.
 type DbmsEntry struct {
 	Entry
-	driver   string
-	dsn      database.Dsn
+	driver string
+	dsn    database.Dsn
 }
 
 // NewDbmsPool initializes a DbmsPool struct with the given rps. See also database.RateLimitedDbmsConn.
 func NewDbmsPool(rps int) DbmsPool {
 	return DbmsPool{
 		entries: make(map[string]Entry),
-		rps: rps,
+		rps:     rps,
 	}
 }
 

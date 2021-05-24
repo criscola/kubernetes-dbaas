@@ -14,7 +14,7 @@ const (
 	Integration TestType = "i"
 	E2e         TestType = "e2e"
 
-	Slow		TestAttribute = "slow"
+	Slow TestAttribute = "slow"
 
 	PostgresCreateOpName  = "sp_create_db_rowset_eav"
 	MysqlCreateOpName     = "sp_create_db_rowset_eav"

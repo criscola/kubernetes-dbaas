@@ -48,12 +48,12 @@ import (
 )
 
 const (
-	LoadConfigKey    = "load-config"
-	DebugKey         = "debug"
-	WebhookEnableKey = "enable-webhooks"
-	ZapLogLevelKey   = "log-level"
+	LoadConfigKey     = "load-config"
+	DebugKey          = "debug"
+	WebhookEnableKey  = "enable-webhooks"
+	ZapLogLevelKey    = "log-level"
 	DisableStackTrace = "disable-stacktrace"
-	RpsKey 			  = "rps"
+	RpsKey            = "rps"
 
 	// Flag overrides for flags specified in OperatorConfig
 	MetricsBindAddressKey     = "metrics.bindAddress"
@@ -213,8 +213,8 @@ func loadOperator() {
 		Log:           ctrl.Log.WithName("controllers").WithName("Database"),
 		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor(controllers.DatabaseControllerName),
-		DbmsList: dbmsList,
-		Pool: dbmsPool,
+		DbmsList:      dbmsList,
+		Pool:          dbmsPool,
 	}).SetupWithManager(mgr); err != nil {
 		fatalError(err, "unable to create controller", "controller", "Database")
 	}
