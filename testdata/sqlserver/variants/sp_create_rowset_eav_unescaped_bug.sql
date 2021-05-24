@@ -1,10 +1,10 @@
-create or alter proc sp_create_rowset_EAV (@k8sName varchar(max))
+create or alter proc sp_create_rowset_eav_unescaped_bug (@k8sName varchar(max))
 as
 declare @sql varchar(max)
 
 IF COUNT((DB_ID(@k8sName))) = 0
     BEGIN
-        set @sql = CONCAT('create database [',@k8sName, ']')
+        set @sql = CONCAT('create database ',@k8sName)
         exec (@sql)
     END
 

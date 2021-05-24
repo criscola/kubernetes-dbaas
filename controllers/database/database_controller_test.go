@@ -29,7 +29,7 @@ const (
 var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 	// Define utility constants for object names and testing timeouts/durations and intervals.
 	const (
-		timeout  = time.Second * 4
+		timeout  = time.Second * 10
 		duration = time.Second * 10
 		interval = time.Millisecond * 250
 	)
@@ -59,6 +59,7 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 						return err
 					}, timeout, interval).Should(BeNil())
 				})
+				By("rotating the credentials")
 				By("deleting the API resource successfully", func() {
 					err = k8sClient.Delete(context.Background(), &postgresDb)
 					Expect(err).NotTo(HaveOccurred())
@@ -69,17 +70,6 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 			})
 		})
 		Context("when handling a Mariadb instance", func() {
-			//It("should handle its lifecycle correctly", func() {
-			//	By("creating the API resource successfully with condition Ready set to true", func() {
-			//		mariadbDb, err := getMariadbDb(DbMariadbFilename)
-			//		Expect(err).NotTo(HaveOccurred())
-			//		err = k8sClient.Create(context.Background(), &mariadbDb)
-			//		Expect(err).NotTo(HaveOccurred())
-			//		Eventually(func() error {
-			//			return checkDbReady(&mariadbDb)
-			//		}, timeout, interval).Should(BeNil())
-			//	})
-			//})
 			It("should handle its lifecycle correctly", func() {
 				mariadbDb, err := getDbFromTestdata(DbMariadbFilename)
 				By("creating the API resource successfully with condition Ready set to true", func() {
@@ -112,33 +102,7 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 				})
 			})
 		})
-		//Context("when handling a Sqlserver instance", func() {
-		//	By("creating a new Database instance")
-		//	It("should create the API resource successfully with condition Ready set to true", func() {
-		//		sqlserverDb, err := getSqlserverDb(SqlserverCreateOpName)
-		//		Expect(err).NotTo(HaveOccurred())
-		//		err = k8sClient.Create(context.Background(), &sqlserverDb)
-		//		Expect(err).NotTo(HaveOccurred())
-		//		Eventually(func() error {
-		//			return checkDbReady(&sqlserverDb)
-		//		}, timeout, interval).Should(BeNil())
-		//	})
-		//	It("should create the database in the relative resource endpoint", func() {
-		//
-		//	})
-		//})
-		Context("when handling a Postgres instance", func() {
-			//It("should handle its lifecycle correctly", func() {
-			//	By("creating the API resource successfully with condition Ready set to true", func() {
-			//		mariadbDb, err := getMariadbDb(DbMariadbFilename)
-			//		Expect(err).NotTo(HaveOccurred())
-			//		err = k8sClient.Create(context.Background(), &mariadbDb)
-			//		Expect(err).NotTo(HaveOccurred())
-			//		Eventually(func() error {
-			//			return checkDbReady(&mariadbDb)
-			//		}, timeout, interval).Should(BeNil())
-			//	})
-			//})
+		Context("when handling a Sqlserver instance", func() {
 			It("should handle its lifecycle correctly", func() {
 				sqlserverDb, err := getDbFromTestdata(DbSqlserverFilename)
 				By("creating the API resource successfully with condition Ready set to true", func() {
@@ -182,14 +146,6 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 		// Also test as much behaviour as possible, e.g. Secret recreation
 	})
 })
-
-func getSqlserverDb(filename string) (databasev1.Database, error) {
-	return readDbYaml(DbSqlserverFilename)
-}
-
-func getMariadbDb(filename string) (databasev1.Database, error) {
-	return readDbYaml(DbMariadbFilename)
-}
 
 func getDbFromTestdata(filename string) (databasev1.Database, error) {
 	return readDbYaml(filename)

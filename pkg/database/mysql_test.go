@@ -21,7 +21,7 @@ var _ = Describe(FormatTestDesc(Integration, "Mariadb CreateDb"), func() {
 		Result: map[string]string{
 			"username": "testuser",
 			"password": "testpassword",
-			"dbName":   "myTestDb",
+			"dbName":   "my-database-test",
 			"fqdn":     "localhost",
 			"port":     "3306",
 		},
@@ -33,7 +33,7 @@ var _ = Describe(FormatTestDesc(Integration, "Mariadb CreateDb"), func() {
 		createOperation := database.Operation{
 			Name: MysqlCreateOpName,
 			Inputs: map[string]string{
-				"0": "myTestDb",
+				"0": "my-database-test",
 			},
 		}
 

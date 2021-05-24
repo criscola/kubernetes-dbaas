@@ -14,25 +14,26 @@ var _ = Describe(FormatTestDesc(Integration, "Postgres CreateDb"), func() {
 
 	conn, err := database.NewPsqlConn(dsn)
 	Expect(err).ToNot(HaveOccurred())
+
+	// Prepare assertion data
+	opResultAssertion := database.OpOutput{
+		Result: map[string]string{
+			"username": "testuser",
+			"password": "testpassword",
+			"dbName":   "my-test-db",
+			"fqdn":     "localhost",
+			"port":     "5432",
+		},
+		Err: nil,
+	}
+
 	Context("when Operation is defined correctly", func() {
 		// Prepare test data
 		createOperation := database.Operation{
 			Name: PostgresCreateOpName,
 			Inputs: map[string]string{
-				"k8sName": "myTestDb",
+				"k8sName": "my-test-db",
 			},
-		}
-
-		// Prepare assertion data
-		opResultAssertion := database.OpOutput{
-			Result: map[string]string{
-				"username": "testuser",
-				"password": "testpassword",
-				"dbName":   "myTestDb",
-				"fqdn":     "localhost",
-				"port":     "5432",
-			},
-			Err: nil,
 		}
 
 		// Execute tested operation

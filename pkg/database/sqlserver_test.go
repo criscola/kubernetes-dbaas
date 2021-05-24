@@ -7,6 +7,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const SqlserverCreateOpNameUnescapedBug = "sp_create_rowset_eav_unescaped_bug"
+
 var _ = Describe(FormatTestDesc(Integration, "Sqlserver CreateDb"), func() {
 	// Setting up connection to DBMS
 	dsn, err := database.Dsn("sqlserver://sa:Password&1@localhost:1433").GenSqlserver()
@@ -20,7 +22,7 @@ var _ = Describe(FormatTestDesc(Integration, "Sqlserver CreateDb"), func() {
 		createOperation := database.Operation{
 			Name: SqlserverCreateOpName,
 			Inputs: map[string]string{
-				"k8sName": "myTestDb",
+				"k8sName": "db-name-with-dashes",
 			},
 		}
 
@@ -29,7 +31,7 @@ var _ = Describe(FormatTestDesc(Integration, "Sqlserver CreateDb"), func() {
 			Result: map[string]string{
 				"username": "testuser",
 				"password": "testpassword",
-				"dbName":   "myTestDb",
+				"dbName":   "db-name-with-dashes",
 				"fqdn":     "localhost",
 				"port":     "1433",
 			},
@@ -50,6 +52,23 @@ var _ = Describe(FormatTestDesc(Integration, "Sqlserver CreateDb"), func() {
 
 		It("should return a rowset as specified in the stored procedure", func() {
 			Expect(result).To(Equal(opResultAssertion))
+		})
+	})
+	// TODO: Investigate: bug in the driver (sql.Named of pgx)? The connection should return an error, because the
+	// create statement is not executed and calling the procedure manually does produce an error.
+	PContext("when the unescaped stored procedure is used in the Create call", func() {
+		createOperationUnescaped := database.Operation{
+			Name: SqlserverCreateOpNameUnescapedBug,
+			Inputs: map[string]string{
+				"k8sName": "db-name-with-dashes",
+			},
+		}
+		// Execute tested operation
+		var result database.OpOutput
+		result = conn.CreateDb(createOperationUnescaped)
+
+		It("should return a syntax error due to unescaped characters", func() {
+			Expect(result.Err).To(HaveOccurred())
 		})
 	})
 })
