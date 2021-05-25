@@ -8,12 +8,12 @@ spec:
     create:
       name: "sp_create_db_rowset_eav"
       inputs:
-        "0": |-
+        "k8sName": |-
           {{`{{ .Metadata.name }}`}}
     delete:
       name: "sp_delete"
       inputs:
-        "0": |-
+        k8sName: |-
           {{`{{ .Metadata.name }}`}}
     rotate:
       name: "sp_rotate"
@@ -32,4 +32,4 @@ spec:
     server: |-
       {{`{{ .Result.fqdn }}`}}
     dsn: |-
-      {{`psql://{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}:{{ .Result.port }}/{{ .Result.dbName }}`}}
+      {{`'psql://{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}:{{ .Result.port }}/{{ .Result.dbName }}''`}}

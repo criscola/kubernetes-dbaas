@@ -1,6 +1,6 @@
 # System administrator guide
 ## Installation
-### Helm
+### Helm deployment
 The Operator provides an official Helm chart.
 #### Requirements
 When metrics are enabled, the `/metrics` endpoint is protected by authentication and scraped by Prometheus through a Service Monitor resource.
@@ -26,7 +26,16 @@ helm install charts/kubernetes-dbaas --generate-name --create-namespace --namesp
 ```
 
 ### Vanilla deployment
-To try out the Operator on your local machine, follow these steps:
+You may deploy the Operator in a cluster without Helm.
+
+Make sure to have cert-manager and Prometheus deployed in your target cluster if you want to have the `/metrics` endpoint enabled.
+```
+docker build -t yourrepo/imagename . && docker push yourrepo/imagename
+make deploy IMG=yourrepo/imagename
+```
+
+### Local development deployment
+To try out the Operator on your local development machine, follow these steps:
 
 #### Requirements
 - Install Go 1.16+ https://golang.org/doc/install
@@ -55,17 +64,6 @@ make run ARGS="--load-config=config/manager/controller_manager_config.yaml --ena
 ```
 
 For more information about the operator-sdk and the enclosed Makefile, consult: https://sdk.operatorframework.io/docs/building-operators/golang/tutorial/
-
-### Other deployment options
-Make sure to have certmanager and Prometheus deployed in your local cluster:
-
-You may deploy the Operator in a local cluster without Helm, by running the following:
-
-```
-docker build -t yourrepo/imagename . && docker push yourrepo/imagename
-make deploy IMG=yourrepo/imagename
-```
-
 
 ## Usage
 ### Prerequisites
@@ -151,7 +149,7 @@ The user manual is available
 | `--enable-webhooks`                        	| Enables webhooks servers (default true)                                                                                               	                   |
 | `--health.healthProbeBindAddress <string>` 	| The address the probe endpoint binds to (default ":8081")                                                                                                    |
 | `-h`, `--help`                               	| help for kubedbaas                                                                                                                                           |
-| `--leaderElection.leaderElect`         | Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager  (default true)                                |
+| `--leaderElection.leaderElect`                | Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager  (default true)                                |
 | `--leaderElection.resourceName <string>`   	| The resource name to lock during election cycles (default "bfa62c96.dbaas.bedag.ch")                                                                         |
 | `--load-config <string>`                   	| Location of the Operator's config file                                                                                                                       |
 | `--metrics.bindAddress <string>`           	| The address the metric endpoint binds to (default "127.0.0.1:8080")                                                                  	                       |
@@ -166,8 +164,8 @@ You can troubleshoot problems in two ways:
 1. Look at the events of the resource with `kubectl describe database my-database-resource `
 2. Consult the logs of the manager pod.
 
-To avoid leaking possibly sensitive information, events do not contain the full error, only a message along with some
-pertinent values if present.
+To avoid leaking possibly sensitive information, events do not contain the full error description, they contain a message along with some helpful values, if present.
+Thus, you should refer to the logging output if you need to obtain deeper information about the problem.
 
 You can control the verbosity of the logger by setting the `--log-level <int>` flag.
 
@@ -180,4 +178,4 @@ Errors are always logged.
 Sampling is enabled in production mode for every log entry with same level and message. The first 100 entries in one second
 are logged, after that only one entry is logged every 100 entries until the next second.
 
-Stacktraces are attached to error logs in both production and development mode.
+Stacktraces are attached to error logs in both production and development mode. You can disable this behavior by passing the `--disable-stacktrace=true` flag to the Operator binary.

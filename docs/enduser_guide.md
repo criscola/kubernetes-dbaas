@@ -2,11 +2,11 @@
 
 ## Prerequisites
 
-- You have your Operator ready and deployed.  [See the system administrator guide.](sysadmin_guide.md)
+You have the Operator ready and deployed. See [the system administrator guide.](sysadmin_guide.md)
 
 ## Steps
 
-1. Create a custom resource configuration, e.g. "mycrd.yaml"
+1. Create a custom resource configuration, e.g. `my-db.yaml`
 
 Here's an example;
 
@@ -16,11 +16,8 @@ kind: Database
 metadata:
   name: database-sample  
 spec:
-  provisioner: sqlserver
   endpoint: us-sqlserver-test
 ```
-
-- `provisioner` tells the Operator which driver to use (sqlserver)
 
 - `endpoint` tells the Operator where to create the operator. Your endpoint names are configured in the Operator configuration and should be properly documented inside of your organization.
 
@@ -34,7 +31,6 @@ spec:
     metadata:
       name: database-sample  
     spec:
-      provisioner: sqlserver
       endpoint: us-sqlserver-test
       params:
         myCustomUserParam: "myvalue"
