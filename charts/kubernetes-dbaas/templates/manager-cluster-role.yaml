@@ -1,8 +1,11 @@
+
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
   name: kubernetes-dbaas-manager-role
+  namespace: {{ .Release.Namespace }}
 rules:
   - apiGroups:
       - ""
@@ -48,3 +51,10 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
