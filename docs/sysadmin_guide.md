@@ -1,6 +1,74 @@
 # System administrator guide
+## Installation
+### Helm
+The Operator provides an official Helm chart.
+#### Requirements
+When metrics are enabled, the `/metrics` endpoint is protected by authentication and scraped by Prometheus through a Service Monitor resource.
 
-## Prerequisites
+- Install [kube-prometheus-stack](https://artifacthub.io/packages/helm/prometheus-community/kube-prometheus-stack) v16.0.1
+```
+helm install prometheus-operator prometheus-community/kube-prometheus-stack --create-namespace --namespace=kubernetes-dbaas-system
+```
+- Install [cert-manager](https://artifacthub.io/packages/helm/cert-manager/cert-manager) v1.3.0
+```
+helm install \                                                                                                                                                                                                                                                                                                                                                                                                                       ±[A1●●][develop]
+  cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --create-namespace \
+  --version v1.3.1 \
+  --set installCRDs=true
+  
+```
+#### Deployment
+1. Install the operator
+```
+helm install charts/kubernetes-dbaas --generate-name --create-namespace --namespace=kubernetes-dbaas-system
+```
+
+### Vanilla deployment
+To try out the Operator on your local machine, follow these steps:
+
+#### Requirements
+- Install Go 1.16+ https://golang.org/doc/install
+- Install kubectl v1.21+ https://kubernetes.io/docs/tasks/tools/install-kubectl/
+- Install minikube v1.20+ https://minikube.sigs.k8s.io/docs/start/
+- Install the operator-sdk and its prerequisites: https://sdk.operatorframework.io/docs/installation/
+- Configure the Operator by following the [System administrator guide](docs/sysadmin_guide.md)
+
+#### Deployment
+1. Install the CRDs
+
+```
+make install
+```
+
+2. Install an example DatabaseClass
+
+```
+kubectl apply -f testdata/dbclass.yaml
+```
+
+3. Run the Operator as a local process
+
+```
+make run ARGS="--load-config=config/manager/controller_manager_config.yaml --enable-webhooks=false --leaderElection.leaderElect=false --debug=true"
+```
+
+For more information about the operator-sdk and the enclosed Makefile, consult: https://sdk.operatorframework.io/docs/building-operators/golang/tutorial/
+
+### Other deployment options
+Make sure to have certmanager and Prometheus deployed in your local cluster:
+
+You may deploy the Operator in a local cluster without Helm, by running the following:
+
+```
+docker build -t yourrepo/imagename . && docker push yourrepo/imagename
+make deploy IMG=yourrepo/imagename
+```
+
+
+## Usage
+### Prerequisites
 
 In order to work with the Operator, your DBMS must:
 
@@ -13,7 +81,7 @@ In order to work with the Operator, your DBMS must:
 
 Stored procedures inputs and outputs are treated as strings.
 
-## Steps
+### Steps
 1. Modify the DBMS configuration to suit your needs, the provided example contains the most minimal configuration required to run the Operator, you can find it under the file `config.example.yaml` or in the Helm chart under `operatorConfig`.
     1. Add a DBMS entry for each driver you want to support, e.g. one for sqlserver and another for postgresql. Don't modify the top-level attribute `dbms`.
     2. Add your endpoints under `endpoint`. End-users will use the endpoint `name` to associate their DB with a specific DBMS endpoint.
@@ -73,16 +141,43 @@ As you can see, the first key starts with a dot and has the first letter capital
 
 - SQL Server: https://github.com/denisenkom/go-mssqldb#connection-parameters-and-dsn (currently only URL format `driver://username:password@host/instance?param1=value&param2=value` is supported).
 
-## Helm chart deployment
+## User manual
+The user manual is available
 
-The operator can be deployed using the convenient Helm chart attached. As a minimum, you will have to:
-1. Modify Helm's `values.yaml` file inside `kubernetes-dbaas` to suit your needs. Each attribute is commented on the chart itself except for the `operatorConfig` value, which is documented in [Steps](#Steps).
-2. Build your own Docker image.
-3. Reference the Docker image inside the Helm `values.yaml` file under `image.repository`.
-4. Install the Helm chart.
+## CLI arguments
+|                                          	    | Description                                                                                                                          	             	       |
+|---------------------------------------------- |------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--debug`                                  	| Enables debug mode for development purposes. If set, `--log-level` defaults to `1`                                                                           |
+| `--enable-webhooks`                        	| Enables webhooks servers (default true)                                                                                               	                   |
+| `--health.healthProbeBindAddress <string>` 	| The address the probe endpoint binds to (default ":8081")                                                                                                    |
+| `-h`, `--help`                               	| help for kubedbaas                                                                                                                                           |
+| `--leaderElection.leaderElect`         | Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager  (default true)                                |
+| `--leaderElection.resourceName <string>`   	| The resource name to lock during election cycles (default "bfa62c96.dbaas.bedag.ch")                                                                         |
+| `--load-config <string>`                   	| Location of the Operator's config file                                                                                                                       |
+| `--metrics.bindAddress <string>`           	| The address the metric endpoint binds to (default "127.0.0.1:8080")                                                                  	                       |
+| `--webhook.port <int>`                       	| The port the webhook server binds to (default 9443)                                                                                  	             	       |
+| `--log-level <int>`                       	| The verbosity of the logging output. Can be one out of: `0` info, `1` debug, `2` trace. If debug mode is on, defaults to `1` (default 0)                     |                                                                       	|
+| `--disable-stacktrace`                       	| Disable stacktrace printing in logger errors (default false)                                                                                  	           |
 
-Example of installation:
+The order of precedence is `flags > config file > defaults`. Environment variables are not read.
 
-```
-helm install --generate-name kubernetes-dbaas --namespace kubedbaas-system --create-namespace
-```
+## Troubleshooting
+You can troubleshoot problems in two ways:
+1. Look at the events of the resource with `kubectl describe database my-database-resource `
+2. Consult the logs of the manager pod.
+
+To avoid leaking possibly sensitive information, events do not contain the full error, only a message along with some
+pertinent values if present.
+
+You can control the verbosity of the logger by setting the `--log-level <int>` flag.
+
+- `0`: Info level
+- `1`: Debug Level
+- `2`: Trace level
+
+Errors are always logged.
+
+Sampling is enabled in production mode for every log entry with same level and message. The first 100 entries in one second
+are logged, after that only one entry is logged every 100 entries until the next second.
+
+Stacktraces are attached to error logs in both production and development mode.

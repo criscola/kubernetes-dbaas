@@ -30,7 +30,7 @@ type OperatorConfig struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// ControllerManagerConfigurationSpec returns the configurations for controllers
+	// ControllerManagerConfigurationSpec returns the configurations for controllers. See https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/config/v1alpha1#ControllerManagerConfigurationSpec
 	cfg.ControllerManagerConfigurationSpec `json:",inline"`
 
 	// rps configures the rate limiter to allow only a certain amount of operations per second per endpoint. If set to 0,

@@ -3,7 +3,7 @@ kind: ServiceMonitor
 metadata:
   labels:
     control-plane: controller-manager
-    release: prometheus
+    release: {{ .Values.kubePrometheusStack.namespaceOverride }}
   name: kubernetes-dbaas-controller-manager-metrics-monitor
 spec:
   endpoints:

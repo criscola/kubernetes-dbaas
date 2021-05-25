@@ -8,5 +8,5 @@ roleRef:
   name: kubernetes-dbaas-metrics-reader
 subjects:
   - kind: ServiceAccount
-    name: {{ .Values.prometheusSaName }}
-    namespace: {{ .Values.prometheusSaNamespace }}
+    name: {{ .Values.kubePrometheusStack.prometheusSaName }}
+    namespace: {{ .Values.kubePrometheusStack.prometheusSaNamespace }}

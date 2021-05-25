@@ -34,7 +34,7 @@ There are many cases where a company can't or doesn't want to host their preciou
 
 ## Manuals
 
-Please setup the Operator using the Sysadmin guide. After that, End-users or testers can use the End-user guide to learn how to provision a database through the Operator. 
+Set up the Operator using the Sysadmin guide. After that, End-users can use the End-user guide to learn how to provision a database through the Operator. 
 
 Those who wish to contribute to the code should read the contributor guide.
 
@@ -45,100 +45,42 @@ Those who wish to contribute to the code should read the contributor guide.
 ## Supported DBMS
 
 - SQLServer
-- PostgreSQL (to be implemented)
-- MariaDB (to be implemented)
+- PostgreSQL
+- MySQL/MariaDB
 
 ### Additional notes
 
-The operator doesn't support encrypted DBMS connections yet.
+Encrypted DBMS connections are not supported.
 
-## Quickstart
+## Quickstart with Helm
+Other deployment options are shown in the [System administrator guide]().
+### Helm
+The Operator provides an official Helm chart.
+#### Requirements
+When metrics are enabled, the `/metrics` endpoint is protected by authentication and scraped by Prometheus through a Service Monitor resource.
+If you don't want to publish a `/metrics` endpoint, you may skip the following dependencies. Consult the [chart documentation](charts/kubernetes-dbaas/README.md) to learn more.
 
-To try out the Operator on your local development machine, follow these steps:
-
-1. Install Go 1.15+ https://golang.org/doc/install
-2. Install kubectl v1.19+ https://kubernetes.io/docs/tasks/tools/install-kubectl/
-3. Install minikube v1.16+ https://minikube.sigs.k8s.io/docs/start/
-4. Install the operator-sdk and its prerequisites: https://sdk.operatorframework.io/docs/installation/
-5. Configure the Operator by following the [System administrator guide](docs/sysadmin_guide.md)
-6. Install the CRDs
-   
+- Install [kube-prometheus-stack](https://artifacthub.io/packages/helm/prometheus-community/kube-prometheus-stack) v16.0.1
 ```
-make install
+helm install prometheus-operator prometheus-community/kube-prometheus-stack --create-namespace --namespace=prometheus
 ```
-
-7. Install an example DatabaseClass
-
+- Install [cert-manager](https://artifacthub.io/packages/helm/cert-manager/cert-manager) v1.3.0
 ```
-kubectl apply -f testdata/dbclass.yaml
+helm install \                                                                                                                                                                                                                                                                                                                                                                                                                       ±[A1●●][develop]
+  cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --create-namespace \
+  --version v1.3.1 \
+  --set installCRDs=true
+  
 ```
-
-8. Run the Operator in local development mode 
-   
+#### Deployment
+1. Install the operator
 ```
-make run ARGS="--load-config=config/manager/controller_manager_config.yaml --enable-webhooks=false --leaderElection.leaderElect=false --debug=true"
-```
-
-9. Create and delete a Database resource by following the [End-user guide](docs/enduser_guide.md)
-
-For more information about the operator-sdk and the enclosed Makefile, consult: https://sdk.operatorframework.io/docs/building-operators/golang/tutorial/
-
-### Helm deployment
-Make sure to have certmanager deployed in your target cluster.
-```
-helm install charts/kubernetes-dbaas --generate-name --create-namespace --namespace=kubernetes-dbaas-system
+helm install kubernetes-dbaas charts/kubernetes-dbaas --create-namespace --namespace=kubernetes-dbaas-system
 ```
 
-### Other deployment options
-Make sure to have certmanager deployed in your local cluster.
-
-You may deploy the Operator in a local cluster by running the following:
-
-```
-docker build -t yourrepo/imagename . && docker push yourrepo/imagename
-make deploy IMG=yourrepo/imagename
-```
-
-
-## CLI arguments
-|                                          	    | Description                                                                                                                          	             	       |
-|---------------------------------------------- |------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--debug`                                  	| Enables debug mode for development purposes. If set, `--log-level` defaults to `1`                                                                           |
-| `--enable-webhooks`                        	| Enables webhooks servers (default true)                                                                                               	                   |
-| `--health.healthProbeBindAddress <string>` 	| The address the probe endpoint binds to (default ":8081")                                                                                                    |
-| `-h`, `--help`                               	| help for kubedbaas                                                                                                                                           |
-| `--leaderElection.leaderElect`         | Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager  (default true)                                |
-| `--leaderElection.resourceName <string>`   	| The resource name to lock during election cycles (default "bfa62c96.dbaas.bedag.ch")                                                                         |
-| `--load-config <string>`                   	| Location of the Operator's config file                                                                                                                       |
-| `--metrics.bindAddress <string>`           	| The address the metric endpoint binds to (default "127.0.0.1:8080")                                                                  	                       |
-| `--webhook.port <int>`                       	| The port the webhook server binds to (default 9443)                                                                                  	             	       |
-| `--log-level <int>`                       	| The verbosity of the logging output. Can be one out of: `0` info, `1` debug, `2` trace. If debug mode is on, defaults to `1` (default 0)                     |                                                                       	|
-| `--disable-stacktrace`                       	| Disable stacktrace printing in logger errors (default false)                                                                                  	           |
-
-The order of precedence is `flags > config file > defaults`. Environment variables are not read.
-
-## Troubleshooting
-You can troubleshoot problems in two ways:
-1. Look at the events of the resource with `kubectl describe database my-database-resource `
-2. Consult the logs of the manager pod.
-
-To avoid leaking possibly sensitive information, events do not contain the full error, only a message along with some
-pertinent values if present.
-
-You can control the verbosity of the logger by setting the `--log-level <int>` flag.
-
-- `0`: Info level
-- `1`: Debug Level
-- `2`: Trace level
-
-Errors are always logged.
-
-Sampling is enabled in production mode for every log entry with same level and message. The first 100 entries in one second
-are logged, after that only one entry is logged every 100 entries until the next second.
-
-Stacktraces are attached to error logs in both production and development mode.
-
-## Known problems
+## Known issues
 
 ## Code reference
 
