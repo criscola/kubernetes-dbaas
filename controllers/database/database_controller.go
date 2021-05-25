@@ -671,11 +671,11 @@ func avoidUselessReconciliation() predicate.Predicate {
 		GenericFunc: func(e event.GenericEvent) bool {
 			obj := e.Object.(*databasev1.Database)
 			// If credentials are supposed to be rotated
-			if isRotateAnnotationTrue(e.Object) {
+			if isRotateAnnotationTrue(obj) {
 				return true
 			}
 			// If object is supposed to be deleted
-			if e.Object.GetDeletionTimestamp() != nil && contains(e.Object.GetFinalizers(), databaseFinalizer) {
+			if obj.GetDeletionTimestamp() != nil && contains(e.Object.GetFinalizers(), databaseFinalizer) {
 				return true
 			}
 			// If ready condition is false or unknown
