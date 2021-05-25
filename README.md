@@ -57,7 +57,7 @@ Other deployment options are shown in the [System administrator guide]().
 ### Helm
 The Operator provides an official Helm chart.
 #### Requirements
-When metrics are enabled, the `/metrics` endpoint is protected by authentication and scraped by Prometheus through a Service Monitor resource.
+When metrics are enabled, the `/metrics` endpoint is protected by [authentication](https://github.com/brancz/kube-rbac-proxy) and scraped by Prometheus through a Service Monitor resource.
 If you don't want to publish a `/metrics` endpoint, you may skip the following dependencies. Consult the [chart documentation](charts/kubernetes-dbaas/README.md) to learn more.
 
 - Install [kube-prometheus-stack](https://artifacthub.io/packages/helm/prometheus-community/kube-prometheus-stack) v16.0.1
