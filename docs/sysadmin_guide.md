@@ -2,15 +2,13 @@
 
 ## Usage
 
-The Operator was made with `separation of concerns`
-
 ### Prerequisites
 
-In order to work with the Operator, your DBMS must:
+In order to use the Operator, your Database Management Systems (DBMS) must:
 
 - Be supported by the Operator. See [supported DBMS](../README.md#supported-dbms).
 - Be available and ready to accept connections from the Operator.
-- Contain an **idempotent** stored procedure for database creation.
+- Contain a stored prcedure
     - If the same ID of a **preexisting** DB is provided to the create stored procedure, it should always return the same output values associated with the DB instance.
 - Contain an **idempotent** stored procedure for database deletion.
     - If the ID of a non-existing database is provided, the delete stored procedure should return an error.
@@ -66,14 +64,11 @@ As you can see, the first key starts with a dot and has the first letter capital
 ### Notes
 
 - If a key is specified but not mapped by the user or Kubernetes, the resource will generate an error. Every `.Parameters.<key>` and `.Metadata.<key>` specified in the Operator configuration must be defined.
-- If `metadata.namespace` is not set in the resource, the Operator will replace it with the value `default` during the rendering.
-- If `metadata.name` is not set in the resource, the Operator will replace it with a 16-characters long, random alphanumeric string.
 
+## DSN formatting
 
-## DSN docs
-
-- SQL Server: https://github.com/denisenkom/go-mssqldb#connection-parameters-and-dsn (currently only URL format `driver://username:password@host/instance?param1=value&param2=value` is supported).
-
+The project uses the [xo/dburl](https://github.com/xo/dburl) package, please refer to its documentation for clarifications about the 
+DSN format expected by the Operator.
 
 ## CLI arguments
 |                                          	    | Description                                                                                                                          	             	       |
