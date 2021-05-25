@@ -36,6 +36,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"strings"
 
@@ -86,6 +88,7 @@ func (r *DatabaseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Named(DatabaseControllerName).
 		For(&databasev1.Database{}).
 		Owns(&corev1.Secret{}).
+		WithEventFilter(avoidUselessReconciliation()).
 		Complete(r)
 }
 
@@ -658,17 +661,38 @@ func (r ReconcileError) With(values []interface{}) ReconcileError {
 	}
 }
 
-// isRotateAnnotationTrue checks whether the rotate annotation is present and set to true or ""
-func isRotateAnnotationTrue(obj *databasev1.Database) bool {
-	if val, ok := obj.Annotations[rotateAnnotationKey]; ok && val == "" || val == "true" {
-		return true
-	}
-	return false
-}
-
 // FormatSecretName returns the name of a Database's Secret resource as it should appear in metadata.name.
 func FormatSecretName(obj *databasev1.Database) string {
 	return obj.Name + "-credentials"
+}
+
+func avoidUselessReconciliation() predicate.Predicate {
+	return predicate.Funcs{
+		GenericFunc: func(e event.GenericEvent) bool {
+			obj := e.Object.(*databasev1.Database)
+			// If credentials are supposed to be rotated
+			if isRotateAnnotationTrue(e.Object) {
+				return true
+			}
+			// If object is supposed to be deleted
+			if e.Object.GetDeletionTimestamp() != nil && contains(e.Object.GetFinalizers(), databaseFinalizer) {
+				return true
+			}
+			// If ready condition is false or unknown
+			if !meta.IsStatusConditionTrue(obj.Status.Conditions, TypeReady) {
+				return true
+			}
+			return false
+		},
+	}
+}
+
+// isRotateAnnotationTrue checks whether the rotate annotation is present and set to true or ""
+func isRotateAnnotationTrue(obj client.Object) bool {
+	if val, ok := obj.GetAnnotations()[rotateAnnotationKey]; ok && val == "" || val == "true" {
+		return true
+	}
+	return false
 }
 
 // newOpValuesFromResource constructs a database.OpValues struct starting from a Database resource.

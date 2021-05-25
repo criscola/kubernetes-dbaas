@@ -1,6 +1,8 @@
+
 <!DOCTYPE html>
-<html><head>
-		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 		<title>v1: Go Coverage Report</title>
 		<style>
 			body {
@@ -53,13 +55,13 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0" selected="selected">github.com/bedag/kubernetes-dbaas/apis/database/v1/database_types.go (100.0%)</option>
+				<option value="file0">github.com/bedag/kubernetes-dbaas/apis/database/v1/database_types.go (100.0%)</option>
 				
 				<option value="file1">github.com/bedag/kubernetes-dbaas/apis/database/v1/database_webhook.go (10.0%)</option>
 				
 				<option value="file2">github.com/bedag/kubernetes-dbaas/apis/database/v1/zz_generated.deepcopy.go (0.0%)</option>
 				
-				<option value="file3">github.com/bedag/kubernetes-dbaas/controllers/database/database_controller.go (59.5%)</option>
+				<option value="file3">github.com/bedag/kubernetes-dbaas/controllers/database/database_controller.go (57.9%)</option>
 				
 				<option value="file4">github.com/bedag/kubernetes-dbaas/pkg/database/dbms.go (36.7%)</option>
 				
@@ -96,7 +98,7 @@
 		</div>
 		<div id="content">
 		
-		<pre class="file" id="file0" style="display: block;">/*
+		<pre class="file" id="file0" style="display: none">/*
 Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -411,6 +413,8 @@ import (
         ctrl "sigs.k8s.io/controller-runtime"
         "sigs.k8s.io/controller-runtime/pkg/client"
         "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+        "sigs.k8s.io/controller-runtime/pkg/event"
+        "sigs.k8s.io/controller-runtime/pkg/predicate"
         "sigs.k8s.io/controller-runtime/pkg/reconcile"
         "strings"
 
@@ -461,6 +465,7 @@ func (r *DatabaseReconciler) SetupWithManager(mgr ctrl.Manager) error <span clas
                 Named(DatabaseControllerName).
                 For(&amp;databasev1.Database{}).
                 Owns(&amp;corev1.Secret{}).
+                WithEventFilter(avoidUselessReconciliation()).
                 Complete(r)
 }</span>
 
@@ -1033,18 +1038,39 @@ func (r ReconcileError) With(values []interface{}) ReconcileError <span class="c
         }
 }</span>
 
-// isRotateAnnotationTrue checks whether the rotate annotation is present and set to true or ""
-func isRotateAnnotationTrue(obj *databasev1.Database) bool <span class="cov4" title="4">{
-        if val, ok := obj.Annotations[rotateAnnotationKey]; ok &amp;&amp; val == "" || val == "true" </span><span class="cov0" title="0">{
-                return true
-        }</span>
-        <span class="cov4" title="4">return false</span>
-}
-
 // FormatSecretName returns the name of a Database's Secret resource as it should appear in metadata.name.
 func FormatSecretName(obj *databasev1.Database) string <span class="cov7" title="15">{
         return obj.Name + "-credentials"
 }</span>
+
+func avoidUselessReconciliation() predicate.Predicate <span class="cov7" title="15">{
+        return predicate.Funcs{
+                GenericFunc: func(e event.GenericEvent) bool </span><span class="cov0" title="0">{
+                        obj := e.Object.(*databasev1.Database)
+                        // If credentials are supposed to be rotated
+                        if isRotateAnnotationTrue(e.Object) </span><span class="cov0" title="0">{
+                                return true
+                        }</span>
+                        // If object is supposed to be deleted
+                        <span class="cov0" title="0">if e.Object.GetDeletionTimestamp() != nil &amp;&amp; contains(e.Object.GetFinalizers(), databaseFinalizer) </span><span class="cov0" title="0">{
+                                return true
+                        }</span>
+                        // If ready condition is false or unknown
+                        <span class="cov0" title="0">if !meta.IsStatusConditionTrue(obj.Status.Conditions, TypeReady) </span><span class="cov0" title="0">{
+                                return true
+                        }</span>
+                        <span class="cov0" title="0">return false</span>
+                },
+        }
+}
+
+// isRotateAnnotationTrue checks whether the rotate annotation is present and set to true or ""
+func isRotateAnnotationTrue(obj client.Object) bool <span class="cov4" title="4">{
+        if val, ok := obj.GetAnnotations()[rotateAnnotationKey]; ok &amp;&amp; val == "" || val == "true" </span><span class="cov0" title="0">{
+                return true
+        }</span>
+        <span class="cov4" title="4">return false</span>
+}
 
 // newOpValuesFromResource constructs a database.OpValues struct starting from a Database resource.
 func newOpValuesFromResource(obj *databasev1.Database) (database.OpValues, ReconcileError) <span class="cov5" title="7">{
@@ -1926,7 +1952,7 @@ func (in SecretFormat) DeepCopy() SecretFormat <span class="cov0" title="0">{
 </pre>
 		
 		</div>
-	
+	</body>
 	<script>
 	(function() {
 		var files = document.getElementById('files');
@@ -1954,5 +1980,4 @@ func (in SecretFormat) DeepCopy() SecretFormat <span class="cov0" title="0">{
 		}
 	})();
 	</script>
-
-</body></html>
+</html>
