@@ -1,9 +1,10 @@
+{{ if .Values.enableMetrics }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
     control-plane: controller-manager
-    release: {{ .Values.kubePrometheusStack.namespaceOverride }}
+    release: {{ .Values.prometheusNamespace }}
   name: kubernetes-dbaas-controller-manager-metrics-monitor
 spec:
   endpoints:
@@ -16,3 +17,4 @@ spec:
   selector:
     matchLabels:
       control-plane: controller-manager
+{{ end }}

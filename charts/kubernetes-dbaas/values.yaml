@@ -65,26 +65,13 @@ readinessProbe:
   initialDelaySeconds: 5
   periodSeconds: 10
 
-# You can supply your values for the kube-prometheus-stack chart here, or just disable it.
-# If you disabled metrics, the kube-prometheus-stack dependency requirement will be disabled as well.
-# You can also just deploy a Prometheus instance, granted that it watches for ServiceMonitor resources in order to
-# scrape metrics.
-kubePrometheusStack:
-  enabled: true
-  # Service account name authorized to access the metrics endpoint.
-  prometheusSaName: prometheus-kube-prometheus-prometheus
-  # Service account namespace authorized to access the metrics endpoint.
-  prometheusSaNamespace: default
-  # Namespace of Prometheus to be rendered in the relative Service Monitor resource
-  namespaceOverride: prometheus
-# You can supply your value for the cert-manager chart here, or just disable it.
-# If you disabled metrics, the cert-manager dependency requirement will be disabled as well.
-certmanager:
-  enabled: true
-
-# Disables the metrics endpoint. Setting this value to true will set (override) operatorConfig.metrics.bindAddress to "0" and
-# disable the kube-prometheus-stack and cert-manager dependency requirements.
 enableMetrics: true
+# Namespaces of where Prometheus is deployed. It is required for discovering the ServiceMonitor used to scrape the metrics.
+prometheusNamespace: prometheus
+# Name of the Service Account allowed to scrape the metrics endpoint.
+prometheusSaName: prometheus-kube-prometheus-prometheus
+# Namespace of the Service Account allowed to scrape the metrics endpoint.
+prometheusSaNamespace: prometheus
 
 # Operator configuration including the relative Manager configuration.
 # See https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/config/v1alpha1#ControllerManagerConfigurationSpec.
