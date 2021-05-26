@@ -1,4 +1,4 @@
-{{ if .Values.enableMetrics }}
+{{ if .Values.enableMetricsRbac }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:

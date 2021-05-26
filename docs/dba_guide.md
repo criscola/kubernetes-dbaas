@@ -6,6 +6,10 @@ provisioning system for databases where data and business logic is kept as close
 resort to any third-party tool; the only requirement is a defined [contract](https://en.wikipedia.org/wiki/Design_by_contract) between the 
 system and database infrastructures.
 
+## Prerequisites
+In order to use the Operator, your Database Management Systems (DBMS) must be supported by the Operator. 
+Please see [supported DBMS](../README.md#supported-dbms).
+
 ## Stored procedures
 ### Supported operations
 The Operator supports the following operations:

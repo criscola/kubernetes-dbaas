@@ -34,13 +34,10 @@ There are many cases where a company can't or doesn't want to host their preciou
 
 ## Manuals
 
-Set up the Operator using the Sysadmin guide. After that, End-users can use the End-user guide to learn how to provision a database through the Operator. 
-
-Those who wish to contribute to the code should read the contributor guide.
+Set up the Operator using the Sysadmin guide. After that, end-users can use the end-user guide to learn how to provision a database through the Operator. 
 
 - [System administrator guide](docs/sysadmin_guide.md)
 - [End-user guide](docs/enduser_guide.md)
-- [Contributor guide](docs/contributor_guide.md)
 
 ## Supported DBMS
 
@@ -58,7 +55,7 @@ Other deployment options are shown in the [System administrator guide]().
 The Operator provides an official Helm chart.
 #### Requirements
 When metrics are enabled, the `/metrics` endpoint is protected by [authentication](https://github.com/brancz/kube-rbac-proxy) and scraped by Prometheus through a Service Monitor resource.
-If you don't want to publish a `/metrics` endpoint, you may skip the following dependencies. Consult the [chart documentation](charts/kubernetes-dbaas/README.md) to learn more.
+If you don't want to publish a `/metrics` endpoint, you may skip the following dependencies. 
 
 - Install [kube-prometheus-stack](https://artifacthub.io/packages/helm/prometheus-community/kube-prometheus-stack) v16.0.1
 ```
@@ -86,11 +83,10 @@ helm install kubernetes-dbaas charts/kubernetes-dbaas --create-namespace --names
 
 To be done (godoc present on the code).
 
-## Tests
-
 ## Contribute
+
+Please read the [contributing guidelines](docs/contributing.md). 
 
 ## Credits
 
 ## License
-

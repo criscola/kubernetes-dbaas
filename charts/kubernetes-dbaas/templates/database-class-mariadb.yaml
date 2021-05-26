@@ -18,7 +18,7 @@ spec:
     rotate:
       name: "sp_rotate"
       inputs:
-        k8sName: |-
+        "0": |-
           {{`{{ .Metadata.name }}`}}
   secretFormat:
     username: |-

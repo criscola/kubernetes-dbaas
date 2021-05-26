@@ -48,12 +48,12 @@ import (
 )
 
 const (
-	LoadConfigKey     = "load-config"
-	DebugKey          = "debug"
-	WebhookEnableKey  = "enable-webhooks"
-	ZapLogLevelKey    = "log-level"
-	DisableStackTrace = "disable-stacktrace"
-	RpsKey            = "rps"
+	LoadConfigKey        = "load-config"
+	DebugKey             = "debug"
+	WebhookDisableKey    = "disable-webhooks"
+	ZapLogLevelKey       = "log-level"
+	StacktraceDisableKey = "disable-stacktrace"
+	RpsKey               = "rps"
 
 	// Flag overrides for flags specified in OperatorConfig
 	MetricsBindAddressKey     = "metrics.bindAddress"
@@ -106,8 +106,8 @@ func init() {
 
 func initFlags() {
 	rootCmd.PersistentFlags().String(LoadConfigKey, "", "The location of the Operator's config file")
-	rootCmd.PersistentFlags().Bool(DebugKey, false, "Enable debug mode for development purposes. If set, --log-level defaults to 1")
-	rootCmd.PersistentFlags().Bool(WebhookEnableKey, true, "Enable webhooks servers.")
+	//rootCmd.PersistentFlags().Bool(DebugKey, false, "Enable debug mode for development purposes. If set, --log-level defaults to 1")
+	rootCmd.PersistentFlags().Bool(WebhookDisableKey, false, "Disable webhooks servers")
 	rootCmd.PersistentFlags().String(MetricsBindAddressKey, ":8080", "The address the metric endpoint binds to")
 	rootCmd.PersistentFlags().String(HealthProbeBindAddressKey, ":8081", "The address the probe endpoint binds to")
 	rootCmd.PersistentFlags().Bool(LeaderElectEnableKey, true, "Enable leader election for controller manager. "+
@@ -115,7 +115,7 @@ func initFlags() {
 	rootCmd.PersistentFlags().String(LeaderElectResName, "bfa62c96.dbaas.bedag.ch", "The resource name to lock during election cycles")
 	rootCmd.PersistentFlags().Int(WebhookPortKey, 9443, "The port the webhook server binds to")
 	rootCmd.PersistentFlags().Int(ZapLogLevelKey, 0, "The verbosity of the logging output. Can be one out of: 0 info, 1 debug, 2 trace. If debug mode is on, defaults to 1")
-	rootCmd.PersistentFlags().Bool(DisableStackTrace, false, "Disable stacktrace printing in logger errors")
+	rootCmd.PersistentFlags().Bool(StacktraceDisableKey, false, "Disable stacktrace printing in logger errors")
 	rootCmd.PersistentFlags().Int(RpsKey, 0, "The number of operation executed per second per endpoint. If set to 0, operations won't be rate-limited.")
 
 	// Bind all flags to Viper
@@ -131,7 +131,7 @@ func initConfigFile() {
 		viper.SetConfigFile(viper.GetString("load-config"))
 	} else {
 		viper.SetConfigType("yaml")
-		viper.AddConfigPath("/etc/kubedbaas")
+		viper.AddConfigPath("/etc/kubernetes-dbaas")
 		viper.AddConfigPath(".")
 		viper.SetConfigName("config")
 	}
@@ -161,10 +161,10 @@ func initLogger() {
 		if !viper.IsSet(ZapLogLevelKey) {
 			level = -1
 		}
-		logger = logging.GetDevelopmentLogger(level, viper.GetBool(DisableStackTrace))
+		logger = logging.GetDevelopmentLogger(level, viper.GetBool(StacktraceDisableKey))
 	} else {
 		fmt.Println("setting up logger in production mode...")
-		logger = logging.GetProductionLogger(level, viper.GetBool(DisableStackTrace))
+		logger = logging.GetProductionLogger(level, viper.GetBool(StacktraceDisableKey))
 	}
 	ctrl.SetLogger(logger)
 }
@@ -220,7 +220,7 @@ func loadOperator() {
 	}
 
 	// Setup webhooks
-	if viper.GetBool(WebhookEnableKey) {
+	if !viper.GetBool(WebhookDisableKey) {
 		if err = (&databasev1.Database{}).SetupWebhookWithManager(mgr); err != nil {
 			fatalError(err, "unable to create webhook", "webhook", "Database")
 		}

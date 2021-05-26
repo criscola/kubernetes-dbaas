@@ -1,4 +1,4 @@
-{{ if .Values.enableMetrics }}
+{{ if .Values.enableMetricsRbac }}
 apiVersion: v1
 kind: Service
 metadata:
