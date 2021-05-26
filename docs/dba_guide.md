@@ -49,7 +49,7 @@ The operation will return a RowSet with at least two columns, `key` and `value`.
 If the `create` operation is called twice with the same ID, it should return the same values or updated values. 
 If a value hasn't changed, it must be returned as an empty string `""` to report to the Operator that it hasn't changed.
 Of course, passwords must be stored in hash form, and can't be easily returned, thus it must be always returned again
-as an empty string. If the password needs to be regenerated, see the (Rotate)[#Rotate] operation.
+as an empty string. If the password needs to be regenerated, see the [Rotate](#Rotate) operation.
 
 ### Delete
 The operation will return nothing if the delete operation succeeded.
