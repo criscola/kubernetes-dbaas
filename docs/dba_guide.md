@@ -9,9 +9,9 @@ system and database infrastructures.
 ## Stored procedures
 ### Supported operations
 The Operator supports the following operations:
-- Create
-- Delete
-- Credential rotation
+- Database instance creation
+- Database instance deletion
+- Database instance credential rotation
 
 The DBA should create at least one stored procedure for each operation per DBMS. It is possible to have more than one 
 stored procedure for each operation, if required (e.g. one for testing and one for production usage).
@@ -26,14 +26,14 @@ Stored procedure should be properly documented inside your organization:
 
 Input parameters can be supplied directly by end-users or by infrastructure.
 
-Every value input/output value is treated as a `string` (i.e. `TEXT`, `varchar`...).
+Every input/output value is treated as a `string` (i.e. `TEXT`, `varchar`...).
 
 Errors should be returned using the built-in mechanism of the DBMS involved, e.g. using exceptions. If an exception is returned,
 the Operator will re-execute the operation again using an exponential back-off strategy.
 
 In order to identify each distinct database instance, it is strongly recommended **having at least an input parameter 
 acting as ID for each operation**. Each store procedure call will provide an ID so that store procedures know which 
-Kubernetes resource is bound to its relative database instance. This ID has the same purpose as an IDs in the database world.
+Kubernetes resource is bound to its relative database instance. This ID has the same purpose as IDs in the database world.
 
 ### Create
 The operation will return a RowSet with at least two columns, `key` and `value`. Example:
@@ -49,14 +49,15 @@ The operation will return a RowSet with at least two columns, `key` and `value`.
 If the `create` operation is called twice with the same ID, it should return the same values or updated values. 
 If a value hasn't changed, it must be returned as an empty string `""` to report to the Operator that it hasn't changed.
 Of course, passwords must be stored in hash form, and can't be easily returned, thus it must be always returned again
-as an empty string. If the password needs to be regenerated, see the `rotate` operation.
+as an empty string. If the password needs to be regenerated, see the (Rotate)[#Rotate] operation.
 
 ### Delete
 The operation will return nothing if the delete operation succeeded.
 
 ### Rotate
 The operation reports to the DBMS to regenerate the credentials for a certain database instance. When `rotate` is
-called, it rotates the database's credentials. After that, the `create` operation is called and should return the updated credentials.
+called, it rotates the database's credentials. After that, the `create` operation is called and should return the updated 
+credentials.
 
 ## Notes
 ### MySQL/MariaDB
