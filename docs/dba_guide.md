@@ -1,11 +1,4 @@
 # Database administrator guide
-One of the Operator's strongest points is the separation of concerns between users, system administrators and database administrators. DBAs can retain
-full control on the lifecycle of database instances by creating **stored procedures** for each operation. This decouples the configuration from the implementation and 
-ensures a well-defined boundary between the Kubernetes and Database worlds. Companies with strict compliance requirements can configure an opaque
-provisioning system for databases where data and business logic is kept as close as possible to their location without having to 
-resort to any third-party tool; the only requirement is a defined [contract](https://en.wikipedia.org/wiki/Design_by_contract) between the 
-system and database infrastructures.
-
 ## Prerequisites
 In order to use the Operator, your Database Management Systems (DBMS) must be supported by the Operator. 
 Please see [supported DBMS](../README.md#supported-dbms).
@@ -67,3 +60,6 @@ credentials.
 ### MySQL/MariaDB
 MySQL/MariaDB do not support supplying input parameters by name, only by position. Thus, in this case, the order of the
 parameters matter and should be documented carefully in order of appearance in the stored procedure.
+
+### Samples
+A few primitive samples for the `create` and `delete` stored procedures are present in the [testdata folder](../testdata).

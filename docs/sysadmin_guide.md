@@ -280,6 +280,9 @@ make run ARGS="--load-config=config/manager/controller_manager_config.yaml --ena
 
 For more information about the operator-sdk and the enclosed Makefile, consult: https://sdk.operatorframework.io/docs/building-operators/golang/tutorial/
 
+## Samples
+You can find a few samples of Database and DatabaseClass resources in the [testdata folder](../testdata).
+
 ## Troubleshooting
 You can troubleshoot problems in two ways:
 1. Look at the events of the resource with `kubectl describe database my-database-resource `
@@ -300,3 +303,9 @@ Sampling is enabled in production mode for every log entry with same level and m
 are logged, after that only one entry is logged every 100 entries until the next second.
 
 Stacktraces are attached to error logs in both production and development mode. You can disable this behavior by passing the `--disable-stacktrace=true` flag to the Operator binary.
+
+### Monitoring tips
+You could implement alerts on malfunctioning Database resources by watching Database events. You can find a complete list 
+of Reasons and Messages [here](../pkg/typeutil/constants.go). Alternatively, if you find this too granular, you can
+simply watch the `.status.conditions[*].status.type: Ready` field and check whether `.status.conditions[*].status.status`
+equals `False`, if it does, the Database instance is in an error state, and that could generate an alert.

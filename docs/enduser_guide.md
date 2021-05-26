@@ -33,6 +33,8 @@ Secret are named `<your-db-name>-credentials`.
 kubectl apply -f my-db.yaml
 ```
 
+> **Note:** updates to the `spec` field of already existing resources are not supported, and will be rejected by the Operator.
+
 3. Delete the resource:
 
 This will delete the relative database instance. The Secret associated with it will be garbage collected.

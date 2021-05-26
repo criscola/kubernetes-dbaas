@@ -1,1 +1,3 @@
 # TODO
+## Project structure
+## Tests
