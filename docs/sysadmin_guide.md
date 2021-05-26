@@ -163,8 +163,8 @@ Of course, you can hard-code your own values on a per-DatabaseClass basis, or if
 render values through the Helm chart.
 
 > **Note:** If a key was specified, but a value was not found during rendering, the resource will generate an error.
-Every `.Param.<key>` and `.Metadata.<key>` specified in the Operator configuration must be defined.
-To avoid this, explicitly provide an empty string as value.
+Every `.Params.<key>` and `.Metadata.<key>` specified in the Operator configuration must be defined.
+To define optional parameters, explicitly ask end-users to provide an empty string as value.
 
 ### MySQL/MariaDB
 MySQL/MariaDB do not support supplying input parameters by name, only by position. Thus, in this case, the order of 
