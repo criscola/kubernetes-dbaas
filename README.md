@@ -20,7 +20,7 @@ There are cases where an organization cannot or doesn't want to host their preci
 for a way to bridge the gap between their Kubernetes clusters and on-premise DBMS solutions. Imagine an organization composed 
 by developers, system administrators and database administrators. Developers want their database instance ready ASAP, 
 system administrators want to integrate everything under Kubernetes, and database administrators have to keep control
-over the provisioning process as close as possible to the DBMS solutions while still automating repetitive tasks
+over the provisioning process while still automating repetitive tasks.
 
 One of the Operator's strongest points is the separation of concerns between users, system administrators and database 
 administrators. DBAs can retain full control on the lifecycle of database instances by creating **stored procedures** 
@@ -55,33 +55,27 @@ between the system and database infrastructures.
 - Modern tech-stack
 - Flexible configuration
 
-## Manuals
-
-Set up the Operator using the Sysadmin guide. After that, end-users can use the end-user guide to learn how to provision a database through the Operator. 
-
-- [Database administrator guide](docs/dba_guide.md)
-- [System administrator guide](docs/sysadmin_guide.md)
-- [End-user guide](docs/enduser_guide.md)
-
 ## Supported DBMS
 
 - SQLServer
 - PostgreSQL
 - MySQL/MariaDB
 
-### Additional notes
-
 Encrypted DBMS connections are not supported.
+
+## Manuals
+
+In order of precedence:
+
+- [Database administrator guide](docs/dba_guide.md)
+- [System administrator guide](docs/sysadmin_guide.md)
+- [End-user guide](docs/enduser_guide.md)
 
 ## Known issues
 
-## Code reference
+## Contributing
 
-To be done (godoc present on the code).
-
-## Contribute
-
-Please read the [contributing guidelines](docs/contributing.md). 
+Please read the [contributing guidelines](docs/contributing.md).
 
 ## Credits
 
