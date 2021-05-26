@@ -22,7 +22,7 @@ There are many cases where a company can't or doesn't want to host their preciou
 - Kubernetes v1.21.0 or newer
 - Helm v3
 
-## Features
+## Main features
 
 ### Create database 
 
