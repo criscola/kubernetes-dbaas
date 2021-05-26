@@ -9,7 +9,7 @@ In order to use the Operator, your Database Management Systems (DBMS) must:
 - Contain a `create`, `delete` and `rotate` stored procedure per DBMS as specified in the [Database administrator guide](dba_guide.md).
 
 ## Overview
-![database resource apply overview](resources/database_resource_apply.png)
+![database resource apply overview](resources/database_resource_apply.svg)
 
 ## Operator configuration
 The Operator is configured by 2 pieces of configuration, an `OperatorConfig` resource and `DatabaseClass` resources.
@@ -308,4 +308,4 @@ Stacktraces are attached to error logs in both production and development mode. 
 You could implement alerts on malfunctioning Database resources by watching Database events. You can find a complete list 
 of Reasons and Messages [here](../pkg/typeutil/constants.go). Alternatively, if you find this too granular, you can
 simply watch the `.status.conditions[*].status.type: Ready` field and check whether `.status.conditions[*].status.status`
-equals `False`, if it does, the Database instance is in an error state, and that could generate an alert.
+equals `"False"`, if it does, the Database instance is in an error state, and that could generate an alert.
