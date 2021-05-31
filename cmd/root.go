@@ -106,7 +106,7 @@ func init() {
 
 func initFlags() {
 	rootCmd.PersistentFlags().String(LoadConfigKey, "", "The location of the Operator's config file")
-	//rootCmd.PersistentFlags().Bool(DebugKey, false, "Enable debug mode for development purposes. If set, --log-level defaults to 1")
+	rootCmd.PersistentFlags().Bool(DebugKey, false, "Enable debug mode for development purposes. If set, logging output will be pretty-printed for the command line and --log-level will default to 1")
 	rootCmd.PersistentFlags().Bool(WebhookDisableKey, false, "Disable webhooks servers")
 	rootCmd.PersistentFlags().String(MetricsBindAddressKey, ":8080", "The address the metric endpoint binds to")
 	rootCmd.PersistentFlags().String(HealthProbeBindAddressKey, ":8081", "The address the probe endpoint binds to")

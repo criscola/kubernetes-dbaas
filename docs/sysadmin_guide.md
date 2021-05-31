@@ -199,7 +199,7 @@ The Operator will remove the annotation when the operation has completed.
 ## CLI arguments
 |                                          	    | Description                                                                                                                          	             	       |
 |---------------------------------------------- |------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--debug`                                  	| Enables debug mode for development purposes. If set, `--log-level` defaults to `1`                                                                           |
+| `--debug`                                  	| Enables debug mode for development purposes. If set, logging output will be pretty-printed for the command line and `--log-level` will default to `1`        |
 | `--disable-webhooks`                        	| Disables webhooks servers (default false)                                                                                               	                   |
 | `--health.healthProbeBindAddress <string>` 	| The address the probe endpoint binds to (default ":8081")                                                                                                    |
 | `-h`, `--help`                               	| Help for kubedbaas                                                                                                                                           |
