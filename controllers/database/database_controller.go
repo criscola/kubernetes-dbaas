@@ -701,7 +701,7 @@ func newOpValuesFromResource(obj *databasev1.Database) (database.OpValues, Recon
 	var metadata map[string]interface{}
 	temp, _ := json.Marshal(metaIn)
 	err := json.Unmarshal(temp, &metadata)
-	if err != nil {
+	if err != nil  		{
 		return database.OpValues{}, ReconcileError{
 			Reason:  RsnDbMetaParseFail,
 			Message: MsgDbMetaParseFail,

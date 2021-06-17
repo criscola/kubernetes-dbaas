@@ -6,4 +6,5 @@ metadata:
 spec:
   endpoint: us-mariadb-test
   params:
-    toast: french
+    stage: prod
+    department: mydepartment
