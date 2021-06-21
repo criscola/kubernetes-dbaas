@@ -1,5 +1,6 @@
 # Kubernetes DbaaS
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Go Reference](https://pkg.go.dev/badge/github.com/bedag/kubernetes-dbaas.svg)](https://pkg.go.dev/github.com/bedag/kubernetes-dbaas)
 
 ![Bedag](https://www.bedag.ch/wGlobal/wGlobal/layout/images/logo.svg)
 
