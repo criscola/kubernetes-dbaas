@@ -34,122 +34,78 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 		interval = time.Millisecond * 250
 	)
 
-	Context("when reconciling Database resources", func() {
-		Context("when reconciling a Postgres instance", func() {
+	// Prepare Database resources
+	postgresDatabaseRes, err := getDbFromTestdata(DbPostgresFilename)
+	Expect(err).NotTo(HaveOccurred())
+	sqlserverDatabaseRes, err := getDbFromTestdata(DbSqlserverFilename)
+	Expect(err).NotTo(HaveOccurred())
+	mariadbDatabaseRes, err := getDbFromTestdata(DbMariadbFilename)
+	Expect(err).NotTo(HaveOccurred())
+
+	Context("when testing the happy path", func() {
+		Context("when reconciling a PostgreSQL Database resource", func() {
 			It("should handle its lifecycle correctly", func() {
-				postgresDb, err := getDbFromTestdata(DbPostgresFilename)
-				By("creating the API resource successfully with condition Ready set to true", func() {
-					Expect(err).NotTo(HaveOccurred())
-					err = k8sClient.Create(context.Background(), &postgresDb)
-					Expect(err).NotTo(HaveOccurred())
-					Eventually(func() error {
-						return checkDbReady(&postgresDb)
-					}, timeout, interval).Should(BeNil())
-					// We don't just check the Ready condition would be eventually True, we also check that it
-					// stays that way for a certain period of time as an additional assurance
-					Consistently(func() error {
-						return checkDbReady(&postgresDb)
-					}, duration, interval).Should(BeNil())
-				})
-				By("creating the relative Secret resource successfully", func() {
-					Eventually(func() error {
-						secret := v1.Secret{}
-						err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: postgresDb.Namespace,
-							Name: FormatSecretName(&postgresDb)}, &secret)
-						return err
-					}, timeout, interval).Should(BeNil())
-				})
-				By("rotating the credentials", func() {
-					// TODO: Create Rotate sample stored procedure and then implement credential rotation
-					// TODO: Get secret data, apply rotation, get secret data again and compare it with the older data
-					// Expect password to have changed. Expect annotation to be removed.
-				})
-				By("deleting the API resource successfully", func() {
-					err = k8sClient.Delete(context.Background(), &postgresDb)
-					Expect(err).NotTo(HaveOccurred())
-					Eventually(func() bool {
-						return k8sError.IsNotFound(checkDbReady(&postgresDb))
-					}, timeout, interval).Should(BeTrue())
-				})
+				testDatabaseLifecycleHappyPath(postgresDatabaseRes, duration, timeout, interval)
 			})
 		})
-		Context("when handling a Mariadb instance", func() {
+		Context("when reconciling a MariaDB Database resource", func() {
 			It("should handle its lifecycle correctly", func() {
-				mariadbDb, err := getDbFromTestdata(DbMariadbFilename)
-				By("creating the API resource successfully with condition Ready set to true", func() {
-					Expect(err).NotTo(HaveOccurred())
-					err = k8sClient.Create(context.Background(), &mariadbDb)
-					Expect(err).NotTo(HaveOccurred())
-					Eventually(func() error {
-						return checkDbReady(&mariadbDb)
-					}, timeout, interval).Should(BeNil())
-					// We don't just check the Ready condition would be eventually True, we also check that it
-					// stays that way for a certain period of time as an additional assurance
-					Consistently(func() error {
-						return checkDbReady(&mariadbDb)
-					}, duration, interval).Should(BeNil())
-				})
-				By("creating the relative Secret resource successfully", func() {
-					Eventually(func() error {
-						secret := v1.Secret{}
-						err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: mariadbDb.Namespace,
-							Name: FormatSecretName(&mariadbDb)}, &secret)
-						return err
-					}, timeout, interval).Should(BeNil())
-				})
-				By("deleting the API resource successfully", func() {
-					err = k8sClient.Delete(context.Background(), &mariadbDb)
-					Expect(err).NotTo(HaveOccurred())
-					Eventually(func() bool {
-						return k8sError.IsNotFound(checkDbReady(&mariadbDb))
-					}, timeout, interval).Should(BeTrue())
-				})
+				testDatabaseLifecycleHappyPath(mariadbDatabaseRes, duration, timeout, interval)
 			})
 		})
-		Context("when handling a Sqlserver instance", func() {
+		Context("when reconciling a SQLServer Database resource", func() {
 			It("should handle its lifecycle correctly", func() {
-				sqlserverDb, err := getDbFromTestdata(DbSqlserverFilename)
-				By("creating the API resource successfully with condition Ready set to true", func() {
-					Expect(err).NotTo(HaveOccurred())
-					err = k8sClient.Create(context.Background(), &sqlserverDb)
-					Expect(err).NotTo(HaveOccurred())
-					Eventually(func() error {
-						return checkDbReady(&sqlserverDb)
-					}, timeout, interval).Should(BeNil())
-					// We don't just check the Ready condition would be eventually True, we also check that it
-					// stays that way for a certain period of time as an additional assurance
-					Consistently(func() error {
-						return checkDbReady(&sqlserverDb)
-					}, duration, interval).Should(BeNil())
-				})
-				By("creating the relative Secret resource successfully", func() {
-					Eventually(func() error {
-						secret := v1.Secret{}
-						err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: sqlserverDb.Namespace,
-							Name: FormatSecretName(&sqlserverDb)}, &secret)
-						return err
-					}, timeout, interval).Should(BeNil())
-				})
-				By("deleting the API resource successfully", func() {
-					err = k8sClient.Delete(context.Background(), &sqlserverDb)
-					Expect(err).NotTo(HaveOccurred())
-					Eventually(func() bool {
-						return k8sError.IsNotFound(checkDbReady(&sqlserverDb))
-					}, timeout, interval).Should(BeTrue())
-				})
+				testDatabaseLifecycleHappyPath(sqlserverDatabaseRes, duration, timeout, interval)
 			})
 		})
-		// It assertion on Create
-
-		// Eventually to retry a number of times until either the function's output matches the Should() assertion,
-		// or the number of attempts * interval period exceed the provided timeout value
-
-		// Now that we've create a Database in our test cluster, we must test that the DB actually created it
-		// Using Consistently we can ensure that a status field remains set to a certain value for a certain amount of time
-
-		// Also test as much behaviour as possible, e.g. Secret recreation
 	})
+	// It assertion on Create
+
+
+	// Eventually to retry a number of times until either the function's output matches the Should() assertion,
+	// or the number of attempts * interval period exceed the provided timeout value
+
+	// Now that we've create a Database in our test cluster, we must test that the DB actually created it
+	// Using Consistently we can ensure that a status field remains set to a certain value for a certain amount of time
+
+	// Also test as much behaviour as possible, e.g. Secret recreation
 })
+
+func testDatabaseLifecycleHappyPath(v databasev1.Database, duration, timeout, interval interface{}) {
+	By("creating the API resource successfully with condition Ready set to true", func() {
+		//Expect(err).NotTo(HaveOccurred())
+		err := k8sClient.Create(context.Background(), &v)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(func() error {
+			return checkDbReady(&v)
+		}, timeout, interval).Should(BeNil())
+		// We don't just check the Ready condition would be eventually True, we also check that it
+		// stays that way for a certain period of time as an additional assurance
+		Consistently(func() error {
+			return checkDbReady(&v)
+		}, duration, interval).Should(BeNil())
+	})
+	By("creating the relative Secret resource successfully", func() {
+		Eventually(func() error {
+			secret := v1.Secret{}
+			err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: v.Namespace,
+				Name: FormatSecretName(&v)}, &secret)
+			return err
+		}, timeout, interval).Should(BeNil())
+	})
+	By("rotating the credentials", func() {
+		// TODO: Create Rotate sample stored procedure and then implement credential rotation
+		// TODO: Get secret data, apply rotation, get secret data again and compare it with the older data
+		// Expect password to have changed. Expect annotation to be removed.
+	})
+	By("deleting the API resource successfully", func() {
+		err := k8sClient.Delete(context.Background(), &v)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(func() bool {
+			return k8sError.IsNotFound(checkDbReady(&v))
+		}, timeout, interval).Should(BeTrue())
+	})
+}
 
 func getDbFromTestdata(filename string) (databasev1.Database, error) {
 	return readDbYaml(filename)
