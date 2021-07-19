@@ -1,1 +1,1 @@
-select sp_create_db_rowset_eav(k8sName := 'database-sample-456')
+select sp_create_db_rowset_eav(k8sName := 'manualtest')

@@ -18,6 +18,8 @@ insert into t values('dbName', k8sName);
 insert into t values('fqdn', 'localhost');
 insert into t values('port', '5432');
 
+INSERT INTO databases (username, password, dbname, fqdn, port) VALUES ('testuser', 'testpassword', k8sName, 'localhost', '5432');
+
 return query execute 'select * from t';
 end;
 $func$ language plpgsql;
