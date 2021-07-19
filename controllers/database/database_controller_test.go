@@ -24,6 +24,7 @@ const (
 	DbMariadbFilename   = "db-mariadb.yaml"
 	DbPostgresFilename  = "db-postgres.yaml"
 	DbSqlserverFilename = "db-sqlserver.yaml"
+	RotateAnnotation    = `dbaas.bedag.ch/rotate: ""`
 )
 
 var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
@@ -71,38 +72,59 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 	// Also test as much behaviour as possible, e.g. Secret recreation
 })
 
-func testDatabaseLifecycleHappyPath(v databasev1.Database, duration, timeout, interval interface{}) {
+func testDatabaseLifecycleHappyPath(db databasev1.Database, duration, timeout, interval interface{}) {
 	By("creating the API resource successfully with condition Ready set to true", func() {
 		//Expect(err).NotTo(HaveOccurred())
-		err := k8sClient.Create(context.Background(), &v)
+		err := k8sClient.Create(context.Background(), &db)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(func() error {
-			return checkDbReady(&v)
+			return checkDbReady(&db)
 		}, timeout, interval).Should(BeNil())
 		// We don't just check the Ready condition would be eventually True, we also check that it
 		// stays that way for a certain period of time as an additional assurance
 		Consistently(func() error {
-			return checkDbReady(&v)
+			return checkDbReady(&db)
 		}, duration, interval).Should(BeNil())
 	})
 	By("creating the relative Secret resource successfully", func() {
 		Eventually(func() error {
 			secret := v1.Secret{}
-			err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: v.Namespace,
-				Name: FormatSecretName(&v)}, &secret)
-			return err
+			return k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
+				Name: FormatSecretName(&db)}, &secret)
 		}, timeout, interval).Should(BeNil())
 	})
 	By("rotating the credentials", func() {
-		// TODO: Create Rotate sample stored procedure and then implement credential rotation
-		// TODO: Get secret data, apply rotation, get secret data again and compare it with the older data
-		// Expect password to have changed. Expect annotation to be removed.
+		// Get the Secret that will be updated
+		oldSecret := v1.Secret{}
+		Eventually(func() error {
+			err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
+				Name: FormatSecretName(&db)}, &oldSecret)
+			return err
+		}, timeout, interval).Should(BeNil())
+		// Apply rotate annotation
+		Eventually(func() error {
+			db.Annotations[RotateAnnotation] = "true"
+			return k8sClient.Update(context.Background(), &db)
+		}, timeout, interval).Should(BeNil())
+		// Eventually, the annotation will be removed
+		Eventually(func() map[string]string {
+			err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
+				Name: FormatSecretName(&db)}, &oldSecret)
+			Expect(err).NotTo(HaveOccurred())
+			return db.Annotations
+		}, timeout, interval).ShouldNot(ContainElement(RotateAnnotation))
+		// Check whether the Secret has been updated
+		updatedSecret := v1.Secret{}
+		err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
+			Name: FormatSecretName(&db)}, &oldSecret)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(updatedSecret.StringData["password"]).ToNot(Equal(oldSecret.StringData["password"]))
 	})
 	By("deleting the API resource successfully", func() {
-		err := k8sClient.Delete(context.Background(), &v)
+		err := k8sClient.Delete(context.Background(), &db)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(func() bool {
-			return k8sError.IsNotFound(checkDbReady(&v))
+			return k8sError.IsNotFound(checkDbReady(&db))
 		}, timeout, interval).Should(BeTrue())
 	})
 }
