@@ -58,12 +58,24 @@ func (c *PsqlConn) DeleteDb(operation Operation) OpOutput {
 
 // Rotate attempts to rotate the credentials of a connection.
 func (c *PsqlConn) Rotate(operation Operation) OpOutput {
-	_, err := c.c.Exec(context.Background(), getPsqlVoidOpQuery(operation))
+	val := getPsqlOpQuery(operation)
+	rows, err := c.c.Query(context.Background(), val)
 	if err != nil {
 		return OpOutput{nil, err}
 	}
 
-	return OpOutput{}
+	var key string
+	var value string
+	result := make(map[string]string)
+	for rows.Next() {
+		err = rows.Scan(&key, &value)
+		if err != nil {
+			return OpOutput{nil, err}
+		}
+		result[key] = value
+	}
+
+	return OpOutput{result, nil}
 }
 
 // Ping returns an error if a connection cannot be established with the DBMS, else it returns nil.

@@ -184,18 +184,29 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				r.handleReconcileError(obj, err)
 				return ctrl.Result{Requeue: true}, nil
 			}
+			// Update Ready condition to true
+			if err := r.updateReadyCondition(obj, metav1.ConditionTrue, RsnDbRotateSucc, MsgDbRotateSucc); err != nil {
+				r.handleReadyConditionError(obj, err)
+				return ctrl.Result{Requeue: true}, nil
+			}
 			r.logInfoEvent(obj, RsnDbRotateSucc, MsgDbRotateSucc)
 		} else {
 			// Database is ready and credentials shouldn't be rotated, nothing else to do
 			logger.V(TraceLevel).Info("Credentials should not be rotated, nothing left to do")
 			return ctrl.Result{}, nil
 		}
-	}
+	} else {
+		// Create
+		if err := r.createDb(obj); err.IsNotEmpty() {
+			r.handleReconcileError(obj, err)
+			return ctrl.Result{Requeue: true}, nil
+		}
 
-	// Create
-	if err := r.createDb(obj); err.IsNotEmpty() {
-		r.handleReconcileError(obj, err)
-		return ctrl.Result{Requeue: true}, nil
+		logger.V(TraceLevel).Info("Updating ConditionStatus")
+		if err := r.updateReadyCondition(obj, metav1.ConditionTrue, RsnDbCreateSucc, MsgDbCreateSucc); err != nil {
+			r.handleReadyConditionError(obj, err)
+			return ctrl.Result{Requeue: true}, nil
+		}
 	}
 
 	// If finalizer is not present, add finalizer to resource
@@ -212,11 +223,6 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	logger.V(TraceLevel).Info("Updating ConditionStatus")
-	if err := r.updateReadyCondition(obj, metav1.ConditionTrue, RsnDbCreateSucc, MsgDbCreateSucc); err != nil {
-		r.handleReadyConditionError(obj, err)
-		return ctrl.Result{Requeue: true}, nil
-	}
 	logger.V(TraceLevel).Info("Reached end of reconcile")
 	return ctrl.Result{}, nil
 }
@@ -280,7 +286,8 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError {
 
 	// Log success
 	r.logInfoEvent(obj, RsnDbCreateSucc, MsgDbCreateSucc)
-
+	r.Log.V(TraceLevel).Info(fmt.Sprint(dbClass.Spec.SecretFormat))
+	r.Log.V(TraceLevel).Info(fmt.Sprint(output))
 	// Create Secret
 	err = r.createSecret(obj, dbClass.Spec.SecretFormat, output)
 	if err.IsNotEmpty() {
@@ -403,13 +410,48 @@ func (r *DatabaseReconciler) rotate(obj *databasev1.Database) ReconcileError {
 	output := conn.Rotate(rotateOp)
 	if output.Err != nil {
 		return ReconcileError{
-			Reason:         RsnDbDeleteFail,
-			Message:        MsgDbDeleteFail,
+			Reason:         RsnDbRotateFail,
+			Message:        MsgDbRotateFail,
 			Err:            output.Err,
 			AdditionalInfo: loggingKv,
 		}
 	}
 
+	// Get the secret
+	// Replace secret data with data coming from rotate stored procedure, ignore
+	// empty strings.
+	// Update secret
+	secret := &corev1.Secret{}
+	err = r.Client.Get(context.Background(), client.ObjectKey{
+		Name: FormatSecretName(obj),
+		Namespace: obj.Namespace,
+	}, secret)
+	if err != nil {
+		return ReconcileError{
+			Reason:         RsnSecretGetFail,
+			Message:        MsgSecretGetFail,
+			Err:            err,
+			AdditionalInfo: loggingKv,
+		}
+	}
+	r.Log.V(TraceLevel).Info("secret data before rotation: " + fmt.Sprint(secret.StringData))
+	r.Log.V(TraceLevel).Info("rotate output: " + fmt.Sprint(output))
+	for k, v := range output.Result {
+		if string(secret.Data[k]) != "" {
+			secret.Data[k] = []byte(v)
+		}
+	}
+	r.Log.V(TraceLevel).Info("updated secret data: " + fmt.Sprint(secret.Data))
+
+	r.Log.V(DebugLevel).Info("Updating Secret due to credential rotation")
+	if err = r.Client.Update(context.Background(), secret); err != nil {
+		return ReconcileError{
+			Reason:         RsnSecretUpdateFail,
+			Message:        MsgSecretUpdateFail,
+			Err:            err,
+			AdditionalInfo: loggingKv,
+		}
+	}
 	// Remove annotation if present
 	if isRotateAnnotationTrue(obj) {
 		logger.V(TraceLevel).Info("Removing rotate annotation")
@@ -583,17 +625,6 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretForm
 		return ReconcileError{
 			Reason:         RsnSecretGetFail,
 			Message:        MsgSecretGetFail,
-			Err:            err,
-			AdditionalInfo: loggingKv,
-		}
-	}
-	// Secret exists already, update (e.g. credential rotation)
-	// Don't overwrite empty values
-	secret.StringData = secretData.From(oldSecret.StringData)
-	if err = r.Client.Update(context.Background(), secret); err != nil {
-		return ReconcileError{
-			Reason:         RsnSecretUpdateFail,
-			Message:        MsgSecretUpdateFail,
 			Err:            err,
 			AdditionalInfo: loggingKv,
 		}

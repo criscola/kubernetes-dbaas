@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION sp_rotate(k8sName text) RETURNS TABLE("key" text, value text) AS $$
+CREATE OR REPLACE FUNCTION sp_rotate(k8sName text) RETURNS TABLE("key" text, value text) AS $func$
 	DECLARE 
 		new_pwd TEXT;
 	BEGIN
@@ -10,4 +10,4 @@ CREATE OR REPLACE FUNCTION sp_rotate(k8sName text) RETURNS TABLE("key" text, val
 		UPDATE databases SET password = new_pwd WHERE dbname = k8sName;
 		RETURN query EXECUTE 'select * from t';
 	END;
-$$ LANGUAGE plpgsql;
+$func$ LANGUAGE plpgsql;

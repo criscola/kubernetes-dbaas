@@ -22,6 +22,7 @@ import (
 	databasev1 "github.com/bedag/kubernetes-dbaas/apis/database/v1"
 	databaseclassv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclass/v1"
 	. "github.com/bedag/kubernetes-dbaas/controllers/database"
+	"github.com/bedag/kubernetes-dbaas/internal/logging"
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -35,7 +36,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"testing"
 	//+kubebuilder:scaffold:imports
@@ -64,7 +64,7 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	logf.SetLogger(logging.GetDevelopmentLogger(-2, false))
 
 	By("bootstrapping test environment")
 	if os.Getenv("TEST_USE_EXISTING_CLUSTER") == "true" {

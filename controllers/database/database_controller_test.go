@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"path"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"time"
 )
 
@@ -24,7 +25,7 @@ const (
 	DbMariadbFilename   = "db-mariadb.yaml"
 	DbPostgresFilename  = "db-postgres.yaml"
 	DbSqlserverFilename = "db-sqlserver.yaml"
-	RotateAnnotation    = `dbaas.bedag.ch/rotate: ""`
+	RotateAnnotation    = "dbaas.bedag.ch/rotate"
 )
 
 var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
@@ -32,7 +33,7 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 	const (
 		timeout  = time.Second * 10
 		duration = time.Second * 10
-		interval = time.Millisecond * 250
+		interval = time.Millisecond * 100
 	)
 
 	// Prepare Database resources
@@ -46,7 +47,7 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 	Context("when testing the happy path", func() {
 		Context("when reconciling a PostgreSQL Database resource", func() {
 			It("should handle its lifecycle correctly", func() {
-				testDatabaseLifecycleHappyPath(postgresDatabaseRes, duration, timeout, interval)
+				testDatabaseLifecycleHappyPathWithRotate(postgresDatabaseRes, duration, timeout, interval)
 			})
 		})
 		Context("when reconciling a MariaDB Database resource", func() {
@@ -60,17 +61,57 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 			})
 		})
 	})
-	// It assertion on Create
-
-
-	// Eventually to retry a number of times until either the function's output matches the Should() assertion,
-	// or the number of attempts * interval period exceed the provided timeout value
-
-	// Now that we've create a Database in our test cluster, we must test that the DB actually created it
-	// Using Consistently we can ensure that a status field remains set to a certain value for a certain amount of time
-
-	// Also test as much behaviour as possible, e.g. Secret recreation
 })
+
+func testDatabaseLifecycleHappyPathWithRotate(db databasev1.Database, duration, timeout, interval interface{}) {
+	By("creating the API resource successfully with condition Ready set to true", func() {
+		//Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Create(context.Background(), &db)).Should(Succeed())
+		Eventually(func() error {
+			return checkDbReady(&db)
+		}, timeout, interval).Should(BeNil())
+		// We don't just check the Ready condition would be eventually True, we also check that it
+		// stays that way for a certain period of time as an additional assurance
+		Consistently(func() error {
+			return checkDbReady(&db)
+		}, duration, interval).Should(BeNil())
+	})
+	By("creating the relative Secret resource successfully", func() {
+		secret := v1.Secret{}
+		logf.Log.Info("creating the relative Secret resource successfully")
+		Eventually(func() error {
+			return k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
+				Name: FormatSecretName(&db)}, &secret)
+		}, timeout, interval).Should(Succeed())
+		// Taken from testdata/db-postgres.yaml
+		Expect(secret.Data).To(HaveKeyWithValue("password", []byte("testpassword")))
+	})
+	By("rotating the credentials", func() {
+		// Add rotate annotation
+		Expect(k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace, Name: db.Name}, &db))
+		db.Annotations = map[string]string{RotateAnnotation: "true"}
+		Expect(k8sClient.Update(context.Background(), &db)).Should(Succeed())
+		// Check annotation has been removed
+		Eventually(func() string {
+			newDb := databasev1.Database{}
+			_ = k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace, Name: db.Name}, &newDb)
+			return newDb.Annotations[RotateAnnotation]
+		}, timeout, interval).Should(Equal(""))
+		// Check if password was updated
+		secret := v1.Secret{}
+		Expect(k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
+			Name: FormatSecretName(&db)}, &secret)).Should(Succeed())
+		Expect(secret.Data["password"]).ToNot(Equal("testpassword"))
+		Expect(secret.Data["password"]).ToNot(Equal(""))
+	})
+	By("deleting the API resource successfully", func() {
+		err := k8sClient.Delete(context.Background(), &db)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(func() bool {
+			return k8sError.IsNotFound(checkDbReady(&db))
+		}, timeout, interval).Should(BeTrue())
+	})
+}
 
 func testDatabaseLifecycleHappyPath(db databasev1.Database, duration, timeout, interval interface{}) {
 	By("creating the API resource successfully with condition Ready set to true", func() {
@@ -92,33 +133,6 @@ func testDatabaseLifecycleHappyPath(db databasev1.Database, duration, timeout, i
 			return k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
 				Name: FormatSecretName(&db)}, &secret)
 		}, timeout, interval).Should(BeNil())
-	})
-	By("rotating the credentials", func() {
-		// Get the Secret that will be updated
-		oldSecret := v1.Secret{}
-		Eventually(func() error {
-			err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
-				Name: FormatSecretName(&db)}, &oldSecret)
-			return err
-		}, timeout, interval).Should(BeNil())
-		// Apply rotate annotation
-		Eventually(func() error {
-			db.Annotations[RotateAnnotation] = "true"
-			return k8sClient.Update(context.Background(), &db)
-		}, timeout, interval).Should(BeNil())
-		// Eventually, the annotation will be removed
-		Eventually(func() map[string]string {
-			err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
-				Name: FormatSecretName(&db)}, &oldSecret)
-			Expect(err).NotTo(HaveOccurred())
-			return db.Annotations
-		}, timeout, interval).ShouldNot(ContainElement(RotateAnnotation))
-		// Check whether the Secret has been updated
-		updatedSecret := v1.Secret{}
-		err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
-			Name: FormatSecretName(&db)}, &oldSecret)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(updatedSecret.StringData["password"]).ToNot(Equal(oldSecret.StringData["password"]))
 	})
 	By("deleting the API resource successfully", func() {
 		err := k8sClient.Delete(context.Background(), &db)
