@@ -49,6 +49,9 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 			It("should handle its lifecycle correctly", func() {
 				testDatabaseLifecycleHappyPathWithRotate(postgresDatabaseRes, duration, timeout, interval)
 			})
+			FIt("should handle user mistakenly deleting a Secret by calling Rotate to regenerate it", func() {
+				testSecretDeletedMistakenly(postgresDatabaseRes, duration, timeout, interval)
+			})
 		})
 		Context("when reconciling a MariaDB Database resource", func() {
 			It("should handle its lifecycle correctly", func() {
@@ -101,8 +104,23 @@ func testDatabaseLifecycleHappyPathWithRotate(db databasev1.Database, duration, 
 		secret := v1.Secret{}
 		Expect(k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
 			Name: FormatSecretName(&db)}, &secret)).Should(Succeed())
-		Expect(secret.Data["password"]).ToNot(Equal("testpassword"))
-		Expect(secret.Data["password"]).ToNot(Equal(""))
+		// Rotate recreates the Secret. The Secret should contain the same values as when it is created through the
+		// Create operation.
+		Expect(secret.Data).To(HaveKey("username"))
+		Expect(secret.Data).To(HaveKey("password"))
+		Expect(secret.Data).To(HaveKey("dbName"))
+		Expect(secret.Data).To(HaveKey("port"))
+		Expect(secret.Data).To(HaveKey("server"))
+		Expect(secret.Data).To(HaveKey("dsn"))
+		// It should also have a new entry to test if the Secret is well updated.
+		Expect(string(secret.Data["lastRotation"])).ToNot(Equal(""))
+		Expect(secret.Data).To(HaveKey("lastRotation"))
+		// Check password was changed succesfully
+		Expect(string(secret.Data["password"])).ToNot(Equal(""))
+		Expect(string(secret.Data["password"])).ToNot(Equal("testpassword"))
+		Eventually(func() error {
+			return checkDbReady(&db)
+		}, timeout, interval).Should(BeNil())
 	})
 	By("deleting the API resource successfully", func() {
 		err := k8sClient.Delete(context.Background(), &db)
@@ -132,6 +150,69 @@ func testDatabaseLifecycleHappyPath(db databasev1.Database, duration, timeout, i
 			secret := v1.Secret{}
 			return k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
 				Name: FormatSecretName(&db)}, &secret)
+		}, timeout, interval).Should(BeNil())
+		Eventually(func() error {
+			return checkDbReady(&db)
+		}, timeout, interval).Should(BeNil())
+	})
+	By("deleting the API resource successfully", func() {
+		err := k8sClient.Delete(context.Background(), &db)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(func() bool {
+			return k8sError.IsNotFound(checkDbReady(&db))
+		}, timeout, interval).Should(BeTrue())
+	})
+}
+
+func testSecretDeletedMistakenly(db databasev1.Database, duration, timeout, interval interface{}) {
+	By("creating the API resource successfully with condition Ready set to true", func() {
+		//Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Create(context.Background(), &db)).Should(Succeed())
+		Eventually(func() error {
+			return checkDbReady(&db)
+		}, timeout, interval).Should(BeNil())
+		// We don't just check the Ready condition would be eventually True, we also check that it
+		// stays that way for a certain period of time as an additional assurance
+		Consistently(func() error {
+			return checkDbReady(&db)
+		}, duration, interval).Should(BeNil())
+	})
+	By("creating the relative Secret resource successfully", func() {
+		secret := v1.Secret{}
+		logf.Log.Info("creating the relative Secret resource successfully")
+		Eventually(func() error {
+			return k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
+				Name: FormatSecretName(&db)}, &secret)
+		}, timeout, interval).Should(Succeed())
+		// Taken from testdata/db-postgres.yaml
+		Expect(secret.Data).To(HaveKeyWithValue("password", []byte("testpassword")))
+	})
+	By("mistakenly deleting the Secret resource", func() {
+		oldSecret := v1.Secret{}
+		recreatedSecret := v1.Secret{}
+		_ = k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
+			Name: FormatSecretName(&db)}, &oldSecret)
+		err := k8sClient.Delete(context.Background(), &oldSecret)
+		Expect(err).NotTo(HaveOccurred())
+		// Eventually, the Secret will be recreated, its password must be different than before
+		Eventually(func() error {
+			return k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
+				Name: FormatSecretName(&db)}, &recreatedSecret)
+		}, timeout, interval).Should(BeNil())
+		// Secret should be recreated correctly
+		Expect(recreatedSecret.Data).To(HaveKey("username"))
+		Expect(recreatedSecret.Data).To(HaveKey("password"))
+		Expect(recreatedSecret.Data).To(HaveKey("dbName"))
+		Expect(recreatedSecret.Data).To(HaveKey("port"))
+		Expect(recreatedSecret.Data).To(HaveKey("server"))
+		Expect(recreatedSecret.Data).To(HaveKey("dsn"))
+		// Password should be rotated
+		logf.Log.Info("password before: " + string(oldSecret.Data["password"]))
+		logf.Log.Info("password after recreation: " + string(recreatedSecret.Data["password"]))
+		Expect(recreatedSecret.Data["password"]).ToNot(Equal(oldSecret.Data["password"]))
+		Expect(recreatedSecret.Data["password"]).ToNot(Equal(""))
+		Eventually(func() error {
+			return checkDbReady(&db)
 		}, timeout, interval).Should(BeNil())
 	})
 	By("deleting the API resource successfully", func() {
