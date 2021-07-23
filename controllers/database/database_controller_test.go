@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"os"
 	"path"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -45,8 +46,11 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	Context("when testing the happy path", func() {
-		Context("when reconciling a PostgreSQL Database resource", func() {
-			It("should handle its lifecycle correctly", func() {
+		FContext("when reconciling a PostgreSQL Database resource", func() {
+			AfterEach(func() {
+
+			})
+			FIt("should handle its lifecycle correctly", func() {
 				testDatabaseLifecycleHappyPathWithRotate(postgresDatabaseRes, duration, timeout, interval)
 			})
 			FIt("should handle user mistakenly deleting a Secret by calling Rotate to regenerate it", func() {
@@ -128,7 +132,21 @@ func testDatabaseLifecycleHappyPathWithRotate(db databasev1.Database, duration, 
 		Eventually(func() bool {
 			return k8sError.IsNotFound(checkDbReady(&db))
 		}, timeout, interval).Should(BeTrue())
+		Eventually(func() bool {
+			secret := v1.Secret{}
+			err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
+				Name: FormatSecretName(&db)}, &secret)
+			if !isTestEnvUsingExistingCluster() {
+			// Envtest does not include garbage collection, therefore Secrets must be deleted manually
+				_ = k8sClient.Delete(context.Background(), &secret)
+			}
+			return k8sError.IsNotFound(err)
+		}, timeout, interval).Should(BeTrue())
 	})
+}
+
+func isTestEnvUsingExistingCluster() bool {
+	return os.Getenv("TEST_USE_EXISTING_CLUSTER") == "true"
 }
 
 func testDatabaseLifecycleHappyPath(db databasev1.Database, duration, timeout, interval interface{}) {
@@ -160,6 +178,16 @@ func testDatabaseLifecycleHappyPath(db databasev1.Database, duration, timeout, i
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(func() bool {
 			return k8sError.IsNotFound(checkDbReady(&db))
+		}, timeout, interval).Should(BeTrue())
+		Eventually(func() bool {
+			secret := v1.Secret{}
+			err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
+				Name: FormatSecretName(&db)}, &secret)
+			if !isTestEnvUsingExistingCluster() {
+				// Envtest does not include garbage collection, therefore Secrets must be deleted manually
+				_ = k8sClient.Delete(context.Background(), &secret)
+			}
+			return k8sError.IsNotFound(err)
 		}, timeout, interval).Should(BeTrue())
 	})
 }
@@ -220,6 +248,16 @@ func testSecretDeletedMistakenly(db databasev1.Database, duration, timeout, inte
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(func() bool {
 			return k8sError.IsNotFound(checkDbReady(&db))
+		}, timeout, interval).Should(BeTrue())
+		Eventually(func() bool {
+			secret := v1.Secret{}
+			err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
+				Name: FormatSecretName(&db)}, &secret)
+			if !isTestEnvUsingExistingCluster() {
+				// Envtest does not include garbage collection, therefore Secrets must be deleted manually
+				_ = k8sClient.Delete(context.Background(), &secret)
+			}
+			return k8sError.IsNotFound(err)
 		}, timeout, interval).Should(BeTrue())
 	})
 }

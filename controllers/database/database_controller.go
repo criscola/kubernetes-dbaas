@@ -682,36 +682,15 @@ func (r *DatabaseReconciler) updateSecret(owner *databasev1.Database, secretForm
 		},
 		StringData: secretData,
 	}
-	key := client.ObjectKey{
-		Namespace: owner.Namespace,
-		Name:      secretName,
-	}
-	oldSecret := corev1.Secret{}
-	// Get old Secret if present
-	err = r.Client.Get(context.Background(), key, &oldSecret)
-	if err != nil {
-		// If Secret was not found, it must be created
-		if k8sError.IsNotFound(err) {
-			// Create new Secret
-			if err := r.Client.Create(context.Background(), newSecret); err != nil {
-				return ReconcileError{
-					Reason:         MsgSecretCreateFail,
-					Message:        MsgSecretCreateFail,
-					Err:            err,
-					AdditionalInfo: loggingKv,
-				}
-			}
-			r.logInfoEvent(owner, RsnSecretCreateSucc, MsgSecretCreateSucc, loggingKv...)
-			return ReconcileError{}
-		}
-		// Return error
+	if err := r.Client.Update(context.Background(), newSecret); err != nil {
 		return ReconcileError{
-			Reason:         RsnSecretGetFail,
-			Message:        MsgSecretGetFail,
+			Reason:         MsgSecretUpdateFail,
+			Message:        MsgSecretUpdateFail,
 			Err:            err,
 			AdditionalInfo: loggingKv,
 		}
 	}
+	r.logInfoEvent(owner, RsnSecretUpdateSucc, MsgSecretUpdateSucc, loggingKv...)
 	return ReconcileError{}
 }
 
