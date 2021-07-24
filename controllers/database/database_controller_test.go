@@ -46,14 +46,11 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	Context("when testing the happy path", func() {
-		FContext("when reconciling a PostgreSQL Database resource", func() {
-			AfterEach(func() {
-
-			})
-			FIt("should handle its lifecycle correctly", func() {
+		Context("when reconciling a PostgreSQL Database resource", func() {
+			It("should handle its lifecycle correctly", func() {
 				testDatabaseLifecycleHappyPathWithRotate(postgresDatabaseRes, duration, timeout, interval)
 			})
-			FIt("should handle user mistakenly deleting a Secret by calling Rotate to regenerate it", func() {
+			It("should handle user mistakenly deleting a Secret by calling Rotate to regenerate it", func() {
 				testSecretDeletedMistakenly(postgresDatabaseRes, duration, timeout, interval)
 			})
 		})
