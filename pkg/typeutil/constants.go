@@ -63,7 +63,7 @@ const (
 	MsgReadyCondUpdateFail  = "could not update ready condition of resource"
 	MsgSecretCreateFail     = "could not create secret resource for database resource"
 	MsgSecretCreateSucc     = "secret created successfully"
-	MsgSecretExists			= "secret exists already, please manually remove secret"
+	MsgSecretExists			= "secret exists already, please manually remove it from the cluster"
 	MsgSecretGetFail        = "secret get failed"
 	MsgSecretRenderFail     = "could not render secret data"
 	MsgSecretUpdateFail     = "secret update failed"
