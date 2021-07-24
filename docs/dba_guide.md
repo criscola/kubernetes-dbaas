@@ -1,4 +1,4 @@
-t# Database administrator guide
+# Database administrator guide
 ## Prerequisites
 In order to use the Operator, your Database Management Systems (DBMS) must be supported by the Operator. 
 Please see [supported DBMS](../README.md#supported-dbms).
@@ -63,5 +63,5 @@ MySQL/MariaDB do not support supplying input parameters by name, only by positio
 parameters matter and should be documented carefully in order of appearance in the stored procedure.
 
 ### Samples
-A few primitive samples for the `create` `rotate` (only for PostgreSQL) and `delete` stored procedures are present in 
-the [testdata folder](../testdata).
+A few primitive samples for the `create`, `rotate` (currently PostgreSQL only) and `delete` stored procedures are present in 
+the [testdata folder](../testdata). Samples are intended for **testing only**.
