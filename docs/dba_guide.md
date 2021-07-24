@@ -63,4 +63,5 @@ MySQL/MariaDB do not support supplying input parameters by name, only by positio
 parameters matter and should be documented carefully in order of appearance in the stored procedure.
 
 ### Samples
-A few primitive samples for the `create` and `delete` stored procedures are present in the [testdata folder](../testdata).
+A few primitive samples for the `create` `rotate` (only for PostgreSQL) and `delete` stored procedures are present in 
+the [testdata folder](../testdata).
