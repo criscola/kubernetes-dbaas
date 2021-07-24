@@ -43,9 +43,9 @@ leaderElection:
   resourceNamespace: default
 ```
 ### Rate-limiting
-As a protection against rogue users (or ugly bugs) the Operator embeds a rate-limiter for its DB drivers. You can specify
-how many requests per second are allowed at maximum for an endpoint by setting `rps` to your desired number. If set to 0, 
-the rate-limiter is disabled.
+As a protection against rogue users or as a limitation to batch operations, the Operator embeds a rate-limiter for its 
+DB drivers. You can specify how many requests per second are allowed at maximum for an endpoint by setting `rps` to your 
+desired number. If set to 0, the rate-limiter is disabled.
 
 ```yaml
 rps: 1
@@ -191,10 +191,11 @@ For example:
 To order a DBMS to regenerate the credentials for a Database resource, apply the following annotation to the Database resource:
 
 ```yaml
-dbaas.bedag.ch/rotate: ""
+dbaas.bedag.ch/rotate: "true"
 ```
 
-The Operator will remove the annotation when the operation has completed.
+The Operator will attempt to rotate the credentials immediately. The Operator will remove the annotation once the 
+operation has completed successfully.
 
 ## CLI arguments
 |                                          	    | Description                                                                                                                          	             	       |

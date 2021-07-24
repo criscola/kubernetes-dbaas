@@ -1,4 +1,4 @@
-# Database administrator guide
+t# Database administrator guide
 ## Prerequisites
 In order to use the Operator, your Database Management Systems (DBMS) must be supported by the Operator. 
 Please see [supported DBMS](../README.md#supported-dbms).
@@ -28,33 +28,34 @@ Every input/output value is treated as a `string` (i.e. `TEXT`, `varchar`...).
 Errors should be returned using the built-in mechanism of the DBMS involved, e.g. using exceptions. If an exception is returned,
 the Operator will re-execute the operation again using an exponential back-off strategy.
 
-In order to identify each distinct database instance, it is strongly recommended **having at least an input parameter 
+In order to identify each distinct database instance, it is necessary **to have at least an input parameter 
 acting as ID for each operation**. Each store procedure call will provide an ID so that store procedures know which 
-Kubernetes resource is bound to its relative database instance. This ID has the same purpose as IDs in the database world.
+Kubernetes resource is bound to its relative database instance. This input value will be supplied by the Operator during
+stored procedure calls.
 
 ### Create
-The operation will return a RowSet with at least two columns, `key` and `value`. Example:
+The `create`Row operation will return a set of rows with at least two columns, `key` and `value`. Example:
 
-| key      	| value    	|
-|----------	|----------	|
-| username 	| \<string>	|
-| password 	| \<string>	|
-| host     	| \<string>	|
-| port     	| \<string>	|
-| dbName   	| \<string>	|
+| key      	    | value    	|
+|-------------- |----------	|
+| username 	    | \<string>	|
+| password 	    | \<string>	|
+| host     	    | \<string>	|
+| port     	    | \<string>	|
+| dbName   	    | \<string>	|
+| lastRotation  | \<string>	|
 
-If the `create` operation is called twice with the same ID, it should return the same values or updated values. 
-If a value hasn't changed, it must be returned as an empty string `""` to report to the Operator that it hasn't changed.
-Of course, passwords must be stored in hash form, and can't be easily returned, thus it must be always returned again
-as an empty string. If the password needs to be regenerated, see the [Rotate](#Rotate) operation.
+If the `create` operation is called twice with the same ID, it should return the same values or updated values.
+Of course, passwords should be stored salted in hash form, so if the `create` operation is called again, it should
+call [Rotate](#Rotate) internally and return the updated values. As a rule, the `create` operation is called only during 
+database creation.
 
 ### Delete
 The operation will return nothing if the delete operation succeeded.
 
 ### Rotate
-The operation reports to the DBMS to regenerate the credentials for a certain database instance. When `rotate` is
-called, it rotates the database's credentials. After that, the `create` operation is called and should return the updated 
-credentials.
+The `rotate` operation rotates the Database credentials and returns the **same** keys as the `create` procedure, 
+with updated values if necessary. 
 
 ## Notes
 ### MySQL/MariaDB
