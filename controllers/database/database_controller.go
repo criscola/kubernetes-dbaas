@@ -237,10 +237,6 @@ func (r *DatabaseReconciler) addFinalizer(obj *databasev1.Database) error {
 func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError {
 	r.logInfoEvent(obj, RsnDbCreateInProg, MsgDbCreateInProg)
 
-	// TODO: maybe add extra check for satisfying K8SDBAAS-66, but I think it should not happen because of the Predicate
-	// predicate checks if Secret is present and DB is ready, if they are Reconcile is not triggered. The user cannot
-	// create a DB that is already present, updates are disabled and
-
 	dbClass, err := r.getDbmsClassFromDb(obj)
 	if err.IsNotEmpty() {
 		return err
@@ -290,8 +286,8 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError {
 
 	// Log success
 	r.logInfoEvent(obj, RsnDbCreateSucc, MsgDbCreateSucc)
-	r.Log.V(TraceLevel).Info(fmt.Sprint(dbClass.Spec.SecretFormat))
-	r.Log.V(TraceLevel).Info(fmt.Sprint(output))
+	logger.V(TraceLevel).Info(fmt.Sprint(dbClass.Spec.SecretFormat))
+	logger.V(TraceLevel).Info(fmt.Sprint(output))
 	// Create Secret
 	err = r.createSecret(obj, dbClass.Spec.SecretFormat, output)
 	if err.IsNotEmpty() {
@@ -615,42 +611,18 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretForm
 			AdditionalInfo: loggingKv,
 		}
 	} else {
-		// else create was called with an already existing secret --> return error
-		// TODO: error handling
+		// Create was called on already existing Secret
+		return ReconcileError{
+			Reason: RsnSecretExists,
+			Message: MsgSecretExists,
+			Err: err,
+			AdditionalInfo: loggingKv,
+		}
 	}
-
-	r.logInfoEvent(owner, RsnSecretUpdateSucc, MsgSecretUpdateSucc, loggingKv...)
-	return ReconcileError{}
 }
 
 // createSecret creates a new K8s secret owned by owner with the data contained in output and dsn.
 func (r *DatabaseReconciler) updateSecret(owner *databasev1.Database, secretFormat database.SecretFormat, output database.OpOutput) ReconcileError {
-	// Get the secret
-	// Replace secret data with data coming from rotate stored procedure, ignore
-	// empty strings.
-	// Update secret
-/*	oldSecret := &corev1.Secret{}
-	err := r.Client.Get(context.Background(), client.ObjectKey{
-		Name: FormatSecretName(owner),
-		Namespace: owner.Namespace,
-	}, oldSecret)
-	if err != nil {
-		return ReconcileError{
-			Reason:         RsnSecretGetFail,
-			Message:        MsgSecretGetFail,
-			Err:            err,
-		}
-	}
-
-
-
-	r.Log.V(TraceLevel).Info("secret data before rotation: " + fmt.Sprint(oldSecret.StringData))
-	r.Log.V(TraceLevel).Info("rotate output: " + fmt.Sprint(output))
-	r.Log.V(DebugLevel).Info("Updating Secret due to credential rotation")
-
-
-
-	r.Log.V(TraceLevel).Info("updated secret data: " + fmt.Sprint(secret.Data))*/
 	logger.V(DebugLevel).Info("Updating secret for database resource")
 
 	// TODO: extract common behavior of Secret rendering into a method and put it in createSecret as well (factory method)?
