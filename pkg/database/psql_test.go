@@ -23,7 +23,6 @@ var _ = Describe(FormatTestDesc(Integration, "Postgres CreateDb"), func() {
 			"dbName":   "my-test-db",
 			"fqdn":     "localhost",
 			"port":     "5432",
-			"lastRotation": "",
 		},
 		Err: nil,
 	}
