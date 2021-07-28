@@ -60,4 +60,36 @@ var _ = Describe(FormatTestDesc(Integration, "RegisterDbms"), func() {
 			Expect(err.Error()).To(ContainSubstring("Endpoint names must be unique within the list of endpoints"))
 		})
 	})
+	Context("when trying to register a malformed DSN", func() {
+		BeforeEach(func() {
+			dbmsList = []database.Dbms{{
+				DatabaseClassName: "testDbc",
+				Endpoints: []database.Endpoint{
+					{
+						Name: "postgres1",
+						Dsn:  "malformed123",
+					},
+				},
+			}}
+		})
+		It("should return an error", func() {
+			Expect(err).To(HaveOccurred())
+		})
+	})
+	Context("when trying to register an unexisting DSN", func() {
+		BeforeEach(func() {
+			dbmsList = []database.Dbms{{
+				DatabaseClassName: "testDbc",
+				Endpoints: []database.Endpoint{
+					{
+						Name: "postgres1",
+						Dsn:  "postgres://postgres:fakepassword@fakehostname:12345",
+					},
+				},
+			}}
+		})
+		It("should return an error", func() {
+			Expect(err).To(HaveOccurred())
+		})
+	})
 })
