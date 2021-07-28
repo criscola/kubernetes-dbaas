@@ -23,6 +23,7 @@ var _ = Describe(FormatTestDesc(Integration, "Postgres CreateDb"), func() {
 			"dbName":   "my-test-db",
 			"fqdn":     "localhost",
 			"port":     "5432",
+			"lastRotation": "",
 		},
 		Err: nil,
 	}
@@ -50,6 +51,23 @@ var _ = Describe(FormatTestDesc(Integration, "Postgres CreateDb"), func() {
 
 		It("should return a rowset as specified in the stored procedure", func() {
 			Expect(result).To(Equal(opResultAssertion))
+		})
+	})
+	Context("when Operation is defined wrongly", func() {
+		// Prepare test data
+		createOperation := database.Operation{
+			Name: "fake_sp_name",
+			Inputs: map[string]string{
+				"k8sName": "my-test-db",
+			},
+		}
+
+		// Execute tested operation
+		var result database.OpOutput
+		result = conn.CreateDb(createOperation)
+
+		It("should return an error", func() {
+			Expect(result.Err).To(HaveOccurred())
 		})
 	})
 })
