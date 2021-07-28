@@ -5,18 +5,12 @@ import (
 	. "github.com/bedag/kubernetes-dbaas/pkg/test"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testing"
 )
 
 const (
 	// Test data
 	operationNameBasicCorrect = "sp_test"
 )
-
-func TestDatabase(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Database package suite")
-}
 
 var _ = Describe(FormatTestDesc(Unit, "RenderOperation"), func() {
 	var mapTemplateBasicCorrect map[string]string
