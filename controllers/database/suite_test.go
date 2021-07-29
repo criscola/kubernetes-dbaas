@@ -29,6 +29,7 @@ import (
 	"io/ioutil"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"os"
 	"path"
 	"path/filepath"
@@ -65,99 +66,98 @@ func TestAPIs(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logging.GetDevelopmentLogger(-2, false))
+	Context("when setting up the test infrastructure", func() {
+		var cfg *rest.Config
+		var err error
+		By("bootstrapping test environment", func() {
+			if os.Getenv("TEST_USE_EXISTING_CLUSTER") == "true" {
+				testEnv = &envtest.Environment{
+					UseExistingCluster: &[]bool{true}[0],
+				}
+			} else {
+				testEnv = &envtest.Environment{
+					CRDDirectoryPaths:     []string{filepath.Join(rootPath, "config", "crd", "bases")},
+					ErrorIfCRDPathMissing: true,
+				}
+			}
+			if testConfigPath := os.Getenv("TEST_CONFIG_PATH"); testConfigPath != "" {
+				cfgFilepath = path.Join(rootPath, testConfigPath)
+			}
+			cfg, err = testEnv.Start()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cfg).NotTo(BeNil())
+		})
+		By("adding CRD schemes", func() {
+			err = databasev1.AddToScheme(scheme.Scheme)
+			Expect(err).NotTo(HaveOccurred())
+			err = databaseclassv1.AddToScheme(scheme.Scheme)
+			Expect(err).NotTo(HaveOccurred())
+			err = operatorconfigv1.AddToScheme(scheme.Scheme)
+			Expect(err).NotTo(HaveOccurred())
+			//+kubebuilder:scaffold:scheme
+		})
 
-	By("bootstrapping test environment")
-	if os.Getenv("TEST_USE_EXISTING_CLUSTER") == "true" {
-		testEnv = &envtest.Environment{
-			UseExistingCluster: &[]bool{true}[0],
-		}
-	} else {
-		testEnv = &envtest.Environment{
-			CRDDirectoryPaths:     []string{filepath.Join(rootPath, "config", "crd", "bases")},
-			ErrorIfCRDPathMissing: true,
-		}
-	}
-	if testConfigPath := os.Getenv("TEST_CONFIG_PATH"); testConfigPath != "" {
-		cfgFilepath = path.Join(rootPath, testConfigPath)
-	}
-
-	cfg, err := testEnv.Start()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(cfg).NotTo(BeNil())
-
-	By("adding CRD schemes", func() {
-		err = databasev1.AddToScheme(scheme.Scheme)
-		Expect(err).NotTo(HaveOccurred())
-		err = databaseclassv1.AddToScheme(scheme.Scheme)
-		Expect(err).NotTo(HaveOccurred())
-		err = operatorconfigv1.AddToScheme(scheme.Scheme)
-		Expect(err).NotTo(HaveOccurred())
-		//+kubebuilder:scaffold:scheme
-	})
-
-	var options manager.Options
-	By("loading the operator config from " + cfgFilepath, func() {
-		options = ctrl.Options{Scheme: scheme.Scheme}
-		dat, err := ioutil.ReadFile(cfgFilepath)
-		Expect(err).NotTo(HaveOccurred())
-		err = yaml.Unmarshal(dat, &ctrlConfig)
-		Expect(err).NotTo(HaveOccurred())
-		options, err = options.AndFrom(&ctrlConfig)
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	var k8sManager ctrl.Manager
-	By("creating Manager and Client", func() {
-		k8sManager, err = ctrl.NewManager(cfg, options)
-		Expect(err).ToNot(HaveOccurred())
-		k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-		Expect(k8sClient).NotTo(BeNil())
-	})
-
-	By("registering a DatabaseClasses per driver", func() {
-		dbcSqlserver, err := getSqlserverDbc()
-		Expect(err).ToNot(HaveOccurred())
-		err = k8sClient.Create(context.Background(), &dbcSqlserver)
-		Expect(err).ToNot(HaveOccurred())
-
-		dbcPostgres, err := getPostgresDbc()
-		Expect(err).ToNot(HaveOccurred())
-		err = k8sClient.Create(context.Background(), &dbcPostgres)
-		Expect(err).ToNot(HaveOccurred())
-
-		dbcMariadb, err := getMariadbDbc()
-		Expect(err).ToNot(HaveOccurred())
-		err = k8sClient.Create(context.Background(), &dbcMariadb)
-		Expect(err).ToNot(HaveOccurred())
-	})
-
-	By("registering the pool of connections", func() {
-		dbmsPool = pool.NewDbmsPool(0)
-		for _, dbms := range ctrlConfig.DbmsList {
-			dbc := databaseclassv1.DatabaseClass{}
-			err = k8sClient.Get(context.Background(), client.ObjectKey{Name: dbms.DatabaseClassName}, &dbc)
+		var options manager.Options
+		var k8sManager ctrl.Manager
+		By("loading the operator config from " + cfgFilepath, func() {
+			options = ctrl.Options{Scheme: scheme.Scheme}
+			dat, err := ioutil.ReadFile(cfgFilepath)
+			Expect(err).NotTo(HaveOccurred())
+			err = yaml.Unmarshal(dat, &ctrlConfig)
+			Expect(err).NotTo(HaveOccurred())
+			options, err = options.AndFrom(&ctrlConfig)
+			Expect(err).NotTo(HaveOccurred())
+		})
+		By("creating Manager and Client", func() {
+			k8sManager, err = ctrl.NewManager(cfg, options)
+			Expect(err).ToNot(HaveOccurred())
+			k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+			Expect(k8sClient).NotTo(BeNil())
+		})
+		By("registering DatabaseClasses", func() {
+			dbcPostgres, err := getPostgresDbc()
+			Expect(err).ToNot(HaveOccurred())
+			err = k8sClient.Create(context.Background(), &dbcPostgres)
 			Expect(err).ToNot(HaveOccurred())
 
-			err = dbmsPool.RegisterDbms(dbms, dbc.Spec.Driver)
+			dbcMariadb, err := getMariadbDbc()
 			Expect(err).ToNot(HaveOccurred())
-		}
-	})
-
-	By("starting the DatabaseReconciler instance", func() {
-		err = (&DatabaseReconciler{
-			Client:        k8sManager.GetClient(),
-			Scheme:        k8sManager.GetScheme(),
-			Log:           ctrl.Log.WithName("controllers").WithName("database"),
-			EventRecorder: k8sManager.GetEventRecorderFor(DatabaseControllerName),
-			DbmsList:      ctrlConfig.DbmsList,
-			Pool:          dbmsPool,
-		}).SetupWithManager(k8sManager)
-		Expect(err).ToNot(HaveOccurred())
-
-		go func() {
-			err = k8sManager.Start(ctrl.SetupSignalHandler())
+			err = k8sClient.Create(context.Background(), &dbcMariadb)
 			Expect(err).ToNot(HaveOccurred())
-		}()
+
+			dbcSqlserver, err := getSqlserverDbc()
+			Expect(err).ToNot(HaveOccurred())
+			err = k8sClient.Create(context.Background(), &dbcSqlserver)
+			Expect(err).ToNot(HaveOccurred())
+		})
+		By("registering the pool of connections", func() {
+			dbmsPool = pool.NewDbmsPool(0)
+			for _, dbms := range ctrlConfig.DbmsList {
+				dbc := databaseclassv1.DatabaseClass{}
+				err = k8sClient.Get(context.Background(), client.ObjectKey{Name: dbms.DatabaseClassName}, &dbc)
+				Expect(err).ToNot(HaveOccurred())
+
+				err = dbmsPool.RegisterDbms(dbms, dbc.Spec.Driver)
+				Expect(err).ToNot(HaveOccurred())
+			}
+		})
+		By("starting the DatabaseReconciler instance", func() {
+			err = (&DatabaseReconciler{
+				Client:        k8sManager.GetClient(),
+				Scheme:        k8sManager.GetScheme(),
+				Log:           ctrl.Log.WithName("controllers").WithName("database"),
+				EventRecorder: k8sManager.GetEventRecorderFor(DatabaseControllerName),
+				DbmsList:      ctrlConfig.DbmsList,
+				Pool:          dbmsPool,
+			}).SetupWithManager(k8sManager)
+			Expect(err).ToNot(HaveOccurred())
+
+			go func() {
+				err = k8sManager.Start(ctrl.SetupSignalHandler())
+				Expect(err).ToNot(HaveOccurred())
+			}()
+		})
+
 	})
 }, 60)
 

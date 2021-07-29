@@ -36,7 +36,6 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 		duration = time.Second * 10
 		interval = time.Millisecond * 100
 	)
-
 	Context("when reconciling a PostgreSQL Database resource", func() {
 		var postgresDatabaseRes databasev1.Database
 		var err error
