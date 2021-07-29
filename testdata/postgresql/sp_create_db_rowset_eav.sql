@@ -17,6 +17,7 @@ insert into t values('password', 'testpassword');
 insert into t values('dbName', k8sName);
 insert into t values('fqdn', 'localhost');
 insert into t values('port', '5432');
+insert into t values('lastRotation', '');
 
 IF NOT exists(SELECT id FROM databases WHERE dbName = k8sName) THEN
 	INSERT INTO databases (username, password, dbName, fqdn, port) VALUES ('testuser', 'testpassword', k8sName, 'localhost', '5432');
