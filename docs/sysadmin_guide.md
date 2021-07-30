@@ -50,6 +50,17 @@ desired number. If set to 0, the rate-limiter is disabled.
 ```yaml
 rps: 1
 ```
+
+### Keepalive 
+It is possible to enable a keepalive mechanism that checks every *X* seconds whether there is a connection issue between
+the Operator and the DBMS endpoints. The following configuration option lets users specify the interval in seconds
+between each retry. If a connection is found to be down, the error is logged using the standard logger, and a connection 
+retry is performed. If the option is set to `0`, the keepalive is disabled. 
+
+```yaml
+keepalive: 30
+```
+
 ### DBMS configuration
 Endpoints should be configured thought the `dbms` key. As you can see, the Operator accepts an array formed by two 
 keys, `databaseClassName` and `endpoints`.
@@ -90,6 +101,7 @@ Here's the full example:
     leaderElect: true
     resourceName: bfa62c96.dbaas.bedag.ch
   rps: 1
+  keepalive: 30
   dbms:
     - databaseClassName: "databaseclass-sample-sqlserver"
       endpoints:
@@ -204,14 +216,15 @@ operation has completed successfully.
 | `--disable-webhooks`                        	| Disables webhooks servers (default false)                                                                                               	                   |
 | `--health.healthProbeBindAddress <string>` 	| The address the probe endpoint binds to (default ":8081")                                                                                                    |
 | `-h`, `--help`                               	| Help for kubedbaas                                                                                                                                           |
-| `--leaderElection.leaderElect`                | Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager  (default true)                                |
+| `--leaderElection.leaderElect`                | Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager  (default true)                         |
 | `--leaderElection.resourceName <string>`   	| The resource name to lock during election cycles (default "bfa62c96.dbaas.bedag.ch")                                                                         |
 | `--load-config <string>`                   	| Location of the Operator's config file                                                                                                                       |
 | `--metrics.bindAddress <string>`           	| The address the metric endpoint binds to (default "127.0.0.1:8080")                                                                  	                       |
 | `--webhook.port <int>`                       	| The port the webhook server binds to (default 9443)                                                                                  	             	       |
 | `--log-level <int>`                       	| The verbosity of the logging output. Can be one out of: `0` info, `1` debug, `2` trace. If debug mode is on, defaults to `1` (default 0)                     |                                                                       	|
 | `--disable-stacktrace`                       	| Disable stacktrace printing in logger errors (default false)                                                                                  	           |
-| `--rps <int>`                                 | The number of operation executed per second per endpoint. If set to 0, operations won't be rate-limited (default 0)                                                                                  	           |
+| `--rps <int>`                                 | The maximum number of operations executed per second per endpoint. If set to 0, operations won't be rate-limited (default 0)                                 |
+| `--heartbeat <int>`                           | The interval in seconds between connection checks for the endpoints (default 30)                                                                             |
 
 The order of precedence is `flags > config file > defaults`. Environment variables are not read.
 

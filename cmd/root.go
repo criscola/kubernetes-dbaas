@@ -21,6 +21,7 @@ import (
 	"github.com/bedag/kubernetes-dbaas/pkg/database"
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
 	"github.com/go-logr/logr"
+	"time"
 
 	//"context"
 	"fmt"
@@ -54,6 +55,7 @@ const (
 	ZapLogLevelKey       = "log-level"
 	StacktraceDisableKey = "disable-stacktrace"
 	RpsKey               = "rps"
+	KeepaliveKey		 = "keepalive"
 
 	// Flag overrides for flags specified in OperatorConfig
 	MetricsBindAddressKey     = "metrics.bindAddress"
@@ -117,6 +119,7 @@ func initFlags() {
 	rootCmd.PersistentFlags().Int(ZapLogLevelKey, 0, "The verbosity of the logging output. Can be one out of: 0 info, 1 debug, 2 trace. If debug mode is on, defaults to 1")
 	rootCmd.PersistentFlags().Bool(StacktraceDisableKey, false, "Disable stacktrace printing in logger errors")
 	rootCmd.PersistentFlags().Int(RpsKey, 0, "The number of operation executed per second per endpoint. If set to 0, operations won't be rate-limited.")
+	rootCmd.PersistentFlags().Int(KeepaliveKey, 30, "The interval in seconds between connection checks for the endpoints")
 
 	// Bind all flags to Viper
 	rootCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
@@ -279,6 +282,9 @@ func registerEndpoints() {
 		if err := dbmsPool.RegisterDbms(dbms, dbClass.Spec.Driver); err != nil {
 			fatalError(err, "problem registering dbms endpoint", "databaseClassName", dbClass.Name)
 		}
+	}
+	if keepaliveInterval := viper.GetInt(KeepaliveKey); keepaliveInterval > 0 {
+		dbmsPool.Keepalive(time.Duration(keepaliveInterval)*time.Second, setupLog)
 	}
 }
 

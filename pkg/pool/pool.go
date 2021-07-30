@@ -3,6 +3,7 @@ package pool
 
 import (
 	"fmt"
+	"github.com/bedag/kubernetes-dbaas/internal/logging"
 	"github.com/bedag/kubernetes-dbaas/pkg/database"
 	"github.com/go-logr/logr"
 	"time"
@@ -12,7 +13,7 @@ import (
 type Pool interface {
 	Get(name string) Entry
 	Register(name string, driver string, dsn database.Dsn) error
-	Heartbeat(interval time.Duration, logger logr.Logger)
+	Keepalive(interval time.Duration, logger logr.Logger)
 }
 
 // Entry specifies the generic interface for an entry of DbmsPool.
@@ -75,13 +76,13 @@ func (pool DbmsPool) Register(name string, driver string, dsn database.Dsn) erro
 	return err
 }
 
-// Heartbeat starts a periodic ping to each endpoint, if an endpoint becomes unreachable, an error is logged.
-func (pool DbmsPool) Heartbeat(interval time.Duration, logger logr.Logger) {
+// Keepalive starts a periodic ping to each endpoint, if an endpoint becomes unreachable, an error is logged.
+func (pool DbmsPool) Keepalive(interval time.Duration, logger logr.Logger) {
 	logger = logger.WithName("pool")
 	go func() {
 		for {
 			for k, v := range pool.entries {
-				logger.V(2).Info("checking pool endpoints liveliness")
+				logger.V(logging.ZapTraceLevel).Info("checking pool endpoints liveliness")
 				if err := v.Ping(); err != nil {
 					logger.Error(err, "connection to the endpoint failed", "endpoint", k)
 				}
