@@ -49,13 +49,13 @@ import (
 )
 
 const (
-	LoadConfigKey        = "load-config"
-	DebugKey             = "debug"
-	WebhookDisableKey    = "disable-webhooks"
-	ZapLogLevelKey       = "log-level"
-	StacktraceDisableKey = "disable-stacktrace"
-	RpsKey               = "rps"
-	KeepaliveKey		 = "keepalive"
+	LoadConfigKey       = "load-config"
+	DebugKey            = "debug"
+	WebhookDisableKey   = "disable-webhooks"
+	ZapLogLevelKey      = "log-level"
+	StacktraceEnableKey = "enable-stacktrace"
+	RpsKey              = "rps"
+	KeepaliveKey        = "keepalive"
 
 	// Flag overrides for flags specified in OperatorConfig
 	MetricsBindAddressKey     = "metrics.bindAddress"
@@ -117,7 +117,7 @@ func initFlags() {
 	rootCmd.PersistentFlags().String(LeaderElectResName, "bfa62c96.dbaas.bedag.ch", "The resource name to lock during election cycles")
 	rootCmd.PersistentFlags().Int(WebhookPortKey, 9443, "The port the webhook server binds to")
 	rootCmd.PersistentFlags().Int(ZapLogLevelKey, 0, "The verbosity of the logging output. Can be one out of: 0 info, 1 debug, 2 trace. If debug mode is on, defaults to 1")
-	rootCmd.PersistentFlags().Bool(StacktraceDisableKey, false, "Disable stacktrace printing in logger errors")
+	rootCmd.PersistentFlags().Bool(StacktraceEnableKey, false, "Enable stacktrace printing in logger errors")
 	rootCmd.PersistentFlags().Int(RpsKey, 0, "The number of operation executed per second per endpoint. If set to 0, operations won't be rate-limited.")
 	rootCmd.PersistentFlags().Int(KeepaliveKey, 30, "The interval in seconds between connection checks for the endpoints")
 
@@ -151,7 +151,8 @@ func initConfigFile() {
 
 // initLogger initializes the Operator's logger.
 func initLogger() {
-	// Distinguish between 'debug' and 'production' setting.
+	// Distinguish between 'debug' and 'production' setting
+	// See also https://github.com/operator-framework/operator-sdk/issues/4771
 	level := viper.GetInt(ZapLogLevelKey)
 	if level > 0 {
 		level -= 2 * level
@@ -160,14 +161,21 @@ func initLogger() {
 	var logger logr.Logger
 	if viper.GetBool(DebugKey) {
 		fmt.Println("setting up logger in development mode...")
-		// Check if default is set
+		// If the default value is not set, reset the default to debug level
 		if !viper.IsSet(ZapLogLevelKey) {
-			level = -1
+			level = logging.LogrDebugLevel
 		}
-		logger = logging.GetDevelopmentLogger(level, viper.GetBool(StacktraceDisableKey))
+		// If the default value is not set, reset stacktrace printing enable to true while in Debug mode
+		var stacktraceEnabled bool
+		if !viper.IsSet(StacktraceEnableKey) {
+			stacktraceEnabled = true
+		} else {
+			stacktraceEnabled = viper.GetBool(StacktraceEnableKey)
+		}
+		logger = logging.GetDevelopmentLogger(level, stacktraceEnabled)
 	} else {
 		fmt.Println("setting up logger in production mode...")
-		logger = logging.GetProductionLogger(level, viper.GetBool(StacktraceDisableKey))
+		logger = logging.GetProductionLogger(level, viper.GetBool(StacktraceEnableKey))
 	}
 	ctrl.SetLogger(logger)
 }
