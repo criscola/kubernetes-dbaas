@@ -3,17 +3,17 @@ package database
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 // PsqlConn represents a connection to a SQL Server DBMS.
 type PsqlConn struct {
-	c *pgx.Conn
+	c *pgxpool.Pool
 }
 
 // NewPsqlConn opens a new PostgreSQL connection from a given dsn.
 func NewPsqlConn(dsn string) (*PsqlConn, error) {
-	dbConn, err := pgx.Connect(context.Background(), dsn)
+	dbConn, err := pgxpool.Connect(context.Background(), dsn)
 	if err != nil {
 		return nil, err
 	}
