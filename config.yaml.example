@@ -9,6 +9,7 @@ leaderElection:
   resourceName: bfa62c96.dbaas.bedag.ch
   resourceNamespace: default
 rps: 1
+keepalive: 30
 dbms:
   - databaseClassName: "databaseclass-sample-sqlserver"
     endpoints:

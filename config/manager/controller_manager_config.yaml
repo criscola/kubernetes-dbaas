@@ -9,8 +9,19 @@ webhook:
 leaderElection:
   leaderElect: true
   resourceName: bfa62c96.dbaas.bedag.ch
+  resourceNamespace: default
+rps: 1
+keepalive: 30
 dbms:
-  - databaseClassName: "databaseclass-sample"
+  - databaseClassName: "databaseclass-sample-sqlserver"
     endpoints:
       - name: "us-sqlserver-test"
-        dsn: "sqlserver://sa:Password&1@192.168.49.1:1433"
+        dsn: "sqlserver://sa:Password&1@192.168.49.1:1433/master"
+  - databaseClassName: "databaseclass-sample-psql"
+    endpoints:
+      - name: "us-postgres-test"
+        dsn: "postgres://postgres:Password&1@192.168.49.1:5432/postgres"
+  - databaseClassName: "databaseclass-sample-mariadb"
+    endpoints:
+      - name: "us-mariadb-test"
+        dsn: "mariadb://root:Password&1@192.168.49.1:3306/mysql"
