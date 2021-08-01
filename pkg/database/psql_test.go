@@ -18,11 +18,11 @@ var _ = Describe(FormatTestDesc(Integration, "Postgres CreateDb"), func() {
 	// Prepare assertion data
 	opResultAssertion := database.OpOutput{
 		Result: map[string]string{
-			"username": "testuser",
-			"password": "testpassword",
-			"dbName":   "my-test-db",
-			"fqdn":     "localhost",
-			"port":     "5432",
+			"username":     "testuser",
+			"password":     "testpassword",
+			"dbName":       "my-test-db",
+			"fqdn":         "localhost",
+			"port":         "5432",
 			"lastRotation": "",
 		},
 		Err: nil,

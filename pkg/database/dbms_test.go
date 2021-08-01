@@ -87,7 +87,6 @@ var _ = Describe(FormatTestDesc(Unit, "RenderOperation"), func() {
 	})
 })
 
-
 var _ = Describe(FormatTestDesc(Unit, "RenderSecretFormat"), func() {
 	var templateOpInputs map[string]string
 	var createOpOutput database.OpOutput

@@ -613,9 +613,9 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretForm
 	} else {
 		// Create was called on already existing Secret
 		return ReconcileError{
-			Reason: RsnSecretExists,
-			Message: MsgSecretExists,
-			Err: err,
+			Reason:         RsnSecretExists,
+			Message:        MsgSecretExists,
+			Err:            err,
 			AdditionalInfo: loggingKv,
 		}
 	}
@@ -666,7 +666,6 @@ func (r *DatabaseReconciler) updateSecret(owner *databasev1.Database, secretForm
 	return ReconcileError{}
 }
 
-
 // updateReadyCondition updates the Ready Condition status of obj.
 func (r *DatabaseReconciler) updateReadyCondition(obj *databasev1.Database, status metav1.ConditionStatus, reason, message string) error {
 	meta.SetStatusCondition(&obj.Status.Conditions, metav1.Condition{
@@ -687,9 +686,9 @@ func (r *DatabaseReconciler) shouldRotate(obj *databasev1.Database) (bool, Recon
 	if isSecretPresent, err := r.isSecretPresent(obj); !isSecretPresent {
 		if err.IsNotEmpty() {
 			return false, ReconcileError{
-				Reason:         RsnSecretGetFail,
-				Message:        MsgSecretGetFail,
-				Err:            err.Err,
+				Reason:  RsnSecretGetFail,
+				Message: MsgSecretGetFail,
+				Err:     err.Err,
 			}
 		}
 		return true, ReconcileError{}
@@ -783,7 +782,7 @@ func newOpValuesFromResource(obj *databasev1.Database) (database.OpValues, Recon
 	var metadata map[string]interface{}
 	temp, _ := json.Marshal(metaIn)
 	err := json.Unmarshal(temp, &metadata)
-	if err != nil  		{
+	if err != nil {
 		return database.OpValues{}, ReconcileError{
 			Reason:  RsnDbMetaParseFail,
 			Message: MsgDbMetaParseFail,
