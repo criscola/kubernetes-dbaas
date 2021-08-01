@@ -61,7 +61,7 @@ const (
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t,"Controller Suite")
+	RunSpecs(t, "Controller Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -99,7 +99,7 @@ var _ = BeforeSuite(func() {
 
 		var options manager.Options
 		var k8sManager ctrl.Manager
-		By("loading the operator config from " + cfgFilepath, func() {
+		By("loading the operator config from "+cfgFilepath, func() {
 			options = ctrl.Options{Scheme: scheme.Scheme}
 			dat, err := ioutil.ReadFile(cfgFilepath)
 			Expect(err).NotTo(HaveOccurred())
