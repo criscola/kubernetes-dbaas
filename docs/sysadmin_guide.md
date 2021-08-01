@@ -246,7 +246,6 @@ helm install \                                                                  
   --create-namespace \
   --version v1.3.1 \
   --set installCRDs=true
-  
 ```
 #### Deployment
 1. Install the operator
@@ -315,8 +314,6 @@ Errors are always logged.
 
 Sampling is enabled in production mode for every log entry with same level and message. The first 100 entries in one second
 are logged, after that only one entry is logged every 100 entries until the next second.
-
-Stacktraces are attached to error logs in both production and development mode. You can disable this behavior by passing the `--disable-stacktrace=true` flag to the Operator binary.
 
 ## Tips & tricks
 
