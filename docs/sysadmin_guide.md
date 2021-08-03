@@ -71,7 +71,6 @@ keys, `databaseClassName` and `endpoints`.
     that they can refer to it when they want to create a new Database instance. Endpoint names must be properly documented inside your organization.
   - `dsn` is the [data source name](https://en.wikipedia.org/wiki/Data_source_name) used to connect to the DBMS endpoint.
     This project uses the `xo/dburl` package to parse DSN of different database drivers, you can find out more in [its documentation](https://github.com/xo/dburl).
-
 ```yaml
 dbms:
   - databaseClassName: "databaseclass-sample-sqlserver"
@@ -87,6 +86,40 @@ dbms:
       - name: "us-mariadb-test"
         dsn: "mariadb://root:Password&1@localhost:3306/mysql"
 ```
+
+#### DSN in Secrets
+It is recommended to have the DSN of DBMS in their own Secret when deploying the Operator in production.
+Secrets can be referenced using the key `secretKeyRef` for each endpoint. `secretKeyRef.name` references the name of the
+Secret and `secretKeyRef.key` references the key containing the DSN respectively. 
+
+Secrets must be placed in the same
+namespace of the Operator Pod and must be present before booting the Operator. Updates to those Secrets do not trigger
+any automatic update to the Operator configuration; if a Secret is updated while the Operator is running, the updated
+configuration will be loaded during the next Operator boot. 
+
+Example for `secretKeyRef`:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: "us-sqlserver-test-secret"
+type: Opaque
+stringData:
+  dsn: "sqlserver://sa:Password&1@localhost:1433/master"
+```
+
+```yaml
+dbms:
+  - databaseClassName: "databaseclass-sample-sqlserver"
+    endpoints:
+      - name: "us-sqlserver-test"
+        secretKeyRef:
+          name: "us-sqlserver-test-secret"
+          key: "dsn"
+```
+
+If both `dsn` and `secretKeyRef` are specified, `secretKeyRef` will take the precedence.
 
 ### Full example
 Here's the full example:

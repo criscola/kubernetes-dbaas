@@ -22,6 +22,7 @@ import (
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
 	"github.com/go-logr/logr"
 	"io/ioutil"
+	v1 "k8s.io/api/core/v1"
 	"strings"
 	"time"
 
@@ -271,12 +272,31 @@ func loadOperator() {
 // getDbmsList returns the dbms endpoint list of the operator as specified in the operator's configuration file stored
 // in Viper.
 func getDbmsList() (database.DbmsList, error) {
-	dbms := database.DbmsList{}
-	if err := viper.UnmarshalKey(database.DbmsConfigKey, &dbms); err != nil {
+	dbmsList := database.DbmsList{}
+	if err := viper.UnmarshalKey(database.DbmsConfigKey, &dbmsList); err != nil {
 		return nil, err
 	}
+	for i := 0; i < len(dbmsList); i++ {
+		dbms := &dbmsList[i]
+		for j := 0; j < len(dbms.Endpoints); j++ {
+			endpoint := &dbms.Endpoints[j]
+			if endpoint.Dsn == "" {
+				if endpoint.SecretKeyRef.Name == "" || endpoint.SecretKeyRef.Key == "" {
+					return nil, fmt.Errorf("unable to retrieve DSN for endpoint '%s'", endpoint.Name)
+				}
+				ns := Namespace()
+				secret := v1.Secret{}
+				err := kubeClient.Get(context.Background(), client.ObjectKey{ns, endpoint.SecretKeyRef.Name}, &secret)
+				if err != nil {
+					return nil, fmt.Errorf("unable to read key '%s' from secret '%s/%s' for " +
+						"endpoint '%s': %s", endpoint.SecretKeyRef.Key, ns, endpoint.SecretKeyRef.Name, endpoint.Name, err)
+				}
+				endpoint.Dsn = database.Dsn(secret.Data[endpoint.SecretKeyRef.Key])
+			}
+		}
+	}
 
-	return dbms, nil
+	return dbmsList, nil
 }
 
 // RegisterEndpoints attempts to register the endpoints specified in the operator configuration loaded from LoadConfig.
@@ -285,7 +305,7 @@ func getDbmsList() (database.DbmsList, error) {
 func registerEndpoints() {
 	dbmsList, err := getDbmsList()
 	if err != nil {
-		fatalError(err, "unable to retrieve dbms configuration")
+		fatalError(err, "error while reading dbms configuration")
 	}
 	dbmsPool = pool.NewDbmsPool(viper.GetInt(RpsKey))
 	for _, dbms := range dbmsList {
