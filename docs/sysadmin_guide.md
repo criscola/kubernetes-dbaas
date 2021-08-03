@@ -118,7 +118,7 @@ dbms:
           name: "us-sqlserver-test-secret"
           key: "dsn"
 ```
-
+~~~~~~~~
 If both `dsn` and `secretKeyRef` are specified, `dsn` will take the precedence, and the referenced Secret will not be pulled.
 
 ### Full example

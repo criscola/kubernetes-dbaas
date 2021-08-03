@@ -26,7 +26,7 @@ testbin/*
 
 # don't push your config publicly
 config.yaml
-configtest.yaml
+config_testing.yaml
 
 # dbeaver stuff
 .dbeaver/

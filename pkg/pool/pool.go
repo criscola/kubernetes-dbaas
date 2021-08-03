@@ -3,7 +3,6 @@ package pool
 
 import (
 	"fmt"
-	"github.com/bedag/kubernetes-dbaas/internal/logging"
 	"github.com/bedag/kubernetes-dbaas/pkg/database"
 	"github.com/go-logr/logr"
 	"time"
@@ -82,7 +81,6 @@ func (pool DbmsPool) Keepalive(interval time.Duration, logger logr.Logger) {
 	go func() {
 		for {
 			for k, v := range pool.entries {
-				logger.V(logging.ZapTraceLevel).Info("checking pool endpoints liveliness")
 				if err := v.Ping(); err != nil {
 					logger.Error(err, "connection to the endpoint failed", "endpoint", k)
 				}

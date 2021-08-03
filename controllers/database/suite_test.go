@@ -48,10 +48,12 @@ import (
 var k8sClient client.Client
 var testEnv *envtest.Environment
 var dbmsPool pool.DbmsPool
-var rootPath = path.Join("..", "..")
-var cfgFilepath = path.Join(rootPath, "config.yaml")
-var testdataFilepath = path.Join(rootPath, "testdata")
 var ctrlConfig = operatorconfigv1.OperatorConfig{}
+
+var RootPath = path.Join("..", "..")
+var TestdataPath = path.Join(RootPath, "testdata")
+var CfgFilepath = path.Join(TestdataPath, "config_testing.yaml")
+var ResourcesPath = path.Join(TestdataPath, "resources")
 
 const (
 	DbcPostgresFilename  = "dbclass-postgres.yaml"
@@ -76,12 +78,12 @@ var _ = BeforeSuite(func() {
 				}
 			} else {
 				testEnv = &envtest.Environment{
-					CRDDirectoryPaths:     []string{filepath.Join(rootPath, "config", "crd", "bases")},
+					CRDDirectoryPaths:     []string{filepath.Join(RootPath, "config", "crd", "bases")},
 					ErrorIfCRDPathMissing: true,
 				}
 			}
 			if testConfigPath := os.Getenv("TEST_CONFIG_PATH"); testConfigPath != "" {
-				cfgFilepath = path.Join(rootPath, testConfigPath)
+				CfgFilepath = path.Join(RootPath, testConfigPath)
 			}
 			cfg, err = testEnv.Start()
 			Expect(err).NotTo(HaveOccurred())
@@ -99,9 +101,9 @@ var _ = BeforeSuite(func() {
 
 		var options manager.Options
 		var k8sManager ctrl.Manager
-		By("loading the operator config from "+cfgFilepath, func() {
+		By("loading the operator config from "+CfgFilepath, func() {
 			options = ctrl.Options{Scheme: scheme.Scheme}
-			dat, err := ioutil.ReadFile(cfgFilepath)
+			dat, err := ioutil.ReadFile(CfgFilepath)
 			Expect(err).NotTo(HaveOccurred())
 			err = yaml.Unmarshal(dat, &ctrlConfig)
 			Expect(err).NotTo(HaveOccurred())
@@ -181,7 +183,7 @@ func getPostgresDbc() (databaseclassv1.DatabaseClass, error) {
 }
 
 func readDbcYaml(filename string) (databaseclassv1.DatabaseClass, error) {
-	dbcFilepath := path.Join(testdataFilepath, filename)
+	dbcFilepath := path.Join(ResourcesPath, filename)
 	dbc := databaseclassv1.DatabaseClass{}
 	dat, err := ioutil.ReadFile(dbcFilepath)
 	if err != nil {

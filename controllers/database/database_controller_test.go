@@ -220,7 +220,7 @@ func performAndAssertDbDelete(db databasev1.Database, timeout, interval interfac
 
 // getDbFromTestdata unmarshalls a Database resource stored in a yaml file contained in the testdata folder.
 func getDbFromTestdata(filename string) (databasev1.Database, error) {
-	dbFilepath := path.Join(testdataFilepath, filename)
+	dbFilepath := path.Join(ResourcesPath, filename)
 	db := databasev1.Database{}
 	dat, err := ioutil.ReadFile(dbFilepath)
 	if err != nil {
