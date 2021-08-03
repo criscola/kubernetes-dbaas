@@ -119,7 +119,7 @@ dbms:
           key: "dsn"
 ```
 
-If both `dsn` and `secretKeyRef` are specified, `secretKeyRef` will take the precedence.
+If both `dsn` and `secretKeyRef` are specified, `dsn` will take the precedence, and the referenced Secret will not be pulled.
 
 ### Full example
 Here's the full example:
