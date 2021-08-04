@@ -1,1 +1,1 @@
-EXEC sp_create_rowset_EAV 'myDatabase'
+EXEC sp_create_rowset_EAV @k8sName = "myDatabase"

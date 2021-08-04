@@ -1,0 +1,1 @@
+EXEC sp_delete @k8sName = "myDatabase"
