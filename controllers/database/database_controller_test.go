@@ -44,7 +44,7 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("should handle its lifecycle correctly", func() {
-			testDatabaseLifecycleHappyPathWithRotate(postgresDatabaseRes, duration, timeout, interval)
+			testDatabaseLifecycleHappyPath(postgresDatabaseRes, duration, timeout, interval)
 		})
 		It("should handle user mistakenly deleting a Secret by calling Rotate to regenerate it", func() {
 			testSecretDeletedMistakenly(postgresDatabaseRes, duration, timeout, interval)
@@ -58,7 +58,7 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("should handle its lifecycle correctly", func() {
-			testDatabaseLifecycleHappyPathWithRotate(mariadbDatabaseRes, duration, timeout, interval)
+			testDatabaseLifecycleHappyPath(mariadbDatabaseRes, duration, timeout, interval)
 		})
 	})
 	Context("when reconciling a SQLServer Database resource", func() {
@@ -69,7 +69,7 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("should handle its lifecycle correctly", func() {
-			testDatabaseLifecycleHappyPathWithRotate(sqlserverDatabaseRes, duration, timeout, interval)
+			testDatabaseLifecycleHappyPath(sqlserverDatabaseRes, duration, timeout, interval)
 		})
 	})
 })
