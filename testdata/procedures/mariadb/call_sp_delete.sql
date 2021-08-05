@@ -1,1 +1,1 @@
-CALL sp_delete("lospollos"); 
+CALL sp_delete("manualtest"); 

@@ -1,1 +1,1 @@
-CALL sp_create_db_rowset_eav("lospollos"); 
+CALL sp_create_db_rowset_eav("manualtest"); 

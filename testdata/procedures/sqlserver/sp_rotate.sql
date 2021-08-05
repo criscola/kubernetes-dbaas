@@ -7,7 +7,6 @@ DECLARE @fqdn varchar(max)
 DECLARE @port varchar(max)
 DECLARE @username varchar(max)
 
--- this does not work...
 SELECT @username = databases.username, @fqdn = databases.fqdn, @port = databases.port 
 FROM databases 
 WHERE databases.dbName = @k8sName

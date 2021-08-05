@@ -1,1 +1,1 @@
-EXEC sp_delete @k8sName = "myDatabase"
+EXEC sp_delete @k8sName = 'database-sample-123';
