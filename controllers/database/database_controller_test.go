@@ -58,7 +58,7 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("should handle its lifecycle correctly", func() {
-			testDatabaseLifecycleHappyPath(mariadbDatabaseRes, duration, timeout, interval)
+			testDatabaseLifecycleHappyPathWithRotate(mariadbDatabaseRes, duration, timeout, interval)
 		})
 	})
 	Context("when reconciling a SQLServer Database resource", func() {
@@ -69,7 +69,7 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("should handle its lifecycle correctly", func() {
-			testDatabaseLifecycleHappyPath(sqlserverDatabaseRes, duration, timeout, interval)
+			testDatabaseLifecycleHappyPathWithRotate(sqlserverDatabaseRes, duration, timeout, interval)
 		})
 	})
 })
