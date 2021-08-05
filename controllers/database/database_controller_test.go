@@ -75,7 +75,7 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 })
 
 // testDatabaseLifecycleHappyPathWithRotate tests the happy path of a Database lifecycle with credential rotation.
-func testDatabaseLifecycleHappyPathWithRotate(db databasev1.Database, duration, timeout, interval interface{}) {
+func testDatabaseLifecycleHappyPath(db databasev1.Database, duration, timeout, interval interface{}) {
 	By("creating the API resource successfully with condition Ready set to true", func() {
 		performAndAssertDbCreate(db, duration, timeout, interval)
 	})
@@ -155,19 +155,6 @@ func testSecretDeletedMistakenly(db databasev1.Database, duration, timeout, inte
 		Eventually(func() error {
 			return checkDbReady(&db)
 		}, timeout, interval).Should(BeNil())
-	})
-	By("deleting the API resource successfully", func() {
-		performAndAssertDbDelete(db, timeout, interval)
-	})
-}
-
-// testDatabaseLifecycleHappyPath tests the happy path of a Database lifecycle without credential rotation.
-func testDatabaseLifecycleHappyPath(db databasev1.Database, duration, timeout, interval interface{}) {
-	By("creating the API resource successfully with condition Ready set to true", func() {
-		performAndAssertDbCreate(db, duration, timeout, interval)
-	})
-	By("creating the relative Secret resource successfully", func() {
-		assertSecretCreate(db, timeout, interval)
 	})
 	By("deleting the API resource successfully", func() {
 		performAndAssertDbDelete(db, timeout, interval)
