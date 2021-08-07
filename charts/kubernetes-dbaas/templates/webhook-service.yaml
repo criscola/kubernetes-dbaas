@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: kubernetes-dbaas-webhook-service
   namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "kubernetes-dbaas.labels" . | nindent 4 }}
 spec:
   ports:
     - port: 443

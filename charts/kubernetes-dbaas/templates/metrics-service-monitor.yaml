@@ -3,9 +3,10 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    control-plane: controller-manager
+    {{- include "kubernetes-dbaas.labels" . | nindent 4 }}
     release: {{ .Values.prometheusNamespace }}
   name: kubernetes-dbaas-controller-manager-metrics-monitor
+
 spec:
   endpoints:
     - path: /metrics

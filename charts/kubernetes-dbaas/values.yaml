@@ -75,6 +75,89 @@ prometheusSaName: prometheus-kube-prometheus-prometheus
 # Namespace of the Service Account allowed to scrape the metrics endpoint.
 prometheusSaNamespace: prometheus
 
+# DatabaseClasses
+dbc:
+  - name: "databaseclass-sample-sqlserver"
+    driver: "sqlserver"
+    operations:
+      create:
+        name: "sp_create_rowset_EAV"
+        inputs:
+          k8sName: "{{ .Metadata.name }}"
+      delete:
+        name: "sp_delete"
+        inputs:
+          k8sName: "{{ .Metadata.name }}"
+      rotate:
+        name: "sp_rotate"
+        inputs:
+          k8sName: "{{ .Metadata.name }}"
+    secretFormat:
+      username: "{{ .Result.username }}"
+      password: "{{ .Result.password }}"
+      port: "{{ .Result.port }}"
+      dbName: "{{ .Result.dbName }}"
+      server: "{{ .Result.fqdn }}"
+      lastRotation: "{{ .Result.lastRotation }}"
+      dsn: "sqlserver://{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}:{{ .Result.port }}/{{ .Result.dbName }}"
+  - name: "databaseclass-sample-postgres"
+    driver: "postgres"
+    operations:
+      create:
+        name: "sp_create_db_rowset_eav"
+        inputs:
+          k8sName: "{{ .Metadata.name }}"
+      delete:
+        name: "sp_delete"
+        inputs:
+          k8sName: "{{ .Metadata.name }}"
+      rotate:
+        name: "sp_rotate"
+        inputs:
+          k8sName: "{{ .Metadata.name }}"
+    secretFormat:
+      username: "{{ .Result.username }}"
+      password: "{{ .Result.password }}"
+      port: "{{ .Result.port }}"
+      dbName: "{{ .Result.dbName }}"
+      server: "{{ .Result.fqdn }}"
+      lastRotation: "{{ .Result.lastRotation }}"
+      dsn: "sqlserver://{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}:{{ .Result.port }}/{{ .Result.dbName }}"
+  - name: "databaseclass-sample-mariadb"
+    driver: "mariadb"
+    operations:
+      create:
+        name: "sp_create_db_rowset_eav"
+        inputs:
+          "0": "{{ .Metadata.name }}"
+      delete:
+        name: "sp_delete"
+        inputs:
+          "0": "{{ .Metadata.name }}"
+      rotate:
+        name: "sp_rotate"
+        inputs:
+          "0": "{{ .Metadata.name }}"
+    secretFormat:
+      username: "{{ .Result.username }}"
+      password: "{{ .Result.password }}"
+      port: "{{ .Result.port }}"
+      dbName: "{{ .Result.dbName }}"
+      server: "{{ .Result.fqdn }}"
+      lastRotation: "{{ .Result.lastRotation }}"
+      dsn: "{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}:{{ .Result.port }}/{{ .Result.dbName }}"
+
+dbmsSecrets:
+  - name: "us-sqlserver-test-credentials"
+    values:
+      dsn: "sqlserver://sa:Password&1@192.168.49.1:1433/master"
+  - name: "us-postgres-test-credentials"
+    values:
+      dsn: "postgres://postgres:Password&1@192.168.49.1:5432/postgres"
+  - name: "us-mariadb-test-credentials"
+    values:
+      dsn: "mariadb://root:Password&1@192.168.49.1:3306/mysql"
+
 # Operator configuration including the relative Manager configuration.
 # See https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/config/v1alpha1#ControllerManagerConfigurationSpec.
 operatorConfig:
@@ -97,12 +180,12 @@ operatorConfig:
     - databaseClassName: "databaseclass-sample-sqlserver"
       endpoints:
         - name: "us-sqlserver-test"
-          dsn: "sqlserver://sa:Password&1@192.168.58.1:1433"
+          dsn: "sqlserver://sa:Password&1@192.168.49.1:1433"
     - databaseClassName: "databaseclass-sample-psql"
       endpoints:
         - name: "us-postgres-test"
-          dsn: "postgres://postgres:Password&1@192.168.58.1:5432/postgres"
+          dsn: "postgres://postgres:Password&1@192.168.49.1:5432/postgres"
     - databaseClassName: "databaseclass-sample-mariadb"
       endpoints:
         - name: "us-mariadb-test"
-          dsn: "mariadb://root:Password&1@192.168.58.1:3306/mysql"
+          dsn: "mariadb://root:Password&1@192.168.49.1:3306/mysql"

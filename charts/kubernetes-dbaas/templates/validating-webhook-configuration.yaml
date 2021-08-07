@@ -5,6 +5,8 @@ metadata:
     cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/kubernetes-dbaas-serving-cert
   creationTimestamp: null
   name: kubernetes-dbaas-validating-webhook-configuration
+  labels:
+  {{- include "kubernetes-dbaas.labels" . | nindent 4 }}
 webhooks:
   - admissionReviewVersions:
       - v1

@@ -5,6 +5,8 @@ metadata:
   labels:
     control-plane: controller-manager
   name: kubernetes-dbaas-controller-manager-metrics-service
+  labels:
+  {{- include "kubernetes-dbaas.labels" . | nindent 4 }}
 spec:
   ports:
     - name: https
