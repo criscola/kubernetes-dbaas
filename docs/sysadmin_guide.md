@@ -291,7 +291,7 @@ The Helm Chart contains useful helper templates to facilitate the deployment of 
 
 ##### DatabaseClasses generator
 
-The top-level key `dbc` contains an array of entries describing DatabaseClass resources.
+The top-level key `dbc` contains an array of entries describing DatabaseClass resources. Each array entry generate one DatabaseClass resource.
 
 Example:
 
@@ -326,7 +326,7 @@ This entry will be translate into a DatabaseClass and deployed. Its structure is
 
 #### DBMS Secrets generator
 
-The top-level key `dbmsSecrets` contains an array of entries describing Secrets resources which can be referenced in endpoint configurations inside of the `dbms[*].endpoints.secretKeyRef` keys.
+The top-level key `dbmsSecrets` contains an array of entries describing Secrets resources which can be referenced in endpoint configurations inside of the `dbms[*].endpoints.secretKeyRef` keys. Each array entry generates one Secret resource.
 
 Example:
 
@@ -343,7 +343,7 @@ dbmsSecrets:
       dsn: "mariadb://root:Password&1@192.168.49.1:3306/mysql"
 ```
 
-`name` is mapped to `metadata.name` and `stringData` is rendered as YAML into `spec.stringData`.
+`name` is mapped to `metadata.name` and `stringData` is rendered as YAML into `spec.stringData` of the generated Secret.
 
 ### Vanilla deployment
 
