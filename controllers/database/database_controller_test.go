@@ -44,7 +44,7 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("should handle its lifecycle correctly", func() {
-			testDatabaseLifecycleHappyPathWithRotate(postgresDatabaseRes, duration, timeout, interval)
+			testDatabaseLifecycleHappyPath(postgresDatabaseRes, duration, timeout, interval)
 		})
 		It("should handle user mistakenly deleting a Secret by calling Rotate to regenerate it", func() {
 			testSecretDeletedMistakenly(postgresDatabaseRes, duration, timeout, interval)
@@ -75,7 +75,7 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 })
 
 // testDatabaseLifecycleHappyPathWithRotate tests the happy path of a Database lifecycle with credential rotation.
-func testDatabaseLifecycleHappyPathWithRotate(db databasev1.Database, duration, timeout, interval interface{}) {
+func testDatabaseLifecycleHappyPath(db databasev1.Database, duration, timeout, interval interface{}) {
 	By("creating the API resource successfully with condition Ready set to true", func() {
 		performAndAssertDbCreate(db, duration, timeout, interval)
 	})
@@ -161,19 +161,6 @@ func testSecretDeletedMistakenly(db databasev1.Database, duration, timeout, inte
 	})
 }
 
-// testDatabaseLifecycleHappyPath tests the happy path of a Database lifecycle without credential rotation.
-func testDatabaseLifecycleHappyPath(db databasev1.Database, duration, timeout, interval interface{}) {
-	By("creating the API resource successfully with condition Ready set to true", func() {
-		performAndAssertDbCreate(db, duration, timeout, interval)
-	})
-	By("creating the relative Secret resource successfully", func() {
-		assertSecretCreate(db, timeout, interval)
-	})
-	By("deleting the API resource successfully", func() {
-		performAndAssertDbDelete(db, timeout, interval)
-	})
-}
-
 // performAndAssertDbCreate creates a Database resource and asserts it has been created successfully with condition
 // Ready set to true.
 func performAndAssertDbCreate(db databasev1.Database, duration, timeout, interval interface{}) {
@@ -220,7 +207,7 @@ func performAndAssertDbDelete(db databasev1.Database, timeout, interval interfac
 
 // getDbFromTestdata unmarshalls a Database resource stored in a yaml file contained in the testdata folder.
 func getDbFromTestdata(filename string) (databasev1.Database, error) {
-	dbFilepath := path.Join(testdataFilepath, filename)
+	dbFilepath := path.Join(ResourcesPath, filename)
 	db := databasev1.Database{}
 	dat, err := ioutil.ReadFile(dbFilepath)
 	if err != nil {

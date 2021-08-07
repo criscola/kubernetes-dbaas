@@ -34,11 +34,12 @@ var _ = Describe(FormatTestDesc(Integration, "Sqlserver CreateDb"), func() {
 		// Prepare assertion data
 		opResultAssertion = database.OpOutput{
 			Result: map[string]string{
-				"username": "testuser",
-				"password": "testpassword",
-				"dbName":   "db-name-with-dashes",
-				"fqdn":     "localhost",
-				"port":     "1433",
+				"username":     "testuser",
+				"password":     "testpassword",
+				"dbName":       "db-name-with-dashes",
+				"fqdn":         "localhost",
+				"port":         "1433",
+				"lastRotation": "",
 			},
 			Err: nil,
 		}

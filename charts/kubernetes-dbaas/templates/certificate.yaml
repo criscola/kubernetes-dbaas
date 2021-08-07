@@ -3,6 +3,8 @@ kind: Certificate
 metadata:
   name: kubernetes-dbaas-serving-cert
   namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "kubernetes-dbaas.labels" . | nindent 4 }}
 spec:
   dnsNames:
     - kubernetes-dbaas-webhook-service.{{ .Release.Namespace }}.svc

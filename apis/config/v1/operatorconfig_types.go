@@ -35,11 +35,14 @@ type OperatorConfig struct {
 
 	// rps configures the rate limiter to allow only a certain amount of operations per second per endpoint. If set to 0,
 	// operations won't be rate-limited.
-	int `json:"rps,omitempty"`
+	Rps int `json:"rps,omitempty"`
+
+	// keepalive configures the interval between pings to endpoints. If set to 0, pings won't be performed.
+	Keepalive int `json:"keepalive,omitempty"`
 
 	// +kubebuilder:kubebuilder:validation:MinItems=1
 	// DbmsList returns the configuration for the database endpoints.
-	database.DbmsList `json:"dbms"`
+	DbmsList database.DbmsList `json:"dbms"`
 }
 
 // +kubebuilder:object:root=true

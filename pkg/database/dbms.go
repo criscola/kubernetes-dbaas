@@ -65,6 +65,12 @@ type Dbms struct {
 	Endpoints         []Endpoint `json:"endpoints"`
 }
 
+// SecretKeyRef specifies a reference to a value contained in a Secret resource identified by name and key.
+type SecretKeyRef struct {
+	Name string `json:"name"`
+	Key  string `json:"key"`
+}
+
 // +kubebuilder:object:generate=true
 // DbmsList is a slice containing Dbms structs.
 type DbmsList []Dbms
@@ -73,8 +79,9 @@ type DbmsList []Dbms
 // +kubebuilder:kubebuilder:validation:MinItems=1
 // Endpoint represent the configuration of a DBMS endpoint identified by a name.
 type Endpoint struct {
-	Name string `json:"name"`
-	Dsn  Dsn    `json:"dsn"`
+	Name         string       `json:"name"`
+	SecretKeyRef SecretKeyRef `json:"secretKeyRef,omitempty"`
+	Dsn          Dsn          `json:"dsn,omitempty"`
 }
 
 // +kubebuilder:object:generate=true
@@ -196,17 +203,6 @@ func (s SecretFormat) RenderSecretFormat(createOpOutput OpOutput) (SecretFormat,
 	renderedSecretFormat := SecretFormat(renderedInputsMap)
 
 	return renderedSecretFormat, nil
-}
-
-// From merges the receiver with toMerge. s values are overwritten by toMerge values when they have same key.
-// New k-v pairs are added to the result. Empty strings in toMerge are ignored (not overwritten nor added to the result).
-func (s SecretFormat) From(toMerge map[string]string) SecretFormat {
-	for k, v := range toMerge {
-		if v != "" {
-			s[k] = v
-		}
-	}
-	return s
 }
 
 // RenderGoTemplate takes the text to be parsed as a Go template and values to be rendered. For options see template.Option.

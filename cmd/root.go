@@ -21,6 +21,9 @@ import (
 	"github.com/bedag/kubernetes-dbaas/pkg/database"
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
 	"github.com/go-logr/logr"
+	"io/ioutil"
+	v1 "k8s.io/api/core/v1"
+	"strings"
 	"time"
 
 	//"context"
@@ -62,13 +65,15 @@ const (
 	HealthProbeBindAddressKey = "health.healthProbeBindAddress"
 	LeaderElectEnableKey      = "leaderElection.leaderElect"
 	LeaderElectResName        = "leaderElection.resourceName"
+	LeaderElectResNamespace   = "leaderElection.resourceNamespace"
 	WebhookPortKey            = "webhook.port"
 )
 
 var (
-	dbmsPool pool.DbmsPool
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	dbmsPool   pool.DbmsPool
+	kubeClient client.Client
+	scheme     = runtime.NewScheme()
+	setupLog   = ctrl.Log.WithName("setup")
 )
 
 // rootCmd represents the base command when called without any subcommands.
@@ -79,6 +84,13 @@ var rootCmd = &cobra.Command{
 				Users are able to create new database instances by writing an API Object configuration using Custom Resources.
 				The Operator watches for new API Objects and tells the target DBMS to trigger a certain stored procedure based on the content of the configuration.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		var err error
+		kubeClient, err = client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
+		if err != nil {
+			setupLog.Error(err, "unable to create client instance")
+			os.Exit(1)
+		}
+		fmt.Println("namespace " + Namespace())
 		setupLog.Info("registering endpoints...")
 		registerEndpoints()
 		setupLog.Info("endpoints registered")
@@ -120,7 +132,8 @@ func initFlags() {
 	rootCmd.PersistentFlags().Bool(StacktraceEnableKey, false, "Enable stacktrace printing in logger errors")
 	rootCmd.PersistentFlags().Int(RpsKey, 0, "The number of operation executed per second per endpoint. If set to 0, operations won't be rate-limited.")
 	rootCmd.PersistentFlags().Int(KeepaliveKey, 30, "The interval in seconds between connection checks for the endpoints")
-
+	currentNs := Namespace()
+	rootCmd.PersistentFlags().String(LeaderElectResNamespace, currentNs, "The namespace in which to create the leader election lock resource")
 	// Bind all flags to Viper
 	rootCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
 		_ = viper.BindPFlag(flag.Name, flag)
@@ -131,7 +144,7 @@ func initFlags() {
 func initConfigFile() {
 	if cfgFile := viper.GetString(LoadConfigKey); cfgFile != "" {
 		// Use config file set from the flag.
-		viper.SetConfigFile(viper.GetString("load-config"))
+		viper.SetConfigFile(viper.GetString(LoadConfigKey))
 	} else {
 		viper.SetConfigType("yaml")
 		viper.AddConfigPath("/etc/kubernetes-dbaas")
@@ -187,21 +200,23 @@ func loadOperator() {
 	var err error
 	ctrlConfig := operatorconfigv1.OperatorConfig{}
 	options := ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     viper.GetString(MetricsBindAddressKey),
-		Port:                   viper.GetInt(WebhookPortKey),
-		HealthProbeBindAddress: viper.GetString(HealthProbeBindAddressKey),
-		LeaderElection:         viper.GetBool(LeaderElectEnableKey),
-		LeaderElectionID:       viper.GetString(LeaderElectResName),
+		Scheme:                  scheme,
+		MetricsBindAddress:      viper.GetString(MetricsBindAddressKey),
+		Port:                    viper.GetInt(WebhookPortKey),
+		HealthProbeBindAddress:  viper.GetString(HealthProbeBindAddressKey),
+		LeaderElection:          viper.GetBool(LeaderElectEnableKey),
+		LeaderElectionID:        viper.GetString(LeaderElectResName),
+		LeaderElectionNamespace: viper.GetString(LeaderElectResNamespace),
 	}
 
 	// Build and pass the configuration file to the controller.
-	if cfgFile := viper.GetString(LoadConfigKey); cfgFile != "" {
+	if cfgFile := viper.ConfigFileUsed(); cfgFile != "" {
 		options, err = options.AndFrom(ctrl.ConfigFile().AtPath(cfgFile).OfKind(&ctrlConfig))
-
 		if err != nil {
 			fatalError(err, "unable to load the config file into the controller")
 		}
+	} else {
+		fatalError(fmt.Errorf("unable to find configuration file"), "a configuration file must be supplied")
 	}
 
 	// TODO: Check status of https://github.com/kubernetes-sigs/controller-runtime/issues/1463
@@ -257,31 +272,45 @@ func loadOperator() {
 // getDbmsList returns the dbms endpoint list of the operator as specified in the operator's configuration file stored
 // in Viper.
 func getDbmsList() (database.DbmsList, error) {
-	dbms := database.DbmsList{}
-	if err := viper.UnmarshalKey(database.DbmsConfigKey, &dbms); err != nil {
+	dbmsList := database.DbmsList{}
+	if err := viper.UnmarshalKey(database.DbmsConfigKey, &dbmsList); err != nil {
 		return nil, err
 	}
+	for i := 0; i < len(dbmsList); i++ {
+		dbms := &dbmsList[i]
+		for j := 0; j < len(dbms.Endpoints); j++ {
+			endpoint := &dbms.Endpoints[j]
+			if endpoint.Dsn == "" {
+				if endpoint.SecretKeyRef.Name == "" || endpoint.SecretKeyRef.Key == "" {
+					return nil, fmt.Errorf("unable to retrieve DSN for endpoint '%s'", endpoint.Name)
+				}
+				ns := Namespace()
+				secret := v1.Secret{}
+				err := kubeClient.Get(context.Background(), client.ObjectKey{Namespace: ns, Name: endpoint.SecretKeyRef.Name}, &secret)
+				if err != nil {
+					return nil, fmt.Errorf("unable to read key '%s' from secret '%s/%s' for "+
+						"endpoint '%s': %s", endpoint.SecretKeyRef.Key, ns, endpoint.SecretKeyRef.Name, endpoint.Name, err)
+				}
+				endpoint.Dsn = database.Dsn(secret.Data[endpoint.SecretKeyRef.Key])
+			}
+		}
+	}
 
-	return dbms, nil
+	return dbmsList, nil
 }
 
 // RegisterEndpoints attempts to register the endpoints specified in the operator configuration loaded from LoadConfig.
 //
 // See pool.Register for details.
 func registerEndpoints() {
-	c, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
-	if err != nil {
-		setupLog.Error(err, "unable to create client instance")
-		os.Exit(1)
-	}
 	dbmsList, err := getDbmsList()
 	if err != nil {
-		fatalError(err, "unable to retrieve dbms configuration")
+		fatalError(err, "error while reading dbms configuration")
 	}
 	dbmsPool = pool.NewDbmsPool(viper.GetInt(RpsKey))
 	for _, dbms := range dbmsList {
 		dbClass := databaseclassv1.DatabaseClass{}
-		err = c.Get(context.Background(), client.ObjectKey{Namespace: "", Name: dbms.DatabaseClassName}, &dbClass)
+		err = kubeClient.Get(context.Background(), client.ObjectKey{Namespace: "", Name: dbms.DatabaseClassName}, &dbClass)
 		if err != nil {
 			fatalError(err, "problem getting databaseclass from api server", "databaseClassName",
 				dbms.DatabaseClassName)
@@ -299,4 +328,25 @@ func registerEndpoints() {
 func fatalError(err error, msg string, values ...interface{}) {
 	setupLog.Error(err, msg, values...)
 	os.Exit(1)
+}
+
+// Namespace attempts to get the namespace in which the Operator Pod is being deployed. It looks for an environment
+// variable POD_NAMESPACE which can be set through the Downward API in the Pod spec, if not set Namespace tries to
+// retrieve the namespace of the currently mounted ServiceAccount, if not set Namespace returns "default".
+func Namespace() string {
+	// Taken from https://github.com/kubernetes/kubernetes/blob/8bf42039e62d001f5d0331753bd99790b70d51eb/staging/src/k8s.io/client-go/tools/clientcmd/client_config.go#L579
+	// This way assumes you've set the POD_NAMESPACE environment variable using the downward API.
+	// This check has to be done first for backwards compatibility with the way InClusterConfig was originally set up
+	if ns, ok := os.LookupEnv("POD_NAMESPACE"); ok {
+		return ns
+	}
+
+	// Fall back to the namespace associated with the service account token, if available
+	if data, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace"); err == nil {
+		if ns := strings.TrimSpace(string(data)); len(ns) > 0 {
+			return ns
+		}
+	}
+
+	return "default"
 }

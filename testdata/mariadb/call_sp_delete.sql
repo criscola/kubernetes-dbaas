@@ -1,1 +1,0 @@
-CALL sp_delete("lospollos"); 

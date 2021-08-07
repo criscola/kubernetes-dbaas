@@ -80,12 +80,24 @@ func (c *MysqlConn) Rotate(operation Operation) OpOutput {
 			Err:    err,
 		}
 	}
-	_, err = c.c.Exec(sp)
+
+	rows, err := c.c.Query(sp)
 	if err != nil {
-		return OpOutput{nil, err}
+		return OpOutput{Result: nil, Err: err}
 	}
 
-	return OpOutput{}
+	var key string
+	var value string
+	result := make(map[string]string)
+	for rows.Next() {
+		err = rows.Scan(&key, &value)
+		if err != nil {
+			return OpOutput{nil, err}
+		}
+		result[key] = value
+	}
+
+	return OpOutput{result, nil}
 }
 
 // Ping returns an error if a connection cannot be established with the DBMS, else it returns nil.

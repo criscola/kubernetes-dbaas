@@ -31,12 +31,11 @@ const (
 	RsnReadyCondUpdateFail  = "ReadyConditionUpdateFailed"
 	RsnSecretCreateFail     = "SecretCreateFailed"
 	RsnSecretCreateSucc     = "SecretCreateSuccess"
-	RsnSecretExists			= "RsnSecretExists"
+	RsnSecretExists         = "RsnSecretExists"
 	RsnSecretGetFail        = "SecretGetFailed"
 	RsnSecretRenderFail     = "SecretRenderFailed"
 	RsnSecretUpdateFail     = "SecretUpdateFailed"
 	RsnSecretUpdateSucc     = "SecretUpdateSuccess"
-
 
 	// Human-readable messages
 	MsgDbCreateFail         = "could not create database instance on dbms endpoint"
@@ -63,7 +62,7 @@ const (
 	MsgReadyCondUpdateFail  = "could not update ready condition of resource"
 	MsgSecretCreateFail     = "could not create secret resource for database resource"
 	MsgSecretCreateSucc     = "secret created successfully"
-	MsgSecretExists			= "secret exists already, please manually remove it from the cluster"
+	MsgSecretExists         = "secret exists already, please manually remove it from the cluster"
 	MsgSecretGetFail        = "secret get failed"
 	MsgSecretRenderFail     = "could not render secret data"
 	MsgSecretUpdateFail     = "secret update failed"

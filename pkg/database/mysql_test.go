@@ -33,11 +33,12 @@ var _ = Describe(FormatTestDesc(Integration, "Mariadb CreateDb"), func() {
 		// Prepare assertion data
 		opResultAssertion = database.OpOutput{
 			Result: map[string]string{
-				"username": "testuser",
-				"password": "testpassword",
-				"dbName":   "my-database-test",
-				"fqdn":     "localhost",
-				"port":     "3306",
+				"username":     "testuser",
+				"password":     "testpassword",
+				"dbName":       "my-database-test",
+				"fqdn":         "localhost",
+				"port":         "3306",
+				"lastRotation": "",
 			},
 			Err: nil,
 		}

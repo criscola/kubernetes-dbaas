@@ -71,7 +71,6 @@ keys, `databaseClassName` and `endpoints`.
     that they can refer to it when they want to create a new Database instance. Endpoint names must be properly documented inside your organization.
   - `dsn` is the [data source name](https://en.wikipedia.org/wiki/Data_source_name) used to connect to the DBMS endpoint.
     This project uses the `xo/dburl` package to parse DSN of different database drivers, you can find out more in [its documentation](https://github.com/xo/dburl).
-
 ```yaml
 dbms:
   - databaseClassName: "databaseclass-sample-sqlserver"
@@ -87,6 +86,40 @@ dbms:
       - name: "us-mariadb-test"
         dsn: "mariadb://root:Password&1@localhost:3306/mysql"
 ```
+
+#### DSN in Secrets
+It is recommended to have the DSN of DBMS in their own Secret when deploying the Operator in production.
+Secrets can be referenced using the key `secretKeyRef` for each endpoint. `secretKeyRef.name` references the name of the
+Secret and `secretKeyRef.key` references the key containing the DSN respectively. 
+
+Secrets must be placed in the same
+namespace of the Operator Pod and must be present before booting the Operator. Updates to those Secrets do not trigger
+any automatic update to the Operator configuration; if a Secret is updated while the Operator is running, the updated
+configuration will be loaded during the next Operator boot. 
+
+Example for `secretKeyRef`:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: "us-sqlserver-test-secret"
+type: Opaque
+stringData:
+  dsn: "sqlserver://sa:Password&1@localhost:1433/master"
+```
+
+```yaml
+dbms:
+  - databaseClassName: "databaseclass-sample-sqlserver"
+    endpoints:
+      - name: "us-sqlserver-test"
+        secretKeyRef:
+          name: "us-sqlserver-test-secret"
+          key: "dsn"
+```
+
+If both `dsn` and `secretKeyRef` are specified, `dsn` will take the precedence, and the referenced Secret will not be pulled.
 
 ### Full example
 Here's the full example:
@@ -158,9 +191,7 @@ spec:
 ```
 
 ### Templating
-DatabaseClasses support [Go templates](https://golang.org/pkg/text/template/) for operation inputs. Users can supply an 
-arbitrary number of key-value pairs which will be mapped to the relative key as specified in the DatabaseClass responsible for their 
-Database instance. See [End-user guide](enduser_guide.md).
+DatabaseClasses support [Go templates](https://golang.org/pkg/text/template/) for operation inputs. Users can supply an arbitrary number of key-value pairs which will be mapped to the relative key as specified in the DatabaseClass responsible for their  Database instance. See [End-user guide](enduser_guide.md).
 
 The first key starts with a dot and has the first letter capitalized. There are two sources of values:
 
@@ -210,21 +241,22 @@ The Operator will attempt to rotate the credentials immediately. The Operator wi
 operation has completed successfully.
 
 ## CLI arguments
-|                                            | Description                                                  |
-| ------------------------------------------ | ------------------------------------------------------------ |
-| `-h`, `--help`                             | Help for kubedbaas                                           |
-| `--debug <bool>`                           | Enables debug mode for development purposes. If set, logging output will be pretty-printed for the command line and `--log-level` will default to `1` |
-| `--disable-webhooks <bool>`                | Disables webhooks servers (default `false`)                  |
-| `--health.healthProbeBindAddress <string>` | The address the probe endpoint binds to (default `:8081`)    |
-| `--leaderElection.leaderElect <bool>`      | Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager (default `true`) |
-| `--leaderElection.resourceName <string>`   | The resource name to lock during election cycles (default `bfa62c96.dbaas.bedag.ch`) |
-| `--load-config <string>`                   | Location of the Operator's config file                       |
-| `--metrics.bindAddress <string>`           | The address the metric endpoint binds to (default `127.0.0.1:8080`) |
-| `--webhook.port <int>`                     | The port the webhook server binds to (default `9443`)        |
-| `--log-level <int>`                        | The verbosity of the logging output. Can be one out of: `0` info, `1` debug, `2` trace. If debug mode is on, defaults to `1` (default 0) |
-| `--enable-stacktrace <bool>`               | Enable stacktrace printing in logger errors, If debug mode is on, defaults to `true` (default `false`) |
-| `--rps <int>`                              | The maximum number of operations executed per second per endpoint. If set to `0`, operations won't be rate-limited (default `0`) |
-| `--keepalive <int>`                        | The interval in seconds between connection checks for the endpoints (default `30`) |
+|                                                 | Description                                                  |
+| ----------------------------------------------- | ------------------------------------------------------------ |
+| `-h`, `--help`                                  | Help for kubedbaas                                           |
+| `--debug <bool>`                                | Enables debug mode for development purposes. If set, logging output will be pretty-printed for the command line and `--log-level` will default to `1` |
+| `--disable-webhooks <bool>`                     | Disables webhooks servers (default `false`)                  |
+| `--health.healthProbeBindAddress <string>`      | The address the probe endpoint binds to (default `:8081`)    |
+| `--leaderElection.leaderElect <bool>`           | Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager (default `true`) |
+| `--leaderElection.resourceName <string>`        | The resource name to lock during election cycles (default `bfa62c96.dbaas.bedag.ch`) |
+| `--leaderElection.resourceNamespace <string>`   | The namespace in which to create the leader election lock resource (defaults to the namespace of the Operator Pod) |
+| `--load-config <string>`                        | Location of the Operator's config file                       |
+| `--metrics.bindAddress <string>`                | The address the metric endpoint binds to (default `127.0.0.1:8080`) |
+| `--webhook.port <int>`                          | The port the webhook server binds to (default `9443`)        |
+| `--log-level <int>`                             | The verbosity of the logging output. Can be one out of: `0` info, `1` debug, `2` trace. If debug mode is on, defaults to `1` (default 0) |
+| `--enable-stacktrace <bool>`                    | Enable stacktrace printing in logger errors, If debug mode is on, defaults to `true` (default `false`) |
+| `--rps <int>`                                   | The maximum number of operations executed per second per endpoint. If set to `0`, operations won't be rate-limited (default `0`) |
+| `--keepalive <int>`                             | The interval in seconds between connection checks for the endpoints (default `30`) |
 
 The order of precedence is `flags > config file > defaults`. Environment variables are not read.
 
@@ -234,19 +266,18 @@ The Operator provides an official Helm chart.
 #### Requirements
 When metrics are enabled, the `/metrics` endpoint is protected by authentication and scraped by Prometheus through a Service Monitor resource.
 
-- Install [kube-prometheus-stack](https://artifacthub.io/packages/helm/prometheus-community/kube-prometheus-stack) v16.0.1
+- Install [kube-prometheus-stack](https://artifacthub.io/packages/helm/prometheus-community/kube-prometheus-stack) v17.1.3
 ```
 helm install prometheus-operator prometheus-community/kube-prometheus-stack --create-namespace --namespace=prometheus
 ```
-- Install [cert-manager](https://artifacthub.io/packages/helm/cert-manager/cert-manager) v1.3.0
+- Install [cert-manager](https://artifacthub.io/packages/helm/cert-manager/cert-manager) v1.4.0
 ```
-helm install \                                                                                                                                                                                                                                                                                                                                                                                                                       ±[A1●●][develop]
+helm install \                                                                                                                
   cert-manager jetstack/cert-manager \
   --namespace cert-manager \
   --create-namespace \
-  --version v1.3.1 \
+  --version v1.4.0 \
   --set installCRDs=true
-  
 ```
 #### Deployment
 1. Install the operator
@@ -254,7 +285,68 @@ helm install \                                                                  
 helm install kubernetes-dbaas charts/kubernetes-dbaas --create-namespace --namespace=kubernetes-dbaas-system
 ```
 
+#### Helper templates
+
+The Helm Chart contains useful helper templates to facilitate the deployment of the Operator. 
+
+##### DatabaseClasses generator
+
+The top-level key `dbc` contains an array of entries describing DatabaseClass resources. Each array entry generate one DatabaseClass resource.
+
+Example:
+
+```yaml
+dbc:
+  - name: "databaseclass-sample-postgres"
+    driver: "postgres"
+    operations:
+      create:
+        name: "sp_create_db_rowset_eav"
+        inputs:
+          k8sName: "{{ .Metadata.name }}"
+      delete:
+        name: "sp_delete"
+        inputs:
+          k8sName: "{{ .Metadata.name }}"
+      rotate:
+        name: "sp_rotate"
+        inputs:
+          k8sName: "{{ .Metadata.name }}"
+    secretFormat:
+      username: "{{ .Result.username }}"
+      password: "{{ .Result.password }}"
+      port: "{{ .Result.port }}"
+      dbName: "{{ .Result.dbName }}"
+      server: "{{ .Result.fqdn }}"
+      lastRotation: "{{ .Result.lastRotation }}"
+      dsn: "sqlserver://{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}:{{ .Result.port }}/{{ .Result.dbName }}"
+```
+
+This entry will be translate into a DatabaseClass and deployed. Its structure is analogous to a standard DatabaseClass spec, only it does not contain Kubernetes-specific fields, such as `spec` and `metadata`. Moreover, it contains an additional key `dbc[*].name` which is rendered as the `metadata.name` of the resource.
+
+#### DBMS Secrets generator
+
+The top-level key `dbmsSecrets` contains an array of entries describing Secrets resources which can be referenced in endpoint configurations inside of the `dbms[*].endpoints.secretKeyRef` keys. Each array entry generates one Secret resource.
+
+Example:
+
+```
+dbmsSecrets:
+  - name: "us-sqlserver-test-credentials"
+    stringData:
+      dsn: "sqlserver://sa:Password&1@192.168.49.1:1433/master"
+  - name: "us-postgres-test-credentials"
+    stringData:
+      dsn: "postgres://postgres:Password&1@192.168.49.1:5432/postgres"
+  - name: "us-mariadb-test-credentials"
+    stringData:
+      dsn: "mariadb://root:Password&1@192.168.49.1:3306/mysql"
+```
+
+`name` is mapped to `metadata.name` and `stringData` is rendered as YAML into `spec.stringData` of the generated Secret.
+
 ### Vanilla deployment
+
 You may deploy the Operator in a cluster without Helm.
 
 Make sure to have cert-manager and Prometheus deployed in your target cluster if you want to have the `/metrics` endpoint enabled.
@@ -269,7 +361,7 @@ To try out the Operator on your local development machine, follow these steps:
 #### Requirements
 - Install Go 1.16+ https://golang.org/doc/install
 - Install kubectl v1.21+ https://kubernetes.io/docs/tasks/tools/install-kubectl/
-- Install minikube v1.20+ https://minikube.sigs.k8s.io/docs/start/
+- eus-community/kube-prometheus-stackInstall minikube v1.20+ https://minikube.sigs.k8s.io/docs/start/
 - Install the operator-sdk v1.6+ and its prerequisites: https://sdk.operatorframework.io/docs/installation/
 - Have the Operator configured with your endpoint list and DatabaseClasses.
 
@@ -315,8 +407,6 @@ Errors are always logged.
 
 Sampling is enabled in production mode for every log entry with same level and message. The first 100 entries in one second
 are logged, after that only one entry is logged every 100 entries until the next second.
-
-Stacktraces are attached to error logs in both production and development mode. You can disable this behavior by passing the `--disable-stacktrace=true` flag to the Operator binary.
 
 ## Tips & tricks
 

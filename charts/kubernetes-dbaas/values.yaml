@@ -3,9 +3,9 @@ replicaCount: 1
 image:
   # Repository of the operator manager image.
   repository: criscola/kubernetes-dbaas
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
+  tag: ""
 
 imagePullSecrets: []
 nameOverride: ""
@@ -27,7 +27,7 @@ securityContext: {}
 # Allocating less resources might create problems
 resources:
   limits:
-    cpu: 100m
+    cpu: 200m
     memory: 128Mi
   requests:
     cpu: 100m
@@ -75,6 +75,12 @@ prometheusSaName: prometheus-kube-prometheus-prometheus
 # Namespace of the Service Account allowed to scrape the metrics endpoint.
 prometheusSaNamespace: prometheus
 
+# DatabaseClass (dbc) generator (optional).
+dbc:
+
+# Endpoint Secrets generator (optional).
+dbmsSecrets:
+
 # Operator configuration including the relative Manager configuration.
 # See https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/config/v1alpha1#ControllerManagerConfigurationSpec.
 operatorConfig:
@@ -94,15 +100,3 @@ operatorConfig:
   # specifying the "name" of endpoint to be made available to end-users as well as its connection string (DSN).
   # To learn more about the supported DSN formats, see: https://github.com/xo/dburl.
   dbms:
-    - databaseClassName: "databaseclass-sample-sqlserver"
-      endpoints:
-        - name: "us-sqlserver-test"
-          dsn: "sqlserver://sa:Password&1@192.168.58.1:1433"
-    - databaseClassName: "databaseclass-sample-psql"
-      endpoints:
-        - name: "us-postgres-test"
-          dsn: "postgres://postgres:Password&1@192.168.58.1:5432/postgres"
-    - databaseClassName: "databaseclass-sample-mariadb"
-      endpoints:
-        - name: "us-mariadb-test"
-          dsn: "mariadb://root:Password&1@192.168.58.1:3306/mysql"

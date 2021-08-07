@@ -1,26 +1,27 @@
 apiVersion: databaseclass.dbaas.bedag.ch/v1
 kind: DatabaseClass
 metadata:
-  name: databaseclass-sample-sqlserver
+  name: databaseclass-sample-mariadb
 spec:
-  driver: "sqlserver"
+  driver: "mariadb"
   operations:
     create:
-      name: "sp_create_rowset_EAV"
+      name: "sp_create_db_rowset_eav"
       inputs:
-        k8sName: "{{ .Metadata.name }}"
+        "0": "{{ .Metadata.name }}"
     delete:
       name: "sp_delete"
       inputs:
-        k8sName: "{{ .Metadata.name }}"
+        "0": "{{ .Metadata.name }}"
     rotate:
       name: "sp_rotate"
       inputs:
-        k8sName: "{{ .Metadata.name }}"
+        "0": "{{ .Metadata.name }}"
   secretFormat:
     username: "{{ .Result.username }}"
     password: "{{ .Result.password }}"
     port: "{{ .Result.port }}"
     dbName: "{{ .Result.dbName }}"
     server: "{{ .Result.fqdn }}"
-    dsn: "sqlserver://{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}:{{ .Result.port }}/{{ .Result.dbName }}"
+    lastRotation: "{{ .Result.lastRotation }}"
+    dsn: "{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}:{{ .Result.port }}/{{ .Result.dbName }}"

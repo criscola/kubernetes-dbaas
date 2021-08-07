@@ -8,3 +8,5 @@ kind: ConfigMap
 metadata:
   name: kubernetes-dbaas-manager-config
   namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "kubernetes-dbaas.labels" . | nindent 4 }}

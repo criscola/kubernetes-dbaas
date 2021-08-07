@@ -1,14 +1,14 @@
 health:
-  healthProbeBindAddress: :8081
+  healthProbeBindAddress: ""
 metrics:
-  bindAddress: 127.0.0.1:8080
+  bindAddress: "0"
 webhook:
-  port: 9443
+  port:
 leaderElection:
-  leaderElect: true
+  leaderElect: false
   resourceName: bfa62c96.dbaas.bedag.ch
-rps: 1
-keepalive: 30
+rps: 0
+keepalive: 0
 dbms:
   - databaseClassName: "databaseclass-sample-sqlserver"
     endpoints:
