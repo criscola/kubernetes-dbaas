@@ -31,3 +31,6 @@ config_testing.yaml
 # dbeaver stuff
 .dbeaver/
 .project
+
+# values used for local deployment
+myvalues.yaml
