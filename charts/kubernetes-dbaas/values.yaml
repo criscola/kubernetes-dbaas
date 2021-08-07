@@ -149,13 +149,13 @@ dbc:
 
 dbmsSecrets:
   - name: "us-sqlserver-test-credentials"
-    values:
+    stringData:
       dsn: "sqlserver://sa:Password&1@192.168.49.1:1433/master"
   - name: "us-postgres-test-credentials"
-    values:
+    stringData:
       dsn: "postgres://postgres:Password&1@192.168.49.1:5432/postgres"
   - name: "us-mariadb-test-credentials"
-    values:
+    stringData:
       dsn: "mariadb://root:Password&1@192.168.49.1:3306/mysql"
 
 # Operator configuration including the relative Manager configuration.
@@ -180,12 +180,18 @@ operatorConfig:
     - databaseClassName: "databaseclass-sample-sqlserver"
       endpoints:
         - name: "us-sqlserver-test"
-          dsn: "sqlserver://sa:Password&1@192.168.49.1:1433"
+          secretKeyRef:
+            name: "us-sqlserver-test-credentials"
+            key: "dsn"
     - databaseClassName: "databaseclass-sample-psql"
       endpoints:
         - name: "us-postgres-test"
-          dsn: "postgres://postgres:Password&1@192.168.49.1:5432/postgres"
+          secretKeyRef:
+            name: "us-postgres-test-secret"
+            key: "dsn"
     - databaseClassName: "databaseclass-sample-mariadb"
       endpoints:
         - name: "us-mariadb-test"
-          dsn: "mariadb://root:Password&1@192.168.49.1:3306/mysql"
+          secretKeyRef:
+            name: "us-mariadb-test-credentials"
+            key: "dsn"

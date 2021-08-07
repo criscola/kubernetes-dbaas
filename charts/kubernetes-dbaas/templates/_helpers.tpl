@@ -71,3 +71,20 @@ spec:
 {{- end }}
 {{- end }}
 
+{{/*
+DBMS endpoint Secrets generator
+*/}}
+{{- define "kubernetes-dbaas.dbmsSecretsGenerator" -}}
+{{- range .Values.dbmsSecrets }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "kubernetes-dbaas.labels" $ | nindent 4 }}
+type: Opaque
+stringData:
+  {{- toYaml .stringData | nindent 2 }}
+---
+{{- end }}
+{{- end }}
