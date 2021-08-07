@@ -27,7 +27,7 @@ securityContext: {}
 # Allocating less resources might create problems
 resources:
   limits:
-    cpu: 100m
+    cpu: 200m
     memory: 128Mi
   requests:
     cpu: 100m
