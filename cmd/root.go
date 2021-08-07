@@ -286,9 +286,9 @@ func getDbmsList() (database.DbmsList, error) {
 				}
 				ns := Namespace()
 				secret := v1.Secret{}
-				err := kubeClient.Get(context.Background(), client.ObjectKey{ns, endpoint.SecretKeyRef.Name}, &secret)
+				err := kubeClient.Get(context.Background(), client.ObjectKey{Namespace: ns, Name: endpoint.SecretKeyRef.Name}, &secret)
 				if err != nil {
-					return nil, fmt.Errorf("unable to read key '%s' from secret '%s/%s' for " +
+					return nil, fmt.Errorf("unable to read key '%s' from secret '%s/%s' for "+
 						"endpoint '%s': %s", endpoint.SecretKeyRef.Key, ns, endpoint.SecretKeyRef.Name, endpoint.Name, err)
 				}
 				endpoint.Dsn = database.Dsn(secret.Data[endpoint.SecretKeyRef.Key])
