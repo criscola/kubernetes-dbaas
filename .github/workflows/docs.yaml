@@ -6,7 +6,7 @@ on:
     paths: [ 'website/**' ]
   push:
     branches: [main]
-    paths: [ 'website/**', '/.github/workflows/docs.yaml' ]
+    paths: [ 'website/**', '.github/workflows/docs.yaml' ]
 
 jobs:
   checks:
