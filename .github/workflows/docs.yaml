@@ -65,4 +65,5 @@ jobs:
           echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-8`" >> $GITHUB_ENV
           git add .
           git commit -m "Deploy website - based on ${SHORT_SHA}"
-          git push
+          git push --set-upstream origin gh-pages
+
