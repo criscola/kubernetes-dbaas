@@ -1,3 +1,0 @@
-{{ if .Values.dbc }}
-{{ template "kubernetes-dbaas.dbcGenerator" . }}
-{{ end }}

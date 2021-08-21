@@ -1,9 +1,0 @@
-apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  name: kubernetes-dbaas-selfsigned-issuer
-  namespace: {{ .Release.Namespace }}
-  labels:
-  {{- include "kubernetes-dbaas.labels" . | nindent 4 }}
-spec:
-  selfSigned: {}

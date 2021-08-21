@@ -1,9 +1,0 @@
-CREATE TABLE _databases (
-    id MEDIUMINT NOT NULL AUTO_INCREMENT,
-   	username	VARCHAR(40),
-	password	TEXT NOT NULL,
-	dbName		VARCHAR(63) UNIQUE NOT NULL,
-	port		VARCHAR(5) NOT NULL,
-	fqdn      	VARCHAR(64) NOT NULL,
-    PRIMARY KEY (id)
- );

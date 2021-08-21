@@ -1,1 +1,0 @@
-CALL sp_rotate("manualtest"); 

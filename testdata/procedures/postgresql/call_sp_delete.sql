@@ -1,1 +1,0 @@
-select sp_delete(k8sName := 'my-test-db');

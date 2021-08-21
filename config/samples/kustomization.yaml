@@ -1,6 +1,0 @@
-## Append samples you want in your CSV to this file as resources ##
-resources:
-- database_v1_database.yaml
-- databaseclass_v1_databaseclass.yaml
-- config_v1_operatorconfig.yaml
-#+kubebuilder:scaffold:manifestskustomizesamples

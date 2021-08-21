@@ -1,7 +1,0 @@
-apiVersion: config.dbaas.bedag.ch/v1
-kind: OperatorConfig
-metadata:
-  name: operatorconfig-sample
-spec:
-  # Add fields here
-  foo: bar

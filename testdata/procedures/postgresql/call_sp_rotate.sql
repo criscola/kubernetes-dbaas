@@ -1,1 +1,0 @@
-select sp_rotate(k8sName := 'manualtest');

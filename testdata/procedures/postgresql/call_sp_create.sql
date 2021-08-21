@@ -1,1 +1,0 @@
-select sp_create_db_rowset_eav(k8sName := 'manualtest')

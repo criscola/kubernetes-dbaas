@@ -1,1 +1,0 @@
-EXEC sp_rotate @k8sName = "myDatabase"
