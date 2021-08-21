@@ -1,0 +1,73 @@
+name: Website build & deploy
+
+on:
+  pull_request:
+    branches: [main]
+    paths: [ 'website/**', '.github/workflows/docs.yaml' ]
+  push:
+    branches: [main]
+    paths: [ 'website/**', '.github/workflows/docs.yaml' ]
+
+jobs:
+  checks:
+    name: Pull request checks
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+      - name: Test Build
+        run: |
+          if [ -e yarn.lock ]; then
+            yarn install --frozen-lockfile
+          elif [ -e package-lock.json ]; then
+            npm ci
+          else
+            npm i
+          fi
+          npm run build
+  gh-release:
+    name: GitHub pages release
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+      - uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.BOT_SSH_PRIVATE_KEY }}
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v3
+        with:
+          gpg-private-key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.BOT_GPG_PRIVATE_KEY_PASSPHRASE }}
+          git-user-signingkey: true
+          git-commit-gpgsign: true
+      - name: Retrieve short commit SHA
+        run: echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-8`" >> $GITHUB_ENV
+      - name: Release to GitHub Pages
+        env:
+          USE_SSH: true
+          GIT_USER: kubernetesdbaasbot
+        run: |
+          git config --global user.email "kubernetesdbaasbot@gmail.com"
+          git config --global user.name "kubernetesdbaasbot"
+          mkdir ../temp
+          cd website/
+          yarn install --frozen-lockfile
+          yarn build --out-dir ../../temp
+          cd ..
+          git fetch
+          git switch gh-pages
+          rm -rf *
+          mv ../temp/* .
+          if [[ $(git diff) ]]; then # avoid error exit code if repo is up-to-date
+            git add .
+            git commit -m "Deploy website - based on ${SHORT_SHA}"
+            git push
+          fi
