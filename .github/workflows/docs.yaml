@@ -1,4 +1,4 @@
-name: documentation
+name: Website build & deploy
 
 on:
   pull_request:
@@ -58,7 +58,7 @@ jobs:
           yarn install --frozen-lockfile
           yarn build --out-dir ../../temp
           git fetch
-          git switch gh-pages
+          git switch -c gh-pages
           rm -rf *
           echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-8`" >> $GITHUB_ENV
           git add .
