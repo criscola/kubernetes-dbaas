@@ -1,0 +1,26 @@
+{
+  "unversionedId": "contributing/branching-standard",
+  "id": "contributing/branching-standard",
+  "isDocsHomePage": false,
+  "title": "Branching standard",
+  "description": "Make sure you have read How to contribute first.",
+  "source": "@site/docs/contributing/branching-standard.md",
+  "sourceDirName": "contributing",
+  "slug": "/contributing/branching-standard",
+  "permalink": "/kubernetes-dbaas/docs/contributing/branching-standard",
+  "editUrl": "https://github.com/bedag/kubernetes-dbaas/edit/main/website/docs/contributing/branching-standard.md",
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "How to contribute",
+    "permalink": "/kubernetes-dbaas/docs/contributing/how-to-contribute"
+  },
+  "next": {
+    "title": "Architecture",
+    "permalink": "/kubernetes-dbaas/docs/contributing/architecture"
+  }
+}

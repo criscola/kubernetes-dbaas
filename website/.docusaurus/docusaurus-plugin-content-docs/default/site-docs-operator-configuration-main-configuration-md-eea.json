@@ -1,0 +1,26 @@
+{
+  "unversionedId": "operator-configuration/main-configuration",
+  "id": "operator-configuration/main-configuration",
+  "isDocsHomePage": false,
+  "title": "Main configuration",
+  "description": "Operator configuration",
+  "source": "@site/docs/operator-configuration/main-configuration.md",
+  "sourceDirName": "operator-configuration",
+  "slug": "/operator-configuration/main-configuration",
+  "permalink": "/kubernetes-dbaas/docs/operator-configuration/main-configuration",
+  "editUrl": "https://github.com/bedag/kubernetes-dbaas/edit/main/website/docs/operator-configuration/main-configuration.md",
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Prerequisites",
+    "permalink": "/kubernetes-dbaas/docs/operator-configuration/prerequisites"
+  },
+  "next": {
+    "title": "DatabaseClass",
+    "permalink": "/kubernetes-dbaas/docs/operator-configuration/databaseclasses"
+  }
+}

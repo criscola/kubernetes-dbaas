@@ -1,0 +1,123 @@
+{
+  "docusaurus-plugin-content-docs": {
+    "default": {
+      "path": "/kubernetes-dbaas/docs",
+      "versions": [
+        {
+          "name": "current",
+          "label": "Next",
+          "isLast": true,
+          "path": "/kubernetes-dbaas/docs",
+          "mainDocId": "overview",
+          "docs": [
+            {
+              "id": "contributing/architecture",
+              "path": "/kubernetes-dbaas/docs/contributing/architecture",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "contributing/branching-standard",
+              "path": "/kubernetes-dbaas/docs/contributing/branching-standard",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "contributing/ci",
+              "path": "/kubernetes-dbaas/docs/contributing/ci",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "contributing/how-to-contribute",
+              "path": "/kubernetes-dbaas/docs/contributing/how-to-contribute",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "contributing/testing",
+              "path": "/kubernetes-dbaas/docs/contributing/testing",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "dbms-configuration/operations",
+              "path": "/kubernetes-dbaas/docs/dbms-configuration/operations",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "dbms-configuration/prerequisites",
+              "path": "/kubernetes-dbaas/docs/dbms-configuration/prerequisites",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "dbms-configuration/samples",
+              "path": "/kubernetes-dbaas/docs/dbms-configuration/samples",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "legals",
+              "path": "/kubernetes-dbaas/docs/legals",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "operator-configuration/cli-arguments",
+              "path": "/kubernetes-dbaas/docs/operator-configuration/cli-arguments",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "operator-configuration/credential-rotation",
+              "path": "/kubernetes-dbaas/docs/operator-configuration/credential-rotation",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "operator-configuration/databaseclasses",
+              "path": "/kubernetes-dbaas/docs/operator-configuration/databaseclasses",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "operator-configuration/logging-monitoring",
+              "path": "/kubernetes-dbaas/docs/operator-configuration/logging-monitoring",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "operator-configuration/main-configuration",
+              "path": "/kubernetes-dbaas/docs/operator-configuration/main-configuration",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "operator-configuration/prerequisites",
+              "path": "/kubernetes-dbaas/docs/operator-configuration/prerequisites",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "operator-configuration/tips-and-tricks",
+              "path": "/kubernetes-dbaas/docs/operator-configuration/tips-and-tricks",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "operator-deployment/development-deployment",
+              "path": "/kubernetes-dbaas/docs/operator-deployment/development-deployment",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "operator-deployment/helm",
+              "path": "/kubernetes-dbaas/docs/operator-deployment/helm",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "operator-deployment/vanilla-deployment",
+              "path": "/kubernetes-dbaas/docs/operator-deployment/vanilla-deployment",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "overview",
+              "path": "/kubernetes-dbaas/docs/overview",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "usage",
+              "path": "/kubernetes-dbaas/docs/usage",
+              "sidebar": "tutorialSidebar"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

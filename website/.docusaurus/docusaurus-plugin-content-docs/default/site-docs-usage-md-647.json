@@ -1,0 +1,26 @@
+{
+  "unversionedId": "usage",
+  "id": "usage",
+  "isDocsHomePage": false,
+  "title": "Usage",
+  "description": "Steps",
+  "source": "@site/docs/usage.md",
+  "sourceDirName": ".",
+  "slug": "/usage",
+  "permalink": "/kubernetes-dbaas/docs/usage",
+  "editUrl": "https://github.com/bedag/kubernetes-dbaas/edit/main/website/docs/usage.md",
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {
+    "sidebar_position": 5
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Local development",
+    "permalink": "/kubernetes-dbaas/docs/operator-deployment/development-deployment"
+  },
+  "next": {
+    "title": "How to contribute",
+    "permalink": "/kubernetes-dbaas/docs/contributing/how-to-contribute"
+  }
+}

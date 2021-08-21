@@ -1,0 +1,26 @@
+{
+  "unversionedId": "operator-deployment/vanilla-deployment",
+  "id": "operator-deployment/vanilla-deployment",
+  "isDocsHomePage": false,
+  "title": "Vanilla",
+  "description": "You may deploy the Operator in a cluster without Helm.",
+  "source": "@site/docs/operator-deployment/vanilla-deployment.md",
+  "sourceDirName": "operator-deployment",
+  "slug": "/operator-deployment/vanilla-deployment",
+  "permalink": "/kubernetes-dbaas/docs/operator-deployment/vanilla-deployment",
+  "editUrl": "https://github.com/bedag/kubernetes-dbaas/edit/main/website/docs/operator-deployment/vanilla-deployment.md",
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Helm",
+    "permalink": "/kubernetes-dbaas/docs/operator-deployment/helm"
+  },
+  "next": {
+    "title": "Local development",
+    "permalink": "/kubernetes-dbaas/docs/operator-deployment/development-deployment"
+  }
+}

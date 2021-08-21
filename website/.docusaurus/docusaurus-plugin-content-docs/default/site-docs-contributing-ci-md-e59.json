@@ -1,0 +1,23 @@
+{
+  "unversionedId": "contributing/ci",
+  "id": "contributing/ci",
+  "isDocsHomePage": false,
+  "title": "CI pipeline",
+  "description": "Overview",
+  "source": "@site/docs/contributing/ci.md",
+  "sourceDirName": "contributing",
+  "slug": "/contributing/ci",
+  "permalink": "/kubernetes-dbaas/docs/contributing/ci",
+  "editUrl": "https://github.com/bedag/kubernetes-dbaas/edit/main/website/docs/contributing/ci.md",
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Testing",
+    "permalink": "/kubernetes-dbaas/docs/contributing/testing"
+  },
+  "next": {
+    "title": "Legals",
+    "permalink": "/kubernetes-dbaas/docs/legals"
+  }
+}

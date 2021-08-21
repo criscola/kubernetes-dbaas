@@ -1,0 +1,26 @@
+{
+  "unversionedId": "dbms-configuration/operations",
+  "id": "dbms-configuration/operations",
+  "isDocsHomePage": false,
+  "title": "Operations",
+  "description": "Supported operations",
+  "source": "@site/docs/dbms-configuration/operations.md",
+  "sourceDirName": "dbms-configuration",
+  "slug": "/dbms-configuration/operations",
+  "permalink": "/kubernetes-dbaas/docs/dbms-configuration/operations",
+  "editUrl": "https://github.com/bedag/kubernetes-dbaas/edit/main/website/docs/dbms-configuration/operations.md",
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Prerequisites",
+    "permalink": "/kubernetes-dbaas/docs/dbms-configuration/prerequisites"
+  },
+  "next": {
+    "title": "Samples",
+    "permalink": "/kubernetes-dbaas/docs/dbms-configuration/samples"
+  }
+}

@@ -1,0 +1,431 @@
+{
+  "entrypoints": [
+    "main"
+  ],
+  "origins": {
+    "34": [
+      195,
+      261,
+      514,
+      532,
+      608,
+      674,
+      918,
+      34
+    ],
+    "261": [
+      34,
+      195,
+      514,
+      532,
+      608,
+      674,
+      261
+    ],
+    "608": [
+      34,
+      261,
+      532,
+      608
+    ],
+    "674": [
+      34,
+      195,
+      261,
+      532,
+      674
+    ],
+    "17896441": [
+      34,
+      532,
+      918
+    ],
+    "18891827": [
+      81
+    ],
+    "main": [
+      303,
+      532,
+      179
+    ],
+    "runtime~main": [
+      179,
+      532,
+      303
+    ],
+    "09ab5c5d": [
+      308
+    ],
+    "189ac1b8": [
+      243
+    ],
+    "1be78505": [
+      34,
+      261,
+      532,
+      608
+    ],
+    "1e6ef862": [
+      780
+    ],
+    "32adf47f": [
+      601
+    ],
+    "4beba2b4": [
+      816
+    ],
+    "4e75fca0": [
+      878
+    ],
+    "533bab35": [
+      441
+    ],
+    "62c51ae7": [
+      472
+    ],
+    "637a5d33": [
+      177
+    ],
+    "6476eba6": [
+      827
+    ],
+    "6d0e33f4": [
+      987
+    ],
+    "79635f2d": [
+      286
+    ],
+    "935f2afb": [
+      53
+    ],
+    "9d26afe2": [
+      560
+    ],
+    "aa8333e0": [
+      398
+    ],
+    "bf4d8c2d": [
+      930
+    ],
+    "c4f5d8e4": [
+      34,
+      261,
+      532,
+      674,
+      195
+    ],
+    "e009ef3e": [
+      60
+    ],
+    "e59c3180": [
+      175
+    ],
+    "eea89744": [
+      304
+    ],
+    "f1890d0e": [
+      333
+    ],
+    "f54e6ab0": [
+      373
+    ],
+    "styles": [
+      34,
+      179,
+      195,
+      261,
+      303,
+      514,
+      608,
+      674,
+      918,
+      532
+    ]
+  },
+  "assets": {
+    "34": {
+      "js": [
+        {
+          "file": "assets/js/34.a96b53ab.js",
+          "hash": "e11766d5b7ac6372f6e2",
+          "publicPath": "/kubernetes-dbaas/assets/js/34.a96b53ab.js"
+        }
+      ]
+    },
+    "53": {
+      "js": [
+        {
+          "file": "assets/js/935f2afb.14a584f5.js",
+          "hash": "c7a4eac83514975adaf2",
+          "publicPath": "/kubernetes-dbaas/assets/js/935f2afb.14a584f5.js"
+        }
+      ]
+    },
+    "60": {
+      "js": [
+        {
+          "file": "assets/js/e009ef3e.081b7fab.js",
+          "hash": "29688ae9e21e2f1de8a5",
+          "publicPath": "/kubernetes-dbaas/assets/js/e009ef3e.081b7fab.js"
+        }
+      ]
+    },
+    "81": {
+      "js": [
+        {
+          "file": "assets/js/18891827.a69805b1.js",
+          "hash": "6b8ef179d39fdb515c41",
+          "publicPath": "/kubernetes-dbaas/assets/js/18891827.a69805b1.js"
+        }
+      ]
+    },
+    "175": {
+      "js": [
+        {
+          "file": "assets/js/e59c3180.89f5e5b3.js",
+          "hash": "3ed7d4e1a3e13d175ef8",
+          "publicPath": "/kubernetes-dbaas/assets/js/e59c3180.89f5e5b3.js"
+        }
+      ]
+    },
+    "177": {
+      "js": [
+        {
+          "file": "assets/js/637a5d33.a96457f4.js",
+          "hash": "011e153f6e8adda88468",
+          "publicPath": "/kubernetes-dbaas/assets/js/637a5d33.a96457f4.js"
+        }
+      ]
+    },
+    "179": {
+      "js": [
+        {
+          "file": "assets/js/main.bca3c5cf.js",
+          "hash": "f082e7b4ea9bf0da6774",
+          "publicPath": "/kubernetes-dbaas/assets/js/main.bca3c5cf.js"
+        }
+      ]
+    },
+    "195": {
+      "js": [
+        {
+          "file": "assets/js/c4f5d8e4.daa19398.js",
+          "hash": "14c96e749057844554f4",
+          "publicPath": "/kubernetes-dbaas/assets/js/c4f5d8e4.daa19398.js"
+        }
+      ]
+    },
+    "243": {
+      "js": [
+        {
+          "file": "assets/js/189ac1b8.99a1ecba.js",
+          "hash": "87482cc01af464b77e50",
+          "publicPath": "/kubernetes-dbaas/assets/js/189ac1b8.99a1ecba.js"
+        }
+      ]
+    },
+    "261": {
+      "js": [
+        {
+          "file": "assets/js/261.60e95d39.js",
+          "hash": "c17c11275507606a163f",
+          "publicPath": "/kubernetes-dbaas/assets/js/261.60e95d39.js"
+        }
+      ]
+    },
+    "286": {
+      "js": [
+        {
+          "file": "assets/js/79635f2d.856e1b96.js",
+          "hash": "7e425f0b401f6840e6ff",
+          "publicPath": "/kubernetes-dbaas/assets/js/79635f2d.856e1b96.js"
+        }
+      ]
+    },
+    "303": {
+      "js": [
+        {
+          "file": "assets/js/runtime~main.ef09c43f.js",
+          "hash": "721f5770a482ea327548",
+          "publicPath": "/kubernetes-dbaas/assets/js/runtime~main.ef09c43f.js"
+        }
+      ]
+    },
+    "304": {
+      "js": [
+        {
+          "file": "assets/js/eea89744.a2ddfe7a.js",
+          "hash": "596407fa0f74589716ce",
+          "publicPath": "/kubernetes-dbaas/assets/js/eea89744.a2ddfe7a.js"
+        }
+      ]
+    },
+    "308": {
+      "js": [
+        {
+          "file": "assets/js/09ab5c5d.f8ca707e.js",
+          "hash": "424791cd3ca5d74d9977",
+          "publicPath": "/kubernetes-dbaas/assets/js/09ab5c5d.f8ca707e.js"
+        }
+      ]
+    },
+    "333": {
+      "js": [
+        {
+          "file": "assets/js/f1890d0e.c599b84a.js",
+          "hash": "7d13b8144bda316385e2",
+          "publicPath": "/kubernetes-dbaas/assets/js/f1890d0e.c599b84a.js"
+        }
+      ]
+    },
+    "373": {
+      "js": [
+        {
+          "file": "assets/js/f54e6ab0.d9196259.js",
+          "hash": "499558b267ef2988cd2a",
+          "publicPath": "/kubernetes-dbaas/assets/js/f54e6ab0.d9196259.js"
+        }
+      ]
+    },
+    "398": {
+      "js": [
+        {
+          "file": "assets/js/aa8333e0.fe2bf73f.js",
+          "hash": "fa70b1eed7aeb79b4db4",
+          "publicPath": "/kubernetes-dbaas/assets/js/aa8333e0.fe2bf73f.js"
+        }
+      ]
+    },
+    "441": {
+      "js": [
+        {
+          "file": "assets/js/533bab35.e284c049.js",
+          "hash": "e77f97be6bf51a63fe95",
+          "publicPath": "/kubernetes-dbaas/assets/js/533bab35.e284c049.js"
+        }
+      ]
+    },
+    "472": {
+      "js": [
+        {
+          "file": "assets/js/62c51ae7.363bdf12.js",
+          "hash": "0aa9fb9e96e4edd2043b",
+          "publicPath": "/kubernetes-dbaas/assets/js/62c51ae7.363bdf12.js"
+        }
+      ]
+    },
+    "532": {
+      "css": [
+        {
+          "file": "assets/css/styles.2cf4fd45.css",
+          "hash": "67fc863aaa627c5aec5e",
+          "publicPath": "/kubernetes-dbaas/assets/css/styles.2cf4fd45.css"
+        }
+      ]
+    },
+    "560": {
+      "js": [
+        {
+          "file": "assets/js/9d26afe2.c6758e6f.js",
+          "hash": "921e665c6974f128bc50",
+          "publicPath": "/kubernetes-dbaas/assets/js/9d26afe2.c6758e6f.js"
+        }
+      ]
+    },
+    "601": {
+      "js": [
+        {
+          "file": "assets/js/32adf47f.5b12308d.js",
+          "hash": "2a09ca1f3fd3f59c90e7",
+          "publicPath": "/kubernetes-dbaas/assets/js/32adf47f.5b12308d.js"
+        }
+      ]
+    },
+    "608": {
+      "js": [
+        {
+          "file": "assets/js/608.c2127fd1.js",
+          "hash": "fec6d64de06355697d06",
+          "publicPath": "/kubernetes-dbaas/assets/js/608.c2127fd1.js"
+        },
+        {
+          "file": "assets/js/1be78505.ecb3c1cd.js",
+          "hash": "99bafd611f9742fe6101",
+          "publicPath": "/kubernetes-dbaas/assets/js/1be78505.ecb3c1cd.js"
+        }
+      ]
+    },
+    "674": {
+      "js": [
+        {
+          "file": "assets/js/674.6f12bb46.js",
+          "hash": "7dee1ab0e3ef0984496f",
+          "publicPath": "/kubernetes-dbaas/assets/js/674.6f12bb46.js"
+        }
+      ]
+    },
+    "780": {
+      "js": [
+        {
+          "file": "assets/js/1e6ef862.c0d8cc49.js",
+          "hash": "538365dbe8c27d8b3c8c",
+          "publicPath": "/kubernetes-dbaas/assets/js/1e6ef862.c0d8cc49.js"
+        }
+      ]
+    },
+    "816": {
+      "js": [
+        {
+          "file": "assets/js/4beba2b4.d1aaa4b0.js",
+          "hash": "b750ca90f233a2f9aa49",
+          "publicPath": "/kubernetes-dbaas/assets/js/4beba2b4.d1aaa4b0.js"
+        }
+      ]
+    },
+    "827": {
+      "js": [
+        {
+          "file": "assets/js/6476eba6.193a5380.js",
+          "hash": "5b825da7dae560701a3d",
+          "publicPath": "/kubernetes-dbaas/assets/js/6476eba6.193a5380.js"
+        }
+      ]
+    },
+    "878": {
+      "js": [
+        {
+          "file": "assets/js/4e75fca0.975b3b85.js",
+          "hash": "aefa08dcb440faabdcb6",
+          "publicPath": "/kubernetes-dbaas/assets/js/4e75fca0.975b3b85.js"
+        }
+      ]
+    },
+    "918": {
+      "js": [
+        {
+          "file": "assets/js/17896441.932d3ff8.js",
+          "hash": "b4bdc02d0c9814400570",
+          "publicPath": "/kubernetes-dbaas/assets/js/17896441.932d3ff8.js"
+        }
+      ]
+    },
+    "930": {
+      "js": [
+        {
+          "file": "assets/js/bf4d8c2d.ff68e02b.js",
+          "hash": "4fd0920a87ef951f434c",
+          "publicPath": "/kubernetes-dbaas/assets/js/bf4d8c2d.ff68e02b.js"
+        }
+      ]
+    },
+    "987": {
+      "js": [
+        {
+          "file": "assets/js/6d0e33f4.c51568b7.js",
+          "hash": "752ad16808bb55e500be",
+          "publicPath": "/kubernetes-dbaas/assets/js/6d0e33f4.c51568b7.js"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "unversionedId": "operator-deployment/development-deployment",
+  "id": "operator-deployment/development-deployment",
+  "isDocsHomePage": false,
+  "title": "Local development",
+  "description": "You can try out the Operator on your local development machine and boot the Operator as a normal system process.",
+  "source": "@site/docs/operator-deployment/development-deployment.md",
+  "sourceDirName": "operator-deployment",
+  "slug": "/operator-deployment/development-deployment",
+  "permalink": "/kubernetes-dbaas/docs/operator-deployment/development-deployment",
+  "editUrl": "https://github.com/bedag/kubernetes-dbaas/edit/main/website/docs/operator-deployment/development-deployment.md",
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_position": 3
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Vanilla",
+    "permalink": "/kubernetes-dbaas/docs/operator-deployment/vanilla-deployment"
+  },
+  "next": {
+    "title": "Usage",
+    "permalink": "/kubernetes-dbaas/docs/usage"
+  }
+}

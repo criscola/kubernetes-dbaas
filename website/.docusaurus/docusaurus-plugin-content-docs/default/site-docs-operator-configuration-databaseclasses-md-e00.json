@@ -1,0 +1,26 @@
+{
+  "unversionedId": "operator-configuration/databaseclasses",
+  "id": "operator-configuration/databaseclasses",
+  "isDocsHomePage": false,
+  "title": "DatabaseClass",
+  "description": "Format",
+  "source": "@site/docs/operator-configuration/databaseclasses.md",
+  "sourceDirName": "operator-configuration",
+  "slug": "/operator-configuration/databaseclasses",
+  "permalink": "/kubernetes-dbaas/docs/operator-configuration/databaseclasses",
+  "editUrl": "https://github.com/bedag/kubernetes-dbaas/edit/main/website/docs/operator-configuration/databaseclasses.md",
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_position": 3
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Main configuration",
+    "permalink": "/kubernetes-dbaas/docs/operator-configuration/main-configuration"
+  },
+  "next": {
+    "title": "Credential rotation",
+    "permalink": "/kubernetes-dbaas/docs/operator-configuration/credential-rotation"
+  }
+}

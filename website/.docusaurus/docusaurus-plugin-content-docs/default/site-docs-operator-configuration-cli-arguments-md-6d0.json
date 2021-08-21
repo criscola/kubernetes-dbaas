@@ -1,0 +1,26 @@
+{
+  "unversionedId": "operator-configuration/cli-arguments",
+  "id": "operator-configuration/cli-arguments",
+  "isDocsHomePage": false,
+  "title": "CLI arguments",
+  "description": "The order of precedence is flags > config file > defaults. Environment variables are not read.",
+  "source": "@site/docs/operator-configuration/cli-arguments.md",
+  "sourceDirName": "operator-configuration",
+  "slug": "/operator-configuration/cli-arguments",
+  "permalink": "/kubernetes-dbaas/docs/operator-configuration/cli-arguments",
+  "editUrl": "https://github.com/bedag/kubernetes-dbaas/edit/main/website/docs/operator-configuration/cli-arguments.md",
+  "version": "current",
+  "sidebarPosition": 6,
+  "frontMatter": {
+    "sidebar_position": 6
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Logging & troubleshooting",
+    "permalink": "/kubernetes-dbaas/docs/operator-configuration/logging-monitoring"
+  },
+  "next": {
+    "title": "Tips & tricks",
+    "permalink": "/kubernetes-dbaas/docs/operator-configuration/tips-and-tricks"
+  }
+}
