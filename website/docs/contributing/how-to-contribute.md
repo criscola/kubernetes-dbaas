@@ -74,8 +74,8 @@ Your PR should enclose updated or new test cases. See [Testing](/docs/contributi
 
 ### Website
 
-The documentation is done using [Docusaurus](https://github.com/facebook/docusaurus). Download Docusaurus, 
-run `npm run start` in the `/website` directory and start modifying the Markdown
+The documentation is done using [Docusaurus](https://github.com/facebook/docusaurus). Install Docusaurus, 
+run `yarn start` in the `/website` directory and start modifying the Markdown
 files contained in `/website/docs`. Refer directly to the official Docusaurus documentation to learn more. 
 
 ### Helm Chart
@@ -86,7 +86,3 @@ which will autogenerate a README.md for the Chart.
 ### Godocs
 
 Any change to the codebase requires you to update the relative godocs as well.
-
-## Helm Chart notes
-
-TODO: Work in progress

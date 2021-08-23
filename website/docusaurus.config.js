@@ -7,7 +7,7 @@ module.exports = {
   tagline: 'A unique Kubernetes Database-as-a-Service (DBaaS) Operator for declarative, self-service database' +
     ' provisioning in DBMS' +
     ' solutions.',
-  url: 'https://criscola.github.io/kubernetes-dbaas',
+  url: 'https://criscola.github.io',
   baseUrl: '/kubernetes-dbaas/',
   favicon: '/img/favicon.ico',
   trailingSlash: false,

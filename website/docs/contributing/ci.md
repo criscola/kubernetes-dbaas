@@ -10,6 +10,7 @@ There are currently 4 different workflows defined:
 - Test suite
 - Docker image build & release
 - Docs generation 
+- Helm Chart linting
 
 ## CodeQL
 
@@ -43,8 +44,6 @@ the image tagged with `latest` is updated.
 The tags pushed in case of a release are: `{{major}}`, `{{major}}.{{minor}}`, and `{{major}}.{{minor}}.{{patch}}`, so
 that users can decide to receive updates of minor or minor+patch versions without having to bump version manually.
 
-Currently, releases are done manually.
-
 ## Docs generation
 
 This workflow will run whenever a push or pull request is submitted to the main branch. Commit pushes
@@ -53,6 +52,13 @@ Pull requests trigger a job checking whether a build is successful, it does not 
 
 We are using Docusaurus to generate the documentation.
 
+## Helm Chart linting
+
+This workflow will run whenever a push or pull request is submitted to the main branch involving at least
+one file in the `charts/` directory.
+
+This workflow will simply run `ct lint` (Helm Chart linter) to check for trivial errors.
+
 ## Protected branches and status checks
 
 The `stable` branch is a protected branch:
@@ -60,6 +66,7 @@ The `stable` branch is a protected branch:
 - All commits must be signed and verified.
 - All workflows must pass, and the main branch must be up to date before merging.
 
-## Additonal information
+## Additional information
 
 You can also run the workflows locally by setting up [act](https://github.com/nektos/act) on your machine.
+
