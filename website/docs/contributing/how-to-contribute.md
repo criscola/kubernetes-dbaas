@@ -78,7 +78,7 @@ Your PR should enclose updated or new test cases. See [Testing](/docs/contributi
 ### Website
 
 The documentation is done using [Docusaurus](https://github.com/facebook/docusaurus). Install Docusaurus, 
-run `yarn start` in the `/website` directory and start modifying the Markdown
+run `npm run start` in the `/website` directory and start modifying the Markdown
 files contained in `/website/docs`. Refer directly to the official Docusaurus documentation to learn more. 
 
 ### Helm Chart

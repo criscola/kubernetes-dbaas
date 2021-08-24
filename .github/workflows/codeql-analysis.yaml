@@ -3,10 +3,10 @@ name: "CodeQL"
 on:
   push:
     branches: [ main ]
-    paths-ignore: [ 'website/**', '.github/workflows/**', 'charts/**', '!.github/workflows/codeql-analysis.yaml' ]
+    paths-ignore: [ 'website/**', '.github/workflows/**', 'charts/**', '!.github/workflows/codeql-analysis.yaml', 'README.md']
   pull_request:
     branches: [ main ]
-    paths-ignore: [ 'website/**', '.github/workflows/**', 'charts/**', '!.github/workflows/codeql-analysis.yaml' ]
+    paths-ignore: [ 'website/**', '.github/workflows/**', 'charts/**', '!.github/workflows/codeql-analysis.yaml', 'README.md' ]
 
 jobs:
   codeql_analyze:

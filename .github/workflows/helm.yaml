@@ -3,10 +3,10 @@ name: Helm Chart linter
 on:
   pull_request:
     branches: [main]
-    paths: [ 'charts/kubernetes-dbaas/**', '.github/workflows/helm.yaml' ]
+    paths: [ 'charts/kubernetes-dbaas/**', '.github/workflows/helm.yaml', 'README.md' ]
   push:
     branches: [main]
-    paths: [ 'charts/kubernetes-dbaas/**', '.github/workflows/helm.yaml' ]
+    paths: [ 'charts/kubernetes-dbaas/**', '.github/workflows/helm.yaml', 'README.md' ]
 
 jobs:
   checks:

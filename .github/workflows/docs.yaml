@@ -59,8 +59,9 @@ jobs:
           git config --global user.name "kubernetesdbaasbot"
           mkdir ../temp
           cd website/
-          yarn install --frozen-lockfile
-          yarn build --out-dir ../../temp
+          npm ci
+          npm run build
+          mv build/* ../../temp
           cd ..
           git fetch
           git switch gh-pages

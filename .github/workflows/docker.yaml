@@ -2,7 +2,7 @@ name: "Docker image"
 on:
   push:
     branches: [ main ]
-    paths-ignore: [ 'website/**', '.github/workflows/**', 'charts/**', '!.github/workflows/docker.yaml' ]
+    paths-ignore: [ 'website/**', '.github/workflows/**', 'charts/**', '!.github/workflows/docker.yaml', 'README.md' ]
   release:
     types: [ published ]
 

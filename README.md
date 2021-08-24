@@ -5,6 +5,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/bedag/kubernetes-dbaas.svg)](https://pkg.go.dev/github.com/bedag/kubernetes-dbaas)
 [![Go Report Card](https://goreportcard.com/badge/github.com/bedag/kubernetes-dbaas)](https://goreportcard.com/report/github.com/bedag/kubernetes-dbaas)
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/kubernetes-dbaas)](https://artifacthub.io/packages/search?repo=kubernetes-dbaas)
+[![Test Suite](https://github.com/bedag/kubernetes-dbaas/actions/workflows/go.yaml/badge.svg)](https://github.com/bedag/kubernetes-dbaas/actions/workflows/go.yaml)
 
 <img alt="Kubernetes DBaaS Logo" src="website/static/img/logo.svg" width="300" height="260">
 
