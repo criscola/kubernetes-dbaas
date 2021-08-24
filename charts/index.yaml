@@ -70,6 +70,6 @@ entries:
     - https://github.com/bedag/kubernetes-dbaas
     type: application
     urls:
-    - https://criscola.github.io/kubernetes-dbaas/charts/kubernetes-dbaas-1.0.0.tgz
+    - https://bedag.github.io/kubernetes-dbaas/charts/kubernetes-dbaas-1.0.0.tgz
     version: 1.0.0
 generated: "2021-08-24T13:33:55.232726347+02:00"
