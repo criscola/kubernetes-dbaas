@@ -62,7 +62,7 @@ For example, if an end-user has specified `spec.params.department: devops`, you 
 like that: `spec.operations.create.inputs.department: "{{ .Parameters.department }}"` and it will
 be rendered ultimately as following: `department: 'devops'`.
 
-Of course, you can hard-code your own values on a per-DatabaseClass basis, or if you're using the [Helm deployment](#Helm deployment) option,
+Of course, you can hard-code your own values on a per-DatabaseClass basis, or if you're using the [Helm deployment](/docs/operator-deployment/helm) option,
 render values through the Helm chart.
 
 :::caution

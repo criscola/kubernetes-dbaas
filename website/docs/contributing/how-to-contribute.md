@@ -47,6 +47,9 @@ See git help commit:
     http://developercertificate.org/ for more information).
 ```
 
+By making a contribution to this project and signing-off your commits, 
+you agree to and comply with the Developer's Certificate of Origin.
+
 ## Pull requests requirements
 
 All submissions, including submissions by project members, require review. We use GitHub pull requests for this purpose. Consult [GitHub Help](https://help.github.com/articles/about-pull-requests/) for more information on using pull requests. See the above stated requirements for PR on this project.
@@ -59,7 +62,7 @@ Your PR has to fulfill the following points, to be considered:
 ### Versioning
 
 This project follows the [semver standard](https://semver.org/) for everything. Versions are bumped by maintainers.
-If your changes contain breaking changes, please explicitly state it in your GitHub issue.
+If your contribution contains breaking changes, please explicitly state it in your GitHub issue.
 
 ### Review
 
