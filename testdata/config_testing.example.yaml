@@ -1,0 +1,24 @@
+health:
+  healthProbeBindAddress: ""
+metrics:
+  bindAddress: "0"
+webhook:
+  port:
+leaderElection:
+  leaderElect: false
+  resourceName: bfa62c96.dbaas.bedag.ch
+rps: 0
+keepalive: 0
+dbms:
+  - databaseClassName: "databaseclass-sample-sqlserver"
+    endpoints:
+      - name: "us-sqlserver-test"
+        dsn: "sqlserver://sa:Password&1@localhost:1433/master"
+  - databaseClassName: "databaseclass-sample-psql"
+    endpoints:
+      - name: "us-postgres-test"
+        dsn: "postgres://postgres:Password&1@localhost:5432/postgres"
+  - databaseClassName: "databaseclass-sample-mariadb"
+    endpoints:
+      - name: "us-mariadb-test"
+        dsn: "mariadb://root:Password&1@localhost:3306/mysql"

@@ -1,0 +1,139 @@
+name: "Test Suite"
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore: [ 'website/**', 'charts/**', '.github/workflows/**', '!.github/workflows/go.yaml', 'README.md' ]
+  pull_request:
+    branches: [ main ]
+    paths-ignore: [ 'website/**', 'charts/**', '.github/workflows/**', '!.github/workflows/go.yaml', 'README.md' ]
+
+jobs:
+  run_test_suite:
+    name: "Build & Test"
+    runs-on: ubuntu-latest
+
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PASSWORD: stronG!Password
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PORT: 5432
+      SQLSERVER_HOST: localhost
+      SQLSERVER_PASSWORD: stronG!Password
+      SQLSERVER_USER: sa
+      SQLSERVER_DB: master
+      SQLSERVER_PORT: 1433
+      MARIADB_HOST: 127.0.0.1
+      MARIADB_PASSWORD: stronG!Password
+      MARIADB_USER: root
+      MARIADB_DB: mysql
+      MARIADB_PORT: 3306
+
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: ${{ env.SQLSERVER_PASSWORD }}
+          DB_USER: ${{ env.SQLSERVER_USER }}
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools/bin/sqlcmd -U $DB_USER -P $SA_PASSWORD -Q 'select 1' -b -o /dev/null"
+          --health-interval 60s
+          --health-timeout 30s
+          --health-start-period 20s
+          --health-retries 3
+      mariadb:
+        image: mariadb:10.4
+        env:
+          MARIADB_ROOT_PASSWORD: ${{ env.MARIADB_PASSWORD }}
+        options: >-
+          --health-cmd "mysqladmin ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 20s
+        ports:
+          - 3306:3306
+          
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+      - name: Mod
+        run: go mod tidy
+      - name: Install Ginkgo executable
+        run: go install github.com/onsi/ginkgo/ginkgo@v1.16.4
+      - name: Install Envtest binaries
+        run: |
+          curl -sSLo envtest-bins.tar.gz "https://storage.googleapis.com/kubebuilder-tools/kubebuilder-tools-1.19.2-$(go env GOOS)-$(go env GOARCH).tar.gz"
+          mkdir -p /opt/kubebuilder/testbin
+          tar -C /opt/kubebuilder/testbin --strip-components=2 -zvxf envtest-bins.tar.gz
+      - name: Prepare Postgres instance for testing
+        env:
+          # Postgres reads the password using a PGPASSWORD env variable
+          PGPASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        run: |
+          for f in ${{ github.workspace }}/testdata/procedures/postgresql/*.sql
+          do
+            echo "loading $f into postgresql"
+            psql -h ${{ env.POSTGRES_HOST }} -p ${{ env.POSTGRES_PORT }} -d ${{ env.POSTGRES_DB }} -U ${{ env.POSTGRES_USER }} < "$f"
+          done
+      - name: Prepare SQLServer instance for testing
+        run: |
+          for f in ${{ github.workspace }}/testdata/procedures/sqlserver/*.sql
+          do
+            echo "loading $f into sqlserver"
+            /opt/mssql-tools/bin/sqlcmd -S 'tcp:${{ env.SQLSERVER_HOST }},${{ env.SQLSERVER_PORT }}' -U ${{ env.SQLSERVER_USER }} -P ${{ env.SQLSERVER_PASSWORD }} -d ${{ env.SQLSERVER_DB }} -i "$f"
+          done
+      - name: Prepare MariaDB instance for testing
+        run: |
+          for f in ${{ github.workspace }}/testdata/procedures/mariadb/*.sql
+          do
+            echo "loading $f into mariadb"
+            mysql -h ${{ env.MARIADB_HOST }} -P ${{ env.MARIADB_PORT }} -u ${{ env.MARIADB_USER }} --password=${{ env.MARIADB_PASSWORD }} -D ${{ env.MARIADB_DB }} < "$f"
+          done
+      - name: Test
+        env:
+          KUBEBUILDER_ASSETS: /opt/kubebuilder/testbin
+          TEST_CONFIG_PATH: ${{ github.workspace }}/testdata/config_testing_ci.yaml
+          POSTGRES_DSN: postgres://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@${{ env.POSTGRES_HOST }}:${{ env.POSTGRES_PORT }}/${{ env.POSTGRES_DB }}
+          SQLSERVER_DSN: sqlserver://${{ env.SQLSERVER_USER }}:${{ env.SQLSERVER_PASSWORD }}@${{ env.SQLSERVER_HOST }}:${{ env.SQLSERVER_PORT }}/${{ env.SQLSERVER_DB }}
+          MARIADB_DSN: mariadb://${{ env.MARIADB_USER }}:${{ env.MARIADB_PASSWORD }}@${{ env.MARIADB_HOST }}:${{ env.MARIADB_PORT }}/${{ env.MARIADB_DB }}
+        run: ginkgo -r -race -trace -cover -coverprofile=coverage.out -outputdir=testdata/coverage
+      - name: Generate coverage report
+        run: go tool cover -html=testdata/coverage/coverage.out -o testdata/coverage/coverage_report.html
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v3
+        with:
+          gpg-private-key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.BOT_GPG_PRIVATE_KEY_PASSPHRASE }}
+          git-user-signingkey: true
+          git-commit-gpgsign: true
+      - name: Pull latest changes
+        run: git pull
+      - name: Push coverage report
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_user_name: kubernetesdbaasbot
+          commit_user_email: kubernetesdbaasbot@gmail.com
+          commit_message: Update code coverage
+          file_pattern: testdata/coverage/coverage_report.html
+          

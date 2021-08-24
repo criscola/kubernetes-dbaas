@@ -1,11 +1,11 @@
 replicaCount: 1
 
 image:
-  # Repository of the operator manager image.
-  repository: criscola/kubernetes-dbaas
-  pullPolicy: Always
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
+  # -- Repository of the operator manager image.
+  repository: bedag/kubernetes-dbaas
+  pullPolicy: IfNotPresent
+  # -- Overrides the image tag whose default is the chart appVersion.
+  tag: ""
 
 imagePullSecrets: []
 nameOverride: ""
@@ -24,10 +24,10 @@ securityContext: {}
   # runAsNonRoot: true
 # runAsUser: 1000
 
-# Allocating less resources might create problems
+# -- Allocating less resources might create problems
 resources:
   limits:
-    cpu: 100m
+    cpu: 200m
     memory: 128Mi
   requests:
     cpu: 100m
@@ -39,17 +39,17 @@ tolerations: []
 
 affinity: {}
 
-# The termination grace period of your operator manager container.
+# -- The termination grace period of your operator manager container.
 terminationGracePeriodSeconds: 10
 
-# Manager service account name
+# -- Manager service account name
 managerSaName: kubernetes-dbaas-controller-manager
 
-# Should the ServiceAccount of the manager Pod automount the SA Account Token?
+# -- Should the ServiceAccount of the manager Pod automount the SA Account Token?
 # otherwise
 automountServiceAccountToken: true
 
-# Arguments passed to the Operator binary, e.g. "--debug=true".
+# -- Arguments passed to the Operator binary, e.g. "--debug=true".
 managerArgs: []
 
 livenessProbe:
@@ -66,16 +66,22 @@ readinessProbe:
   initialDelaySeconds: 5
   periodSeconds: 10
 
-# If set to true, enabled the deployment of the RBAC needed to protect the /metrics endpoint.
+# -- If set to true, enabled the deployment of the RBAC needed to protect the /metrics endpoint.
 enableMetricsRbac: true
-# Namespaces of where Prometheus is deployed. It is required for discovering the ServiceMonitor used to scrape the metrics.
+# -- Namespaces of where Prometheus is deployed. It is required for discovering the ServiceMonitor used to scrape the metrics.
 prometheusNamespace: prometheus
-# Name of the Service Account allowed to scrape the metrics endpoint.
+# -- Name of the Service Account allowed to scrape the metrics endpoint.
 prometheusSaName: prometheus-kube-prometheus-prometheus
-# Namespace of the Service Account allowed to scrape the metrics endpoint.
+# -- Namespace of the Service Account allowed to scrape the metrics endpoint.
 prometheusSaNamespace: prometheus
 
-# Operator configuration including the relative Manager configuration.
+# -- DatabaseClass (dbc) generator (optional).
+dbc:
+
+# -- Endpoint Secrets generator (optional).
+dbmsSecrets:
+
+# -- Operator configuration including the relative Manager configuration.
 # See https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/config/v1alpha1#ControllerManagerConfigurationSpec.
 operatorConfig:
   health:
@@ -87,22 +93,10 @@ operatorConfig:
   leaderElection:
     leaderElect: true
     resourceName: bfa62c96.dbaas.bedag.ch
-  # Specifies the maximum number of operations per second allowed per endpoint. Set to 0 to disable rate limiting.
+  # -- Specifies the maximum number of operations per second allowed per endpoint. Set to 0 to disable rate limiting.
   rps: 1
-  # Describes the DBMS configuration. Each entry includes a "databaseClassName" attribute specifying
+  # -- Describes the DBMS configuration. Each entry includes a "databaseClassName" attribute specifying
   # the name of the DatabaseClass resource associated with the endpoints along with an "endpoints" attribute
   # specifying the "name" of endpoint to be made available to end-users as well as its connection string (DSN).
   # To learn more about the supported DSN formats, see: https://github.com/xo/dburl.
   dbms:
-    - databaseClassName: "databaseclass-sample-sqlserver"
-      endpoints:
-        - name: "us-sqlserver-test"
-          dsn: "sqlserver://sa:Password&1@192.168.58.1:1433"
-    - databaseClassName: "databaseclass-sample-psql"
-      endpoints:
-        - name: "us-postgres-test"
-          dsn: "postgres://postgres:Password&1@192.168.58.1:5432/postgres"
-    - databaseClassName: "databaseclass-sample-mariadb"
-      endpoints:
-        - name: "us-mariadb-test"
-          dsn: "mariadb://root:Password&1@192.168.58.1:3306/mysql"

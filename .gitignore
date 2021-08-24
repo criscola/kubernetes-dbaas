@@ -26,8 +26,11 @@ testbin/*
 
 # don't push your config publicly
 config.yaml
-configtest.yaml
+config_testing.yaml
 
 # dbeaver stuff
 .dbeaver/
 .project
+
+# values used for local deployment
+myvalues.yaml

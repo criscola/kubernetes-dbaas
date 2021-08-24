@@ -48,5 +48,43 @@ Selector labels
 {{- define "kubernetes-dbaas.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "kubernetes-dbaas.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
-control-plane: controller-manager
+{{- end }}
+
+{{/*
+DatabaseClass generator
+*/}}
+{{- define "kubernetes-dbaas.dbcGenerator" -}}
+{{- range .Values.dbc }}
+apiVersion: databaseclass.dbaas.bedag.ch/v1
+kind: DatabaseClass
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "kubernetes-dbaas.labels" $ | nindent 4 }}
+spec:
+  driver: {{ .driver }}
+  operations:
+    {{- toYaml .operations | nindent 4 }}
+  secretFormat:
+    {{- toYaml .secretFormat | nindent 4 }}
+---
+{{- end }}
+{{- end }}
+
+{{/*
+DBMS endpoint Secrets generator
+*/}}
+{{- define "kubernetes-dbaas.dbmsSecretsGenerator" -}}
+{{- range .Values.dbmsSecrets }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "kubernetes-dbaas.labels" $ | nindent 4 }}
+type: Opaque
+stringData:
+  {{- toYaml .stringData | nindent 2 }}
+---
+{{- end }}
 {{- end }}

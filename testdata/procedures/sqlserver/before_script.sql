@@ -1,0 +1,8 @@
+CREATE TABLE databases (
+	id 			int NOT NULL IDENTITY PRIMARY KEY,
+	username	VARCHAR(40),
+	password	VARCHAR(MAX) NOT NULL,
+	dbName		VARCHAR(63) UNIQUE NOT NULL,
+	port		VARCHAR(5) NOT NULL,
+	fqdn      	VARCHAR(64) NOT NULL
+)

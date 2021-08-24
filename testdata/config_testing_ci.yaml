@@ -1,0 +1,25 @@
+# THIS CONFIG IS USED IN THE CI PIPELINE FOR E2E TESTS
+health:
+  healthProbeBindAddress: :8081
+metrics:
+  bindAddress: 127.0.0.1:8080
+webhook:
+  port: 9443
+leaderElection:
+  leaderElect: false
+  resourceName: bfa62c96.dbaas.bedag.ch
+rps: 0
+keepalive: 0
+dbms:
+  - databaseClassName: "databaseclass-sample-sqlserver"
+    endpoints:
+      - name: "us-sqlserver-test"
+        dsn: "sqlserver://sa:stronG!Password@localhost:1433/master"
+  - databaseClassName: "databaseclass-sample-psql"
+    endpoints:
+      - name: "us-postgres-test"
+        dsn: "postgres://postgres:stronG!Password@localhost:5432/postgres"
+  - databaseClassName: "databaseclass-sample-mariadb"
+    endpoints:
+      - name: "us-mariadb-test"
+        dsn: "mariadb://root:stronG!Password@127.0.0.1:3306/mysql"

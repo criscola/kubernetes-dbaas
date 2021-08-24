@@ -1,0 +1,75 @@
+apiVersion: v1
+entries:
+  kubernetes-dbaas:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Update Chart for appVersion 1.0.0
+        - kind: changed
+          description: Adapt comments for helm-docs
+        - kind: added
+          description: Endpoint secrets generator
+        - kind: added
+          description: DatabaseClass generator
+      artifacthub.io/crds: |
+        - kind: DatabaseClass
+          version: v1
+          name: databaseclasses.databaseclass.dbaas.bedag.ch
+          displayName: DatabaseClass
+          description: DatabaseClass resources describe the format of the operations to be executed
+            on DB systems, what driver should be used to call operations and how data
+            should be saved into Kubernetes Secrets.
+        - kind: Database
+          version: v1
+          name: databases.database.dbaas.bedag.ch
+          displayName: Database
+          description: Database resources are used to describe Database instances.
+        - kind: OperatorConfig
+          version: v1
+          name: operatorconfigs.config.dbaas.bedag.ch
+          displayName: OperatorConfig
+          description: OperatorConfig is used to configure the
+            Operator depending on the needs of the user organization. It contains also the
+            list of DBMS endpoints, including their DSN, which are assigned to a specific DatabaseClass.
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: DockerHub image
+          url: https://hub.docker.com/r/bedag/kubernetes-dbaas
+      artifacthub.io/maintainers: |
+        - name: Cristiano Colangelo
+          email: cristiano.colangelo@bluewin.ch
+      artifacthub.io/operator: "true"
+    apiVersion: v2
+    appVersion: 1.0.0
+    created: "2021-08-24T13:33:55.240780352+02:00"
+    description: A Helm chart for the Kubernetes DBaaS Operator.
+    digest: 5bb1a541a107cb4109893cb98ce93780885c3038d932fa461e90a5f724f38a95
+    home: https://bedag.github.io/kubernetes-dbaas/
+    icon: https://bedag.github.io/kubernetes-dbaas/img/logo.svg
+    keywords:
+    - kubernetes-dbaas
+    - operator
+    - database-as-a-service
+    - dbaas
+    - stored procedures
+    - kubernetes operator
+    - go
+    - dbms
+    - database management systems
+    - stored procedures
+    - automation
+    - provisioning
+    - databases
+    kubeVersion: '>= 1.21.0'
+    maintainers:
+    - email: cristiano.colangelo@bluewin.ch
+      name: criscola
+      url: https://github.com/criscola
+    name: kubernetes-dbaas
+    sources:
+    - https://github.com/bedag/kubernetes-dbaas
+    type: application
+    urls:
+    - https://bedag.github.io/kubernetes-dbaas/charts/kubernetes-dbaas-1.0.0.tgz
+    version: 1.0.0
+generated: "2021-08-24T13:33:55.232726347+02:00"

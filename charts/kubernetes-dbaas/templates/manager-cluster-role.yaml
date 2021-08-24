@@ -6,6 +6,8 @@ metadata:
   creationTimestamp: null
   name: kubernetes-dbaas-manager-role
   namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "kubernetes-dbaas.labels" . | nindent 4 }}
 rules:
   - apiGroups:
       - ""
@@ -13,6 +15,7 @@ rules:
       - secrets
     verbs:
       - create
+      - get
       - delete
       - list
       - update

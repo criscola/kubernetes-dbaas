@@ -62,12 +62,23 @@ func (c *SqlserverConn) DeleteDb(operation Operation) OpOutput {
 func (c *SqlserverConn) Rotate(operation Operation) OpOutput {
 	inputParams := getQueryInputs(operation.Inputs)
 
-	_, err := c.c.Exec(operation.Name, inputParams...)
+	rows, err := c.c.Query(operation.Name, inputParams...)
 	if err != nil {
-		return OpOutput{nil, err}
+		return OpOutput{Result: nil, Err: err}
 	}
 
-	return OpOutput{}
+	var key string
+	var value string
+	result := make(map[string]string)
+	for rows.Next() {
+		err = rows.Scan(&key, &value)
+		if err != nil {
+			return OpOutput{nil, err}
+		}
+		result[key] = value
+	}
+
+	return OpOutput{result, nil}
 }
 
 func (c *SqlserverConn) Ping() error {

@@ -3,17 +3,17 @@ package database
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 // PsqlConn represents a connection to a SQL Server DBMS.
 type PsqlConn struct {
-	c *pgx.Conn
+	c *pgxpool.Pool
 }
 
 // NewPsqlConn opens a new PostgreSQL connection from a given dsn.
 func NewPsqlConn(dsn string) (*PsqlConn, error) {
-	dbConn, err := pgx.Connect(context.Background(), dsn)
+	dbConn, err := pgxpool.Connect(context.Background(), dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -58,12 +58,24 @@ func (c *PsqlConn) DeleteDb(operation Operation) OpOutput {
 
 // Rotate attempts to rotate the credentials of a connection.
 func (c *PsqlConn) Rotate(operation Operation) OpOutput {
-	_, err := c.c.Exec(context.Background(), getPsqlVoidOpQuery(operation))
+	val := getPsqlOpQuery(operation)
+	rows, err := c.c.Query(context.Background(), val)
 	if err != nil {
 		return OpOutput{nil, err}
 	}
 
-	return OpOutput{}
+	var key string
+	var value string
+	result := make(map[string]string)
+	for rows.Next() {
+		err = rows.Scan(&key, &value)
+		if err != nil {
+			return OpOutput{nil, err}
+		}
+		result[key] = value
+	}
+
+	return OpOutput{result, nil}
 }
 
 // Ping returns an error if a connection cannot be established with the DBMS, else it returns nil.

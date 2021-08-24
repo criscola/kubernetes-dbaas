@@ -81,14 +81,14 @@ var logger logr.Logger
 // +kubebuilder:rbac:groups=database.dbaas.bedag.ch,resources=databases/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=database.dbaas.bedag.ch,resources=databases/finalizers,verbs=update
 // +kubebuilder:rbac:groups=databaseclass.dbaas.bedag.ch,resources=databaseclasses,verbs=get;list;watch
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=list;watch;create;update;delete
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;delete
 // SetupWithManager creates the controller responsible for Database resources by means of a ctrl.Manager.
 func (r *DatabaseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(DatabaseControllerName).
 		For(&databasev1.Database{}).
 		Owns(&corev1.Secret{}).
-		WithEventFilter(avoidUselessReconciliation()).
+		WithEventFilter(r.triggerReconciler()).
 		Complete(r)
 }
 
@@ -167,7 +167,7 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	// If Database is ready
 	if meta.IsStatusConditionTrue(obj.Status.Conditions, TypeReady) {
-		logger.V(TraceLevel).Info("Database is in Ready state")
+		logger.V(TraceLevel).Info("Database resource is in Ready state")
 		// Check if Database credentials should be rotated
 		shouldRotate, err := r.shouldRotate(obj)
 		if err.IsNotEmpty() {
@@ -184,18 +184,29 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				r.handleReconcileError(obj, err)
 				return ctrl.Result{Requeue: true}, nil
 			}
+			// Update Ready condition to true
+			if err := r.updateReadyCondition(obj, metav1.ConditionTrue, RsnDbRotateSucc, MsgDbRotateSucc); err != nil {
+				r.handleReadyConditionError(obj, err)
+				return ctrl.Result{Requeue: true}, nil
+			}
 			r.logInfoEvent(obj, RsnDbRotateSucc, MsgDbRotateSucc)
 		} else {
 			// Database is ready and credentials shouldn't be rotated, nothing else to do
 			logger.V(TraceLevel).Info("Credentials should not be rotated, nothing left to do")
 			return ctrl.Result{}, nil
 		}
-	}
+	} else {
+		// Create
+		if err := r.createDb(obj); err.IsNotEmpty() {
+			r.handleReconcileError(obj, err)
+			return ctrl.Result{Requeue: true}, nil
+		}
 
-	// Create
-	if err := r.createDb(obj); err.IsNotEmpty() {
-		r.handleReconcileError(obj, err)
-		return ctrl.Result{Requeue: true}, nil
+		logger.V(TraceLevel).Info("Updating ConditionStatus")
+		if err := r.updateReadyCondition(obj, metav1.ConditionTrue, RsnDbCreateSucc, MsgDbCreateSucc); err != nil {
+			r.handleReadyConditionError(obj, err)
+			return ctrl.Result{Requeue: true}, nil
+		}
 	}
 
 	// If finalizer is not present, add finalizer to resource
@@ -212,11 +223,6 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	logger.V(TraceLevel).Info("Updating ConditionStatus")
-	if err := r.updateReadyCondition(obj, metav1.ConditionTrue, RsnDbCreateSucc, MsgDbCreateSucc); err != nil {
-		r.handleReadyConditionError(obj, err)
-		return ctrl.Result{Requeue: true}, nil
-	}
 	logger.V(TraceLevel).Info("Reached end of reconcile")
 	return ctrl.Result{}, nil
 }
@@ -280,7 +286,8 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError {
 
 	// Log success
 	r.logInfoEvent(obj, RsnDbCreateSucc, MsgDbCreateSucc)
-
+	logger.V(TraceLevel).Info(fmt.Sprint(dbClass.Spec.SecretFormat))
+	logger.V(TraceLevel).Info(fmt.Sprint(output))
 	// Create Secret
 	err = r.createSecret(obj, dbClass.Spec.SecretFormat, output)
 	if err.IsNotEmpty() {
@@ -403,10 +410,27 @@ func (r *DatabaseReconciler) rotate(obj *databasev1.Database) ReconcileError {
 	output := conn.Rotate(rotateOp)
 	if output.Err != nil {
 		return ReconcileError{
-			Reason:         RsnDbDeleteFail,
-			Message:        MsgDbDeleteFail,
+			Reason:         RsnDbRotateFail,
+			Message:        MsgDbRotateFail,
 			Err:            output.Err,
 			AdditionalInfo: loggingKv,
+		}
+	}
+
+	if isSecretPresent, err := r.isSecretPresent(obj); isSecretPresent {
+		if err.IsNotEmpty() {
+			return err.With(loggingKv)
+		}
+		// Secret is already present, update it
+		err = r.updateSecret(obj, dbClass.Spec.SecretFormat, output)
+		if err.IsNotEmpty() {
+			return err.With(loggingKv)
+		}
+	} else {
+		// Secret is not present, create it
+		err = r.createSecret(obj, dbClass.Spec.SecretFormat, output)
+		if err.IsNotEmpty() {
+			return err.With(loggingKv)
 		}
 	}
 
@@ -586,19 +610,58 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretForm
 			Err:            err,
 			AdditionalInfo: loggingKv,
 		}
-	}
-	// Secret exists already, update (e.g. credential rotation)
-	// Don't overwrite empty values
-	secret.StringData = secretData.From(oldSecret.StringData)
-	if err = r.Client.Update(context.Background(), secret); err != nil {
+	} else {
+		// Create was called on already existing Secret
 		return ReconcileError{
-			Reason:         RsnSecretUpdateFail,
+			Reason:         RsnSecretExists,
+			Message:        MsgSecretExists,
+			Err:            err,
+			AdditionalInfo: loggingKv,
+		}
+	}
+}
+
+// createSecret creates a new K8s secret owned by owner with the data contained in output and dsn.
+func (r *DatabaseReconciler) updateSecret(owner *databasev1.Database, secretFormat database.SecretFormat, output database.OpOutput) ReconcileError {
+	logger.V(DebugLevel).Info("Updating secret for database resource")
+
+	// TODO: extract common behavior of Secret rendering into a method and put it in createSecret as well (factory method)?
+	// Init vars
+	secretName := FormatSecretName(owner)
+	loggingKv := StringsToInterfaceSlice("secret", secretName)
+	secretData, err := secretFormat.RenderSecretFormat(output)
+	if err != nil {
+		return ReconcileError{
+			Reason:         RsnSecretRenderFail,
+			Message:        MsgSecretRenderFail,
+			Err:            err,
+			AdditionalInfo: loggingKv,
+		}
+	}
+	var ownerRefs []metav1.OwnerReference
+	ownerRefs = append(ownerRefs, metav1.OwnerReference{
+		APIVersion: owner.APIVersion,
+		Kind:       owner.Kind,
+		Name:       owner.Name,
+		UID:        owner.UID,
+		Controller: &[]bool{true}[0], // sets this controller as owner
+	})
+	newSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            secretName,
+			Namespace:       owner.Namespace,
+			OwnerReferences: ownerRefs,
+		},
+		StringData: secretData,
+	}
+	if err := r.Client.Update(context.Background(), newSecret); err != nil {
+		return ReconcileError{
+			Reason:         MsgSecretUpdateFail,
 			Message:        MsgSecretUpdateFail,
 			Err:            err,
 			AdditionalInfo: loggingKv,
 		}
 	}
-
 	r.logInfoEvent(owner, RsnSecretUpdateSucc, MsgSecretUpdateSucc, loggingKv...)
 	return ReconcileError{}
 }
@@ -616,20 +679,40 @@ func (r *DatabaseReconciler) updateReadyCondition(obj *databasev1.Database, stat
 	return r.Client.Status().Update(context.Background(), obj)
 }
 
-// shouldRotate returns true if there isn't any Secret associated with the given Database object, or if the rotate
-// annotation is present. It returns false otherwise, or if an error was generated during execution.
+// shouldRotate returns true if there isn't any Secret associated with the given Database object (secret deletion),
+// or if the rotate annotation is present. It returns false otherwise, or if an error was generated during execution.
 func (r *DatabaseReconciler) shouldRotate(obj *databasev1.Database) (bool, ReconcileError) {
 	logger.V(TraceLevel).Info("Checking if credentials should be rotated")
+	if isSecretPresent, err := r.isSecretPresent(obj); !isSecretPresent {
+		if err.IsNotEmpty() {
+			return false, ReconcileError{
+				Reason:  RsnSecretGetFail,
+				Message: MsgSecretGetFail,
+				Err:     err.Err,
+			}
+		}
+		return true, ReconcileError{}
+	}
+	// secret is present, check if rotate annotation is present, if yes, rotate, else, just keep going
+	if isRotateAnnotationTrue(obj) {
+		return true, ReconcileError{}
+	}
+	return false, ReconcileError{}
+}
+
+// isSecretPresent returns true if the Secret bound to obj is present. It returns false otherwise, or if an
+// error was generated during execution.
+func (r *DatabaseReconciler) isSecretPresent(obj *databasev1.Database) (bool, ReconcileError) {
 	secretName := FormatSecretName(obj)
 	loggingKv := StringsToInterfaceSlice(SecretName, secretName)
+	logger.V(TraceLevel).Info("Checking if secret bound to Database resource is present")
 
-	// If Secret of Database is not present, it must be recreated through credentials rotation
 	var secret corev1.Secret
 	secretObjKey := client.ObjectKey{Namespace: obj.Namespace, Name: FormatSecretName(obj)}
 	if err := r.Client.Get(context.Background(), secretObjKey, &secret); err != nil {
 		if k8sError.IsNotFound(err) {
-			// Secret for given object is not present, it must be recreated
-			return true, ReconcileError{}
+			// Secret for given object is not present
+			return false, ReconcileError{}
 		}
 		// Another error was generated while getting the Secret, return it
 		return false, ReconcileError{
@@ -639,11 +722,7 @@ func (r *DatabaseReconciler) shouldRotate(obj *databasev1.Database) (bool, Recon
 			AdditionalInfo: loggingKv,
 		}
 	}
-	// secret is present, check if rotate annotation is present, if yes, rotate, else, just keep going
-	if isRotateAnnotationTrue(obj) {
-		return true, ReconcileError{}
-	}
-	return false, ReconcileError{}
+	return true, ReconcileError{}
 }
 
 // IsNotEmpty checks if r is not empty using reflect.DeepEqual. Needed because field AdditionalInfo is not comparable.
@@ -666,12 +745,14 @@ func FormatSecretName(obj *databasev1.Database) string {
 	return obj.Name + "-credentials"
 }
 
-func avoidUselessReconciliation() predicate.Predicate {
+// triggerReconciler checks whether reconciliation should be triggered or not to avoid useless reconciliations.
+// See also predicate.Predicate.
+func (r *DatabaseReconciler) triggerReconciler() predicate.Predicate {
 	return predicate.Funcs{
 		GenericFunc: func(e event.GenericEvent) bool {
 			obj := e.Object.(*databasev1.Database)
 			// If credentials are supposed to be rotated
-			if isRotateAnnotationTrue(obj) {
+			if shouldRotate, err := r.shouldRotate(obj); shouldRotate || err.IsNotEmpty() {
 				return true
 			}
 			// If object is supposed to be deleted
@@ -701,7 +782,7 @@ func newOpValuesFromResource(obj *databasev1.Database) (database.OpValues, Recon
 	var metadata map[string]interface{}
 	temp, _ := json.Marshal(metaIn)
 	err := json.Unmarshal(temp, &metadata)
-	if err != nil  		{
+	if err != nil {
 		return database.OpValues{}, ReconcileError{
 			Reason:  RsnDbMetaParseFail,
 			Message: MsgDbMetaParseFail,

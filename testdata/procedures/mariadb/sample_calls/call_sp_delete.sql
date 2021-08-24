@@ -1,0 +1,1 @@
+CALL sp_delete("manualtest"); 

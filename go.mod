@@ -21,9 +21,10 @@ require (
 	golang.org/x/sys v0.0.0-20210608053332-aa57babbf139 // indirect
 	golang.org/x/text v0.3.6 // indirect
 	golang.org/x/tools v0.1.2 // indirect
-	k8s.io/api v0.20.2
-	k8s.io/apimachinery v0.20.2
+	golang.stackrox.io/kube-linter v0.0.0-20210707220328-19fa6db01f27 // indirect
+	k8s.io/api v0.20.4
+	k8s.io/apimachinery v0.20.4
 	k8s.io/apiserver v0.20.2
-	k8s.io/client-go v0.20.2
+	k8s.io/client-go v0.20.4
 	sigs.k8s.io/controller-runtime v0.8.3
 )

@@ -5,13 +5,14 @@ import (
 	. "github.com/bedag/kubernetes-dbaas/pkg/test"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"os"
 	"sync"
 	"time"
 )
 
 var _ = Describe(FormatTestDesc(Integration, "NewRateLimitedDbmsConn", Slow), func() {
 	// Setting up connection to DBMS
-	dsn, err := database.Dsn("sqlserver://sa:Password&1@localhost:1433").GenMysql()
+	dsn, err := database.Dsn(os.Getenv("SQLSERVER_DSN")).GenSqlserver()
 	Expect(err).ToNot(HaveOccurred())
 
 	conn, err := database.NewSqlserverConn(dsn)
@@ -35,12 +36,12 @@ var _ = Describe(FormatTestDesc(Integration, "NewRateLimitedDbmsConn", Slow), fu
 			beforeAll := time.Now()
 			for i := 0; i < 10; i++ {
 				wg.Add(1)
-				go func() {
+				go func(callTimes []time.Time) {
 					defer func() { callTimes = append(callTimes, time.Now()) }()
 					defer wg.Done()
 
 					rateLimitedConn.CreateDb(createOperation)
-				}()
+				}(callTimes)
 			}
 			wg.Wait()
 			elapsedSeconds := time.Now().Sub(beforeAll).Seconds()

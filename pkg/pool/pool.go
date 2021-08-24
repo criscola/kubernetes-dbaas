@@ -4,12 +4,15 @@ package pool
 import (
 	"fmt"
 	"github.com/bedag/kubernetes-dbaas/pkg/database"
+	"github.com/go-logr/logr"
+	"time"
 )
 
 // Pool specifies the generic interface for a Pool of DBMS connections.
 type Pool interface {
 	Get(name string) Entry
 	Register(name string, driver string, dsn database.Dsn) error
+	Keepalive(interval time.Duration, logger logr.Logger)
 }
 
 // Entry specifies the generic interface for an entry of DbmsPool.
@@ -70,4 +73,19 @@ func (pool DbmsPool) Register(name string, driver string, dsn database.Dsn) erro
 	}
 	pool.entries[name] = DbmsEntry{rateLimitedConn, driver, dsn}
 	return err
+}
+
+// Keepalive starts a periodic ping to each endpoint, if an endpoint becomes unreachable, an error is logged.
+func (pool DbmsPool) Keepalive(interval time.Duration, logger logr.Logger) {
+	logger = logger.WithName("pool")
+	go func() {
+		for {
+			for k, v := range pool.entries {
+				if err := v.Ping(); err != nil {
+					logger.Error(err, "connection to the endpoint failed", "endpoint", k)
+				}
+			}
+			time.Sleep(interval)
+		}
+	}()
 }

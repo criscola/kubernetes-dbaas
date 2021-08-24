@@ -20,7 +20,7 @@ const (
 )
 
 // GetDevelopmentLogger returns a json logger configured for production. Level must be a negative number.
-func GetDevelopmentLogger(level int, disableStacktrace bool) logr.Logger {
+func GetDevelopmentLogger(level int, enableStacktrace bool) logr.Logger {
 	if level > 0 {
 		panic("logr logging levels cannot be positive")
 	}
@@ -36,14 +36,14 @@ func GetDevelopmentLogger(level int, disableStacktrace bool) logr.Logger {
 	))
 	atomicLevel.SetLevel(zapLevel)
 
-	if !disableStacktrace {
-		logger = logger.WithOptions(uzap.AddStacktrace(zapcore.Level(2)))
+	if enableStacktrace {
+		logger = logger.WithOptions(uzap.AddStacktrace(zapcore.Level(ZapTraceLevel)))
 	}
 	return zapr.NewLogger(logger)
 }
 
 // GetProductionLogger returns a console logger configured for development. Level must be a negative number.
-func GetProductionLogger(level int, disableStacktrace bool) logr.Logger {
+func GetProductionLogger(level int, enableStacktrace bool) logr.Logger {
 	if level > 0 {
 		panic("logr logging levels cannot be positive")
 	}
@@ -66,8 +66,8 @@ func GetProductionLogger(level int, disableStacktrace bool) logr.Logger {
 	// Configure sampling
 	zapCore = zapcore.NewSamplerWithOptions(zapCore, time.Second, 100, 100)
 	logger := uzap.New(zapCore)
-	if !disableStacktrace {
-		logger = logger.WithOptions(uzap.AddStacktrace(zapcore.Level(2)))
+	if enableStacktrace {
+		logger = logger.WithOptions(uzap.AddStacktrace(zapcore.Level(ZapTraceLevel)))
 	}
 	return zapr.NewLogger(logger)
 }
