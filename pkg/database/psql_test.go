@@ -5,11 +5,12 @@ import (
 	. "github.com/bedag/kubernetes-dbaas/pkg/test"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"os"
 )
 
 var _ = Describe(FormatTestDesc(Integration, "Postgres CreateDb"), func() {
 	// Setting up connection to DBMS
-	dsn, err := database.Dsn("postgres://postgres:Password&1@localhost:5432").GenPostgres()
+	dsn, err := database.Dsn(os.Getenv("POSTGRES_DSN")).GenPostgres()
 	Expect(err).ToNot(HaveOccurred())
 
 	conn, err := database.NewPsqlConn(dsn)

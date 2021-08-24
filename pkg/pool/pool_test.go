@@ -6,6 +6,7 @@ import (
 	. "github.com/bedag/kubernetes-dbaas/pkg/test"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"os"
 )
 
 var _ = Describe(FormatTestDesc(Integration, "RegisterDbms"), func() {
@@ -18,7 +19,7 @@ var _ = Describe(FormatTestDesc(Integration, "RegisterDbms"), func() {
 			Endpoints: []database.Endpoint{
 				{
 					Name: "postgres",
-					Dsn:  "postgres://postgres:Password&1@localhost:5432",
+					Dsn:  database.Dsn(os.Getenv("POSTGRES_DSN")),
 				},
 			},
 		}}
@@ -46,11 +47,11 @@ var _ = Describe(FormatTestDesc(Integration, "RegisterDbms"), func() {
 				Endpoints: []database.Endpoint{
 					{
 						Name: "duplicate",
-						Dsn:  "postgres://postgres:Password&1@localhost:5432",
+						Dsn:  database.Dsn(os.Getenv("POSTGRES_DSN")),
 					},
 					{
 						Name: "duplicate",
-						Dsn:  "postgres://postgres:Password&1@localhost:5432",
+						Dsn:  database.Dsn(os.Getenv("POSTGRES_DSN")),
 					},
 				},
 			}}

@@ -5,6 +5,7 @@ import (
 	. "github.com/bedag/kubernetes-dbaas/pkg/test"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"os"
 )
 
 const SqlserverCreateOpNameUnescapedBug = "sp_create_rowset_eav_unescaped_bug"
@@ -15,7 +16,7 @@ var _ = Describe(FormatTestDesc(Integration, "Sqlserver CreateDb"), func() {
 	var createOperation database.Operation
 
 	// Setting up connection to DBMS
-	dsn, err := database.Dsn("sqlserver://sa:Password&1@localhost:1433").GenSqlserver()
+	dsn, err := database.Dsn(os.Getenv("SQLSERVER_DSN")).GenSqlserver()
 	Expect(err).ToNot(HaveOccurred())
 
 	conn, err := database.NewSqlserverConn(dsn)

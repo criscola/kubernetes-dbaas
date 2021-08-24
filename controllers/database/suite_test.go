@@ -83,7 +83,7 @@ var _ = BeforeSuite(func() {
 				}
 			}
 			if testConfigPath := os.Getenv("TEST_CONFIG_PATH"); testConfigPath != "" {
-				CfgFilepath = path.Join(RootPath, testConfigPath)
+				CfgFilepath = testConfigPath
 			}
 			cfg, err = testEnv.Start()
 			Expect(err).NotTo(HaveOccurred())

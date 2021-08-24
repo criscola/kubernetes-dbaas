@@ -6,6 +6,7 @@ import (
 	. "github.com/bedag/kubernetes-dbaas/pkg/test"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"os"
 )
 
 var _ = Describe(FormatTestDesc(Integration, "Mariadb CreateDb"), func() {
@@ -14,7 +15,7 @@ var _ = Describe(FormatTestDesc(Integration, "Mariadb CreateDb"), func() {
 	var createOperation database.Operation
 
 	// Setting up connection to DBMS
-	dsn, err := database.Dsn("mariadb://root:Password&1@localhost:3306/mysql").GenMysql()
+	dsn, err := database.Dsn(os.Getenv("MARIADB_DSN")).GenMysql()
 	Expect(err).ToNot(HaveOccurred())
 
 	conn, err := database.NewMysqlConn(dsn)
