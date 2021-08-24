@@ -4,9 +4,9 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
-          description: Update Chart for appVersion 0.3.0
+          description: Update Chart for appVersion 1.0.0
         - kind: changed
-          description: Homogenize comments for helm-docs
+          description: Adapt comments for helm-docs
         - kind: added
           description: Endpoint secrets generator
         - kind: added
@@ -40,10 +40,10 @@ entries:
           email: cristiano.colangelo@bluewin.ch
       artifacthub.io/operator: "true"
     apiVersion: v2
-    appVersion: 0.3.0
-    created: "2021-08-23T17:02:23.820754742+02:00"
+    appVersion: 1.0.0
+    created: "2021-08-24T13:33:55.240780352+02:00"
     description: A Helm chart for the Kubernetes DBaaS Operator.
-    digest: b414b94c5ec850d9adce93c946ed016ea81642c1f8770d0cbf5db39320af96d8
+    digest: 5bb1a541a107cb4109893cb98ce93780885c3038d932fa461e90a5f724f38a95
     home: https://bedag.github.io/kubernetes-dbaas/
     icon: https://bedag.github.io/kubernetes-dbaas/img/logo.svg
     keywords:
@@ -53,6 +53,13 @@ entries:
     - dbaas
     - stored procedures
     - kubernetes operator
+    - go
+    - dbms
+    - database management systems
+    - stored procedures
+    - automation
+    - provisioning
+    - databases
     kubeVersion: '>= 1.21.0'
     maintainers:
     - email: cristiano.colangelo@bluewin.ch
@@ -63,6 +70,6 @@ entries:
     - https://github.com/bedag/kubernetes-dbaas
     type: application
     urls:
-    - https://criscola.github.io/kubernetes-dbaas/charts/kubernetes-dbaas-0.3.0.tgz
-    version: 0.3.0
-generated: "2021-08-23T17:02:23.816805594+02:00"
+    - https://criscola.github.io/kubernetes-dbaas/charts/kubernetes-dbaas-1.0.0.tgz
+    version: 1.0.0
+generated: "2021-08-24T13:33:55.232726347+02:00"
