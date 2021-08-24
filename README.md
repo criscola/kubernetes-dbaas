@@ -1,52 +1,33 @@
-# Kubernetes DbaaS
+# Kubernetes DBaaS
+### *A unique Kubernetes Database-as-a-Service (DBaaS) Operator for declarative, self-service database provisioning in DBMS solutions.*
+
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Go Reference](https://pkg.go.dev/badge/github.com/bedag/kubernetes-dbaas.svg)](https://pkg.go.dev/github.com/bedag/kubernetes-dbaas)
+[![Go Report Card](https://goreportcard.com/badge/github.com/bedag/kubernetes-dbaas)](https://goreportcard.com/report/github.com/bedag/kubernetes-dbaas)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/kubernetes-dbaas)](https://artifacthub.io/packages/search?repo=kubernetes-dbaas)
 
-![Bedag](https://www.bedag.ch/wGlobal/wGlobal/layout/images/logo.svg)
+<img alt="Kubernetes DBaaS Logo" src="website/static/img/logo.svg" width="300" height="260">
 
-*A Kubernetes Database as a Service (DBaaS) Operator for non-Kubernetes managed database management systems.*
+All documentation can be found on the [Kubernetes DBaaS website](https://bedag.github.io/kubernetes-dbaas).
 
-![logo](docs/resources/cover.png)
+## Description
 
-## Abstract
+The **Kubernetes Database-as-a-Service (DBaaS) Operator** ("the Operator") is a [Kubernetes
+Operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) used
+to provision database instances in database management systems:
 
-This project aims at creating a Kubernetes Operator able to trigger a stored procedure in an external DBMS which in turn 
-provisions a new database instance. Users are able to create new database instances by writing the API Object 
-configuration using Kubernetes Custom Resources. The Operator watches for new API Objects and tells the target DBMS to 
-trigger a certain stored procedure based on the custom resource specs.
-
-## Motivation
-
-There are cases where an organization cannot or doesn't want to host their precious data in cloud environments and searches 
-for a way to bridge the gap between their Kubernetes clusters and on-premise DBMS solutions. Imagine an organization composed 
-by developers, system administrators and database administrators. Developers want their database instance ready ASAP, 
-system administrators want to integrate everything under Kubernetes, and database administrators have to keep control
-over the provisioning process while still automating repetitive tasks.
-
-One of the Operator's strongest points is the separation of concerns between users, system administrators and database 
-administrators. DBAs can retain full control on the lifecycle of database instances by creating **stored procedures** 
-for each operation. This decouples the configuration from the implementation and ensures a well-defined boundary between 
-the Kubernetes and Database worlds. Companies with strict compliance requirements can configure an opaque provisioning 
-system for databases where data and business logic is kept as close as possible to their location without having to
-resort to any third-party tool; the only requirement is a defined [contract](https://en.wikipedia.org/wiki/Design_by_contract) 
-between the system and database infrastructures.
-
-## Main technologies
-
-- Go 1.16 or newer
-- operator-sdk v1.7.2 or newer 
-- Kubernetes v1.21.0 or newer
-- Helm v3
-
+- The Operator can be easily configured and installed in a Kubernetes cluster
+  using the provided Helm Chart.
+- End-users such as software developers are able to create new database
+  instances by writing simple Database custom resources.
+- Operations on DBMS are implemented using stored procedures called by the
+  Operator whenever necessary, allowing you to define your own custom logic.
+- Credentials to access provisioned database instances are saved into Kubernetes
+  Secrets.
+  
+Written using [Go](https://go.dev/) and the [Operator SDK](https://github.com/operator-framework/operator-sdk).
+  
 ## Main features
-
-### Create database 
-
-![k8s_dbaas_bedag_create](docs/resources/k8s_dbaas_bedag_create.png)
-
-### Delete database
-
-![k8s_dbaas_bedag_delete](docs/resources/k8s_dbaas_bedag_delete.png)
 
 - Level-based logging
 - Event logging, metrics
@@ -62,22 +43,13 @@ between the system and database infrastructures.
 - PostgreSQL
 - MySQL/MariaDB
 
-Encrypted DBMS connections are not supported.
-
-## Manuals
-
-In order of precedence:
-
-- [Database administrator guide](docs/dba_guide.md)
-- [System administrator guide](docs/sysadmin_guide.md)
-- [End-user guide](docs/enduser_guide.md)
-
-## Known issues
-
 ## Contributing
 
-Please read the [contributing guidelines](docs/contributing.md).
+There is a comprehensive set of guidelines and helpful documentation.
+
+Please read [How to contribute](https://bedag.github.io/kubernetes-dbaas/docs/contributing/how-to-contribute) to get started.
 
 ## Credits
 
-## License
+Copyright © 2021 [Cristiano Colangelo](https://github.com/criscola) —
+Developed for Bedag Informatik AG.
