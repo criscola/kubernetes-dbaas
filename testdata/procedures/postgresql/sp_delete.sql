@@ -6,7 +6,7 @@ IF EXISTS (SELECT 1 FROM pg_database WHERE datname = k8sName) THEN
 END IF;
 
 IF exists(SELECT id FROM databases WHERE dbName = k8sName) THEN
-	DELETE FROM databases WHERE dbName = k8sName
+	DELETE FROM databases WHERE dbName = k8sName;
 END IF;
 
 END;

@@ -16,8 +16,10 @@ BEGIN
 	INSERT INTO t VALUES('fqdn', 'localhost');
 	INSERT INTO t VALUES('port', '3306');
 	INSERT INTO t VALUES('lastRotation', '');
-	
-	INSERT INTO _databases (username, password, dbName, port, fqdn) VALUES('testuser', 'testpassword', k8sName, '3306', 'localhost');
+
+	IF NOT EXISTS(SELECT id FROM _databases WHERE dbName = k8sName) THEN
+		INSERT INTO _databases (username, password, dbName, port, fqdn) VALUES('testuser', 'testpassword', k8sName, '3306', 'localhost');
+	END IF;
 
 	SELECT * FROM t;
 END $

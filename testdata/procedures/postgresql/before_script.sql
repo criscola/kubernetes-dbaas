@@ -1,3 +1,4 @@
+create extension if not exists dblink;
 CREATE TABLE databases (
 	id 			SERIAL PRIMARY KEY,
 	username	VARCHAR(40),

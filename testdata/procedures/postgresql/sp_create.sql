@@ -1,5 +1,3 @@
-create extension if not exists dblink;
-
 create or replace function sp_create_db_rowset_eav(k8sName text)
   returns table("key" text, value text) as
 $func$
