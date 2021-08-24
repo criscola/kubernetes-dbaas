@@ -473,7 +473,7 @@ func (r *DatabaseReconciler) SetupWithManager(mgr ctrl.Manager) error <span clas
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) <span class="cov8" title="31">{
+func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) <span class="cov8" title="34">{
         logger = r.Log.WithValues("database", req.NamespacedName)
         logger.V(TraceLevel).Info("Reconcile called")
 
@@ -498,7 +498,7 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
         // Set reason to unknown to indicate the resource was correctly received by a controller but no action was resolved yet
         // Update condition field
-        <span class="cov7" title="23">if meta.FindStatusCondition(obj.Status.Conditions, TypeReady) == nil </span><span class="cov3" title="4">{
+        <span class="cov7" title="26">if meta.FindStatusCondition(obj.Status.Conditions, TypeReady) == nil </span><span class="cov3" title="4">{
                 logger.V(TraceLevel).Info("Updating ConditionStatus")
                 if err = r.updateReadyCondition(obj, metav1.ConditionUnknown, RsnDbOpQueueSucc, MsgDbOpQueueSucc); err != nil </span><span class="cov0" title="0">{
                         r.handleReconcileError(obj, ReconcileError{
@@ -513,7 +513,7 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
         // Check if the Database instance is marked to be deleted, which is
         // indicated by the deletion timestamp being set.
-        <span class="cov7" title="23">if obj.GetDeletionTimestamp() != nil </span><span class="cov3" title="4">{
+        <span class="cov7" title="26">if obj.GetDeletionTimestamp() != nil </span><span class="cov3" title="4">{
                 if contains(obj.GetFinalizers(), databaseFinalizer) </span><span class="cov3" title="4">{
                         // Run finalization logic for DatabaseFinalizer. If the
                         // finalization logic fails, don't remove the finalizer so
@@ -545,7 +545,7 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
         }
 
         // If Database is ready
-        <span class="cov7" title="19">if meta.IsStatusConditionTrue(obj.Status.Conditions, TypeReady) </span><span class="cov6" title="14">{
+        <span class="cov7" title="22">if meta.IsStatusConditionTrue(obj.Status.Conditions, TypeReady) </span><span class="cov6" title="16">{
                 logger.V(TraceLevel).Info("Database resource is in Ready state")
                 // Check if Database credentials should be rotated
                 shouldRotate, err := r.shouldRotate(obj)
@@ -553,7 +553,7 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
                         r.handleReconcileError(obj, err)
                         return ctrl.Result{Requeue: true}, nil
                 }</span>
-                <span class="cov6" title="14">if shouldRotate </span><span class="cov3" title="4">{
+                <span class="cov6" title="16">if shouldRotate </span><span class="cov3" title="4">{
                         // Update Ready condition to false, Database credentials must be rotated
                         if err := r.updateReadyCondition(obj, metav1.ConditionFalse, RsnDbRotateInProg, MsgDbRotateInProg); err != nil </span><span class="cov0" title="0">{
                                 r.handleReadyConditionError(obj, err)
@@ -569,14 +569,14 @@ func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
                                 return ctrl.Result{Requeue: true}, nil
                         }</span>
                         <span class="cov3" title="4">r.logInfoEvent(obj, RsnDbRotateSucc, MsgDbRotateSucc)</span>
-                } else<span class="cov5" title="10"> {
+                } else<span class="cov6" title="12"> {
                         // Database is ready and credentials shouldn't be rotated, nothing else to do
                         logger.V(TraceLevel).Info("Credentials should not be rotated, nothing left to do")
                         return ctrl.Result{}, nil
                 }</span>
-        } else<span class="cov4" title="5"> {
+        } else<span class="cov4" title="6"> {
                 // Create
-                if err := r.createDb(obj); err.IsNotEmpty() </span><span class="cov1" title="1">{
+                if err := r.createDb(obj); err.IsNotEmpty() </span><span class="cov2" title="2">{
                         r.handleReconcileError(obj, err)
                         return ctrl.Result{Requeue: true}, nil
                 }</span>
@@ -613,14 +613,14 @@ func (r *DatabaseReconciler) addFinalizer(obj *databasev1.Database) error <span 
 }</span>
 
 // createDb creates a new Database instance on the external provisioner based on the Database data.
-func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError <span class="cov4" title="5">{
+func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError <span class="cov4" title="6">{
         r.logInfoEvent(obj, RsnDbCreateInProg, MsgDbCreateInProg)
 
         dbClass, err := r.getDbmsClassFromDb(obj)
         if err.IsNotEmpty() </span><span class="cov0" title="0">{
                 return err
         }</span>
-        <span class="cov4" title="5">loggingKv := StringsToInterfaceSlice(DatabaseClass, dbClass.Name, database.OperationsConfigKey, database.CreateMapKey)
+        <span class="cov4" title="6">loggingKv := StringsToInterfaceSlice(DatabaseClass, dbClass.Name, database.OperationsConfigKey, database.CreateMapKey)
 
         // Render operation
         createOpTemplate, exists := dbClass.Spec.Operations[database.CreateMapKey]
@@ -632,11 +632,11 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError <
                         AdditionalInfo: loggingKv,
                 }
         }</span>
-        <span class="cov4" title="5">opValues, err := newOpValuesFromResource(obj)
+        <span class="cov4" title="6">opValues, err := newOpValuesFromResource(obj)
         if err.IsNotEmpty() </span><span class="cov0" title="0">{
                 return err.With(loggingKv)
         }</span>
-        <span class="cov4" title="5">createOp, simpleErr := createOpTemplate.RenderOperation(opValues)
+        <span class="cov4" title="6">createOp, simpleErr := createOpTemplate.RenderOperation(opValues)
         if simpleErr != nil </span><span class="cov0" title="0">{
                 return ReconcileError{
                         Reason:         RsnOpRenderFail,
@@ -645,7 +645,7 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError <
                         AdditionalInfo: loggingKv,
                 }
         }</span>
-        <span class="cov4" title="5">loggingKv = append(loggingKv, EndpointName, obj.Spec.Endpoint)
+        <span class="cov4" title="6">loggingKv = append(loggingKv, EndpointName, obj.Spec.Endpoint)
 
         // Execute operation on DBMS
         // Check preconditions
@@ -653,7 +653,7 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError <
         if conn, err = r.getDbmsConnectionByEndpointName(obj.Spec.Endpoint); err.IsNotEmpty() </span><span class="cov0" title="0">{
                 return err.With(loggingKv)
         }</span>
-        <span class="cov4" title="5">output := conn.CreateDb(createOp)
+        <span class="cov4" title="6">output := conn.CreateDb(createOp)
         if output.Err != nil </span><span class="cov0" title="0">{
                 return ReconcileError{
                         Reason:         RsnDbCreateFail,
@@ -664,12 +664,12 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError <
         }</span>
 
         // Log success
-        <span class="cov4" title="5">r.logInfoEvent(obj, RsnDbCreateSucc, MsgDbCreateSucc)
+        <span class="cov4" title="6">r.logInfoEvent(obj, RsnDbCreateSucc, MsgDbCreateSucc)
         logger.V(TraceLevel).Info(fmt.Sprint(dbClass.Spec.SecretFormat))
         logger.V(TraceLevel).Info(fmt.Sprint(output))
         // Create Secret
         err = r.createSecret(obj, dbClass.Spec.SecretFormat, output)
-        if err.IsNotEmpty() </span><span class="cov1" title="1">{
+        if err.IsNotEmpty() </span><span class="cov2" title="2">{
                 return err.With(loggingKv)
         }</span>
 
@@ -831,7 +831,7 @@ func (r *DatabaseReconciler) rotate(obj *databasev1.Database) ReconcileError <sp
         <span class="cov3" title="4">return ReconcileError{}</span>
 }
 
-func (r *DatabaseReconciler) getDbmsClassFromDb(obj *databasev1.Database) (databaseclassv1.DatabaseClass, ReconcileError) <span class="cov6" title="13">{
+func (r *DatabaseReconciler) getDbmsClassFromDb(obj *databasev1.Database) (databaseclassv1.DatabaseClass, ReconcileError) <span class="cov6" title="14">{
         // Get DatabaseClass resource from api server
         dbClassName := r.DbmsList.GetDatabaseClassNameByEndpointName(obj.Spec.Endpoint)
         if dbClassName == "" </span><span class="cov0" title="0">{
@@ -843,7 +843,7 @@ func (r *DatabaseReconciler) getDbmsClassFromDb(obj *databasev1.Database) (datab
                 }
         }</span>
 
-        <span class="cov6" title="13">dbClass := databaseclassv1.DatabaseClass{}
+        <span class="cov6" title="14">dbClass := databaseclassv1.DatabaseClass{}
         err := r.Client.Get(context.Background(), client.ObjectKey{Namespace: "", Name: dbClassName}, &amp;dbClass)
         if err != nil </span><span class="cov0" title="0">{
                 return databaseclassv1.DatabaseClass{}, ReconcileError{
@@ -853,10 +853,10 @@ func (r *DatabaseReconciler) getDbmsClassFromDb(obj *databasev1.Database) (datab
                         AdditionalInfo: StringsToInterfaceSlice(DatabaseClass, dbClassName),
                 }
         }</span>
-        <span class="cov6" title="13">return dbClass, ReconcileError{}</span>
+        <span class="cov6" title="14">return dbClass, ReconcileError{}</span>
 }
 
-func (r *DatabaseReconciler) getDbmsConnectionByEndpointName(endpointName string) (database.Driver, ReconcileError) <span class="cov6" title="13">{
+func (r *DatabaseReconciler) getDbmsConnectionByEndpointName(endpointName string) (database.Driver, ReconcileError) <span class="cov6" title="14">{
         // Check if the endpoint is currently stored in the connection pool
         conn := r.Pool.Get(endpointName)
         if conn == nil </span><span class="cov0" title="0">{
@@ -867,39 +867,39 @@ func (r *DatabaseReconciler) getDbmsConnectionByEndpointName(endpointName string
                 }
         }</span>
         // Make a first check to acknowledge whether the connection looks alive
-        <span class="cov6" title="13">if simpleErr := conn.Ping(); simpleErr != nil </span><span class="cov0" title="0">{
+        <span class="cov6" title="14">if simpleErr := conn.Ping(); simpleErr != nil </span><span class="cov0" title="0">{
                 return nil, ReconcileError{
                         Reason:  RsnDbmsConnFail,
                         Message: MsgDbmsConnFail,
                         Err:     simpleErr,
                 }
         }</span>
-        <span class="cov6" title="13">return conn, ReconcileError{}</span>
+        <span class="cov6" title="14">return conn, ReconcileError{}</span>
 }
 
 // handleReconcileError sets the obj Conditions type Ready to false and sets the relative fields error and message,
 // it records a Warning event with reason and message for the given obj and logs err (if present) and message to the
 // global logger.
 // It ignores optimistic locking error, see shouldIgnoreUpdateErr.
-func (r *DatabaseReconciler) handleReconcileError(obj *databasev1.Database, err ReconcileError) <span class="cov1" title="1">{
+func (r *DatabaseReconciler) handleReconcileError(obj *databasev1.Database, err ReconcileError) <span class="cov2" title="2">{
         if shouldIgnoreUpdateErr(err.Err) </span><span class="cov0" title="0">{
                 logger.V(TraceLevel).Info(err.Err.Error())
                 return
         }</span>
-        <span class="cov1" title="1">keyAndValuesLen := len(err.AdditionalInfo)
+        <span class="cov2" title="2">keyAndValuesLen := len(err.AdditionalInfo)
         if keyAndValuesLen%2 != 0 </span><span class="cov0" title="0">{
                 logger.Error(nil, "odd number of keyAndValues provided!", err.AdditionalInfo...)
                 // Set length to 0 so additional values are ignored
                 keyAndValuesLen = 0
         }</span>
-        <span class="cov1" title="1">if keyAndValuesLen &gt; 0 </span><span class="cov1" title="1">{
+        <span class="cov2" title="2">if keyAndValuesLen &gt; 0 </span><span class="cov2" title="2">{
                 r.EventRecorder.Event(obj, Warning, err.Reason, formatEventMessage(err.Message, err.AdditionalInfo...))
                 logger.Error(err.Err, err.Message, err.AdditionalInfo...)
         }</span> else<span class="cov0" title="0"> {
                 r.EventRecorder.Event(obj, Warning, err.Reason, err.Message)
                 logger.Error(err.Err, err.Message)
         }</span>
-        <span class="cov1" title="1">if updateErr := r.updateReadyCondition(obj, metav1.ConditionFalse, err.Reason, err.Message); updateErr != nil </span><span class="cov1" title="1">{
+        <span class="cov2" title="2">if updateErr := r.updateReadyCondition(obj, metav1.ConditionFalse, err.Reason, err.Message); updateErr != nil </span><span class="cov2" title="2">{
                 logger.Error(err.Err, MsgDbUpdateFail)
         }</span>
 }
@@ -922,14 +922,14 @@ func (r *DatabaseReconciler) handleReadyConditionError(obj *databasev1.Database,
 
 // logInfoEvent records an event of type Normal to obj using reason, message and additionalInfo. additionalInfo is formatted
 // as JSON and attached to the event message. An info log using message and additionalInfo is written using the global logger
-func (r *DatabaseReconciler) logInfoEvent(obj *databasev1.Database, reason, message string, additionalInfo ...interface{}) <span class="cov8" title="30">{
+func (r *DatabaseReconciler) logInfoEvent(obj *databasev1.Database, reason, message string, additionalInfo ...interface{}) <span class="cov8" title="32">{
         eventMessage := formatEventMessage(message, additionalInfo...)
         r.EventRecorder.Event(obj, Normal, reason, eventMessage)
         logger.Info(message, additionalInfo...)
 }</span>
 
 // createSecret creates a new K8s secret owned by owner with the data contained in output and dsn.
-func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretFormat database.SecretFormat, output database.OpOutput) ReconcileError <span class="cov4" title="6">{
+func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretFormat database.SecretFormat, output database.OpOutput) ReconcileError <span class="cov4" title="7">{
         logger.V(DebugLevel).Info("Creating secret for database resource")
 
         // Init vars
@@ -944,7 +944,7 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretForm
                         AdditionalInfo: loggingKv,
                 }
         }</span>
-        <span class="cov4" title="6">var ownerRefs []metav1.OwnerReference
+        <span class="cov4" title="7">var ownerRefs []metav1.OwnerReference
         ownerRefs = append(ownerRefs, metav1.OwnerReference{
                 APIVersion: owner.APIVersion,
                 Kind:       owner.Kind,
@@ -989,7 +989,7 @@ func (r *DatabaseReconciler) createSecret(owner *databasev1.Database, secretForm
                         Err:            err,
                         AdditionalInfo: loggingKv,
                 }</span>
-        } else<span class="cov1" title="1"> {
+        } else<span class="cov2" title="2"> {
                 // Create was called on already existing Secret
                 return ReconcileError{
                         Reason:         RsnSecretExists,
@@ -1046,7 +1046,7 @@ func (r *DatabaseReconciler) updateSecret(owner *databasev1.Database, secretForm
 }
 
 // updateReadyCondition updates the Ready Condition status of obj.
-func (r *DatabaseReconciler) updateReadyCondition(obj *databasev1.Database, status metav1.ConditionStatus, reason, message string) error <span class="cov6" title="17">{
+func (r *DatabaseReconciler) updateReadyCondition(obj *databasev1.Database, status metav1.ConditionStatus, reason, message string) error <span class="cov6" title="18">{
         meta.SetStatusCondition(&amp;obj.Status.Conditions, metav1.Condition{
                 Type:    TypeReady,
                 Status:  status,
@@ -1060,7 +1060,7 @@ func (r *DatabaseReconciler) updateReadyCondition(obj *databasev1.Database, stat
 
 // shouldRotate returns true if there isn't any Secret associated with the given Database object (secret deletion),
 // or if the rotate annotation is present. It returns false otherwise, or if an error was generated during execution.
-func (r *DatabaseReconciler) shouldRotate(obj *databasev1.Database) (bool, ReconcileError) <span class="cov6" title="14">{
+func (r *DatabaseReconciler) shouldRotate(obj *databasev1.Database) (bool, ReconcileError) <span class="cov6" title="16">{
         logger.V(TraceLevel).Info("Checking if credentials should be rotated")
         if isSecretPresent, err := r.isSecretPresent(obj); !isSecretPresent </span><span class="cov1" title="1">{
                 if err.IsNotEmpty() </span><span class="cov0" title="0">{
@@ -1073,15 +1073,15 @@ func (r *DatabaseReconciler) shouldRotate(obj *databasev1.Database) (bool, Recon
                 <span class="cov1" title="1">return true, ReconcileError{}</span>
         }
         // secret is present, check if rotate annotation is present, if yes, rotate, else, just keep going
-        <span class="cov6" title="13">if isRotateAnnotationTrue(obj) </span><span class="cov3" title="3">{
+        <span class="cov6" title="15">if isRotateAnnotationTrue(obj) </span><span class="cov3" title="3">{
                 return true, ReconcileError{}
         }</span>
-        <span class="cov5" title="10">return false, ReconcileError{}</span>
+        <span class="cov6" title="12">return false, ReconcileError{}</span>
 }
 
 // isSecretPresent returns true if the Secret bound to obj is present. It returns false otherwise, or if an
 // error was generated during execution.
-func (r *DatabaseReconciler) isSecretPresent(obj *databasev1.Database) (bool, ReconcileError) <span class="cov6" title="18">{
+func (r *DatabaseReconciler) isSecretPresent(obj *databasev1.Database) (bool, ReconcileError) <span class="cov7" title="20">{
         secretName := FormatSecretName(obj)
         loggingKv := StringsToInterfaceSlice(SecretName, secretName)
         logger.V(TraceLevel).Info("Checking if secret bound to Database resource is present")
@@ -1101,16 +1101,16 @@ func (r *DatabaseReconciler) isSecretPresent(obj *databasev1.Database) (bool, Re
                         AdditionalInfo: loggingKv,
                 }</span>
         }
-        <span class="cov6" title="16">return true, ReconcileError{}</span>
+        <span class="cov6" title="18">return true, ReconcileError{}</span>
 }
 
 // IsNotEmpty checks if r is not empty using reflect.DeepEqual. Needed because field AdditionalInfo is not comparable.
-func (r ReconcileError) IsNotEmpty() bool <span class="cov10" title="79">{
+func (r ReconcileError) IsNotEmpty() bool <span class="cov10" title="86">{
         return !reflect.DeepEqual(r, ReconcileError{})
 }</span>
 
 // With creates a copy of the receiver and appends values to its AdditionalInfo field.
-func (r ReconcileError) With(values []interface{}) ReconcileError <span class="cov1" title="1">{
+func (r ReconcileError) With(values []interface{}) ReconcileError <span class="cov2" title="2">{
         return ReconcileError{
                 Reason:         r.Reason,
                 Message:        r.Message,
@@ -1120,7 +1120,7 @@ func (r ReconcileError) With(values []interface{}) ReconcileError <span class="c
 }</span>
 
 // FormatSecretName returns the name of a Database's Secret resource as it should appear in metadata.name.
-func FormatSecretName(obj *databasev1.Database) string <span class="cov9" title="63">{
+func FormatSecretName(obj *databasev1.Database) string <span class="cov9" title="68">{
         return obj.Name + "-credentials"
 }</span>
 
@@ -1148,15 +1148,15 @@ func (r *DatabaseReconciler) triggerReconciler() predicate.Predicate <span class
 }
 
 // isRotateAnnotationTrue checks whether the rotate annotation is present and set to true or ""
-func isRotateAnnotationTrue(obj client.Object) bool <span class="cov6" title="17">{
+func isRotateAnnotationTrue(obj client.Object) bool <span class="cov6" title="19">{
         if val, ok := obj.GetAnnotations()[rotateAnnotationKey]; ok &amp;&amp; val == "" || val == "true" </span><span class="cov4" title="6">{
                 return true
         }</span>
-        <span class="cov5" title="11">return false</span>
+        <span class="cov6" title="13">return false</span>
 }
 
 // newOpValuesFromResource constructs a database.OpValues struct starting from a Database resource.
-func newOpValuesFromResource(obj *databasev1.Database) (database.OpValues, ReconcileError) <span class="cov6" title="13">{
+func newOpValuesFromResource(obj *databasev1.Database) (database.OpValues, ReconcileError) <span class="cov6" title="14">{
         metaIn := obj.ObjectMeta
         var metadata map[string]interface{}
         temp, _ := json.Marshal(metaIn)
@@ -1168,7 +1168,7 @@ func newOpValuesFromResource(obj *databasev1.Database) (database.OpValues, Recon
                         Err:     err,
                 }
         }</span>
-        <span class="cov6" title="13">specIn := obj.Spec.Params
+        <span class="cov6" title="14">specIn := obj.Spec.Params
         var spec map[string]string
         temp, err = json.Marshal(specIn)
         err = json.Unmarshal(temp, &amp;spec)
@@ -1180,7 +1180,7 @@ func newOpValuesFromResource(obj *databasev1.Database) (database.OpValues, Recon
                 }
         }</span>
 
-        <span class="cov6" title="13">return database.OpValues{
+        <span class="cov6" title="14">return database.OpValues{
                 Metadata:   metadata,
                 Parameters: spec,
         }, ReconcileError{}</span>
@@ -1188,18 +1188,18 @@ func newOpValuesFromResource(obj *databasev1.Database) (database.OpValues, Recon
 
 // formatEventMessage formats an event message with key and values formatted as a json key-value structure. If keyAndValues
 // is empty, it returns the message back.
-func formatEventMessage(message string, keyAndValues ...interface{}) string <span class="cov8" title="31">{
-        if len(keyAndValues) &gt; 0 </span><span class="cov5" title="9">{
+func formatEventMessage(message string, keyAndValues ...interface{}) string <span class="cov8" title="34">{
+        if len(keyAndValues) &gt; 0 </span><span class="cov5" title="10">{
                 extraValues := formatKeyAndValuesAsJson(keyAndValues)
-                if extraValues != "" </span><span class="cov5" title="9">{
+                if extraValues != "" </span><span class="cov5" title="10">{
                         return fmt.Sprintf("%s: %s", message, extraValues)
                 }</span>
         }
-        <span class="cov7" title="22">return message</span>
+        <span class="cov7" title="24">return message</span>
 }
 
 // formatKeyAndValuesAsJson converts a slice of interface{} into a json key-value string. Keys need to be strings by JSON's convention.
-func formatKeyAndValuesAsJson(keyAndValues []interface{}) string <span class="cov5" title="9">{
+func formatKeyAndValuesAsJson(keyAndValues []interface{}) string <span class="cov5" title="10">{
         keyAndValuesLen := len(keyAndValues)
         if keyAndValuesLen%2 != 0 </span><span class="cov0" title="0">{
                 logger.Error(fmt.Errorf("expected an even number of arguments, provided: %d", keyAndValuesLen),
@@ -1207,9 +1207,9 @@ func formatKeyAndValuesAsJson(keyAndValues []interface{}) string <span class="co
                 // Set length to 0 so additional values are ignored
                 keyAndValuesLen = 0
         }</span>
-        <span class="cov5" title="9">if keyAndValuesLen &gt; 0 </span><span class="cov5" title="9">{
+        <span class="cov5" title="10">if keyAndValuesLen &gt; 0 </span><span class="cov5" title="10">{
                 keyAndValuesMap := make(map[string]interface{}, keyAndValuesLen/2)
-                for i := 0; i &lt; keyAndValuesLen; i += 2 </span><span class="cov6" title="12">{
+                for i := 0; i &lt; keyAndValuesLen; i += 2 </span><span class="cov6" title="16">{
                         key, ok := keyAndValues[i].(string)
                         if !ok </span><span class="cov0" title="0">{
                                 logger.Error(fmt.Errorf("expected key at position %d to be string, provided: %T", i, keyAndValues[i]),
@@ -1217,14 +1217,14 @@ func formatKeyAndValuesAsJson(keyAndValues []interface{}) string <span class="co
                                 // Set length to 0 so additional values are ignored
                                 keyAndValuesLen = 0
                         }</span>
-                        <span class="cov6" title="12">keyAndValuesMap[key] = keyAndValues[i+1]</span>
+                        <span class="cov6" title="16">keyAndValuesMap[key] = keyAndValues[i+1]</span>
                 }
-                <span class="cov5" title="9">str, err := json.Marshal(keyAndValuesMap)
+                <span class="cov5" title="10">str, err := json.Marshal(keyAndValuesMap)
                 if err != nil </span><span class="cov0" title="0">{
                         logger.Error(err, "cannot marshal keyAndValues to JSON")
                         return ""
                 }</span>
-                <span class="cov5" title="9">return string(str)</span>
+                <span class="cov5" title="10">return string(str)</span>
         }
         <span class="cov0" title="0">return ""</span>
 }
@@ -1242,8 +1242,8 @@ func contains(list []string, s string) bool <span class="cov6" title="12">{
 // shouldIgnoreUpdateErr checks if an error message is generated due to the optimistic locking mechanism of Kubernetes API.
 // This specific error is innocuous and should be generally ignored.
 // See https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-func shouldIgnoreUpdateErr(err error) bool <span class="cov1" title="1">{
-        if err == nil </span><span class="cov1" title="1">{
+func shouldIgnoreUpdateErr(err error) bool <span class="cov2" title="2">{
+        if err == nil </span><span class="cov2" title="2">{
                 return false
         }</span>
         <span class="cov0" title="0">if strings.Contains(err.Error(), genericregistry.OptimisticLockErrorMsg) </span><span class="cov0" title="0">{
