@@ -34,3 +34,9 @@ config_testing.yaml
 
 # values used for local deployment
 myvalues.yaml
+
+# Sensible files
+*sensible*
+
+# Binary
+kubernetes-dbaas
