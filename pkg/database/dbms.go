@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"text/template"
+
+	"github.com/xo/dburl"
 )
 
 const (
@@ -42,6 +44,7 @@ type DbmsConn struct {
 type Operation struct {
 	Name   string            `json:"name,omitempty"`
 	Inputs map[string]string `json:"inputs,omitempty"`
+	DSN    *dburl.URL        `json:"dsn,omitempty"`
 }
 
 // OpOutput represents the return values of an operation. If the operation generates an error, it must be set in the Err
@@ -169,6 +172,17 @@ func (c DbmsList) GetDatabaseClassNameByEndpointName(endpointName string) string
 	for _, dbms := range c {
 		if contains(dbms.Endpoints, endpointName) {
 			return dbms.DatabaseClassName
+		}
+	}
+	return ""
+}
+
+func (c DbmsList) GetDatabaseDSNByEndpointName(endpointName string) string {
+	for _, dbms := range c {
+		for _, endpoint := range dbms.Endpoints {
+			if endpoint.Name == endpointName {
+				return string(endpoint.Dsn)
+			}
 		}
 	}
 	return ""

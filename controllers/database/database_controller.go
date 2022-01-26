@@ -20,11 +20,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/bedag/kubernetes-dbaas/internal/logging"
 	"github.com/bedag/kubernetes-dbaas/pkg/database"
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
 	. "github.com/bedag/kubernetes-dbaas/pkg/typeutil"
 	"github.com/go-logr/logr"
+	"github.com/xo/dburl"
 	corev1 "k8s.io/api/core/v1"
 	k8sError "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -32,14 +36,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/client-go/tools/record"
-	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"strings"
 
 	databasev1 "github.com/bedag/kubernetes-dbaas/apis/database/v1"
 	databaseclassv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclass/v1"
@@ -274,6 +276,7 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError {
 	if conn, err = r.getDbmsConnectionByEndpointName(obj.Spec.Endpoint); err.IsNotEmpty() {
 		return err.With(loggingKv)
 	}
+	createOp.DSN, _ = dburl.Parse(r.DbmsList.GetDatabaseDSNByEndpointName(obj.Spec.Endpoint))
 	output := conn.CreateDb(createOp)
 	if output.Err != nil {
 		return ReconcileError{
