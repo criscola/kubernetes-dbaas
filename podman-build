@@ -1,0 +1,7 @@
+#!/bin/bash
+
+echo "Building $IMAGE"
+
+podman build -t $IMAGE .
+
+podman push $IMAGE

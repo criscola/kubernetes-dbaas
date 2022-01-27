@@ -2,7 +2,12 @@ apiVersion: skaffold/v2beta26
 kind: Config
 build:
   artifacts:
-    - image: widmaster/kubernetes-dbaas # must match in artifactOverrides
+  - image: widmaster/kubernetes-dbaas # must match in artifactOverrides
+    custom:
+      buildCommand: ./podman-build
+      dependencies:
+        dockerfile: 
+          path: Dockerfile
 deploy:
   helm:
     releases:
