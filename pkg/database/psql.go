@@ -48,6 +48,7 @@ func getDatabaseParameters(operation Operation) map[string]string {
 	databaseCredentials["PGPORT"] = operation.DSN.Port()
 	databaseCredentials["PGUSER_CREATE"] = "u_" + username
 	databaseCredentials["PGUSER"] = "u_" + username + "@" + operation.DSN.Hostname()
+	fmt.Printf("%v\n", databaseCredentials)
 	return databaseCredentials
 }
 
@@ -56,6 +57,7 @@ func getDatabaseParameters(operation Operation) map[string]string {
 func (c *PsqlConn) CreateDb(operation Operation) OpOutput {
 	val := getPsqlOpQuery(operation)
 
+	fmt.Printf("%v\n", val)
 	rows, err := c.c.Query(context.Background(), val)
 	if err != nil {
 		return OpOutput{Result: nil, Err: err}
