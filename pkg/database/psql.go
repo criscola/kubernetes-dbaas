@@ -3,9 +3,6 @@ package database
 import (
 	"context"
 	"fmt"
-	"strings"
-
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
@@ -25,39 +22,10 @@ func NewPsqlConn(dsn string) (*PsqlConn, error) {
 	return &conn, nil
 }
 
-func normalizeRune(r rune) rune {
-	if strings.ContainsRune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-.", r) {
-		return r
-	}
-	return '-'
-}
-
-func getDatabaseParameters(operation Operation) map[string]string {
-	username := uuid.New().String()
-	password := uuid.New().String()
-	databaseCredentials := make(map[string]string)
-
-	if databaseName, ok := operation.Inputs["databaseName"]; ok {
-		databaseCredentials["PGDATABASE_CREATE"] = strings.Map(normalizeRune, fmt.Sprintf("%v-%v", operation.Inputs["namespace"], databaseName))
-	} else {
-		databaseCredentials["PGDATABASE_CREATE"] = strings.Map(normalizeRune, "d_"+username)
-	}
-	databaseCredentials["PGDATABASE"] = databaseCredentials["PGDATABASE_CREATE"] + "@" + operation.DSN.Hostname()
-	databaseCredentials["PGHOST"] = operation.DSN.Hostname()
-	databaseCredentials["PGPASSWORD"] = password
-	databaseCredentials["PGPORT"] = operation.DSN.Port()
-	databaseCredentials["PGUSER_CREATE"] = "u_" + username
-	databaseCredentials["PGUSER"] = "u_" + username + "@" + operation.DSN.Hostname()
-	fmt.Printf("%v\n", databaseCredentials)
-	return databaseCredentials
-}
-
 // CreateDb attempts to create a new database as specified in the operation parameter. It returns an OpOutput with the
 // result of the call.
 func (c *PsqlConn) CreateDb(operation Operation) OpOutput {
 	val := getPsqlOpQuery(operation)
-
-	fmt.Printf("%v\n", val)
 	rows, err := c.c.Query(context.Background(), val)
 	if err != nil {
 		return OpOutput{Result: nil, Err: err}
@@ -116,16 +84,7 @@ func (c *PsqlConn) Ping() error {
 }
 
 func getPsqlOpQuery(operation Operation) string {
-	template := strings.ReplaceAll(operation.Name, "{ { ", "{{")
-	templateData := make(map[string]string)
-	for k, v := range operation.Inputs {
-		templateData[k] = v
-	}
-	for k, v := range getDatabaseParameters(operation) {
-		templateData[k] = v
-	}
-	renderedCreateOperation, _ := RenderGoTemplate(template, templateData)
-	return renderedCreateOperation
+	return fmt.Sprintf("select * from %s(%s)", operation.Name, getPsqlInputs(operation.Inputs))
 }
 
 func getPsqlVoidOpQuery(operation Operation) string {

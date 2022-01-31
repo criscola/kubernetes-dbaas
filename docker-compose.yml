@@ -1,0 +1,31 @@
+services:
+  postgres:
+    container_name: postgres-kubedbaas
+    image: 'postgres'
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=Password&1
+      - POSTGRES_DB=postgres
+    ports:
+      - '5432:5432'
+  mariadb:
+    container_name: mariadb-kubedbaas
+    image: 'mariadb'
+    restart: always
+    environment:
+      - MARIADB_USER=mariadb
+      - MARIADB_ROOT_PASSWORD=Password&1
+      - MARIADB_PASSWORD=Password&1
+      - POSTGRES_DB=mariadb
+    ports:
+      - '3306:3306'
+  sqlserver:
+    container_name: sqlserver-kubedbaas
+    image: 'mcr.microsoft.com/mssql/server:2019-latest'
+    restart: always
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Password&1
+    ports:
+      - '1433:1433'

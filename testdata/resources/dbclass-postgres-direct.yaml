@@ -1,0 +1,36 @@
+apiVersion: databaseclass.dbaas.bedag.ch/v1
+kind: DatabaseClass
+metadata:
+  name: databaseclass-sample-psql-direct
+spec:
+  driver: "postgres-direct"
+  operations:
+    create:
+      sqlTemplate: |-
+        CREATE DATABASE "{{ .dbName }}"
+        CREATE USER "{{ .username }}" WITH PASSWORD '{{ .password }}'
+        GRANT ALL PRIVILEGES ON DATABASE "{{ .dbName }}" TO "{{ .username }}"
+      inputs:
+        name: "{{ .Metadata.name }}"
+        namespace: "{{ .Metadata.namespace }}"
+    delete:
+      sqlTemplate: |- 
+        DROP DATABASE "{{ .dbName }}"
+        DROP USER "{{ .username }}"
+      inputs:
+        name: "{{ .Metadata.name }}"
+        namespace: "{{ .Metadata.namespace }}"
+    rotate:
+      sqlTemplate: |- 
+        ALTER USER "{{ .username }}" WITH PASSWORD '{{ .password }}'
+      inputs:
+        name: "{{ .Metadata.name }}"
+        namespace: "{{ .Metadata.namespace }}"
+  secretFormat:
+    username: "{{ .Result.username }}"
+    password: "{{ .Result.password }}"
+    port: "{{ .Result.port }}"
+    dbName: "{{ .Result.dbName }}"
+    fqdn: "{{ .Result.fqdn }}"
+    lastRotation: "{{ .Result.lastRotation }}"
+    dsn: "psql://{{ .Result.username }}:{{ .Result.password }}@{{ .Result.fqdn }}:{{ .Result.port }}/{{ .Result.dbName }}"

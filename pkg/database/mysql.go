@@ -3,8 +3,9 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
 	"strconv"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // MysqlConn represents a connection to a MySQL DBMS.
@@ -113,6 +114,8 @@ func GetMysqlOpQuery(operation Operation) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	fmt.Printf("%+v(%+v)", operation, inputs)
 
 	return fmt.Sprintf("CALL %s(%s)", operation.Name, inputs), nil
 }

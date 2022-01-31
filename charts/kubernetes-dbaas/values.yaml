@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   # -- Repository of the operator manager image.
-  repository: widmaster/kubernetes-dbaas
+  repository: basolur/kubernetes-dbaas
   pullPolicy: Always
   # -- Overrides the image tag whose default is the chart appVersion.
   tag: "debug"

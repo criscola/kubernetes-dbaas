@@ -40,3 +40,5 @@ myvalues.yaml
 
 # Binary
 kubernetes-dbaas
+.env
+.secrets

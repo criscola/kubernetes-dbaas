@@ -2,7 +2,7 @@ apiVersion: skaffold/v2beta26
 kind: Config
 build:
   artifacts:
-  - image: docker.io/widmaster/kubernetes-dbaas # must match in artifactOverrides
+  - image: docker.io/basolur/kubernetes-dbaas # must match in artifactOverrides
     custom:
       buildCommand: ./podman-build
       dependencies:
@@ -17,8 +17,6 @@ deploy:
       valuesFiles:
         - charts/kubernetes-dbaas/values_sensible.yaml
       artifactOverrides:
-        image: docker.io/widmaster/kubernetes-dbaas # no tag present!
+        image: docker.io/basolur/kubernetes-dbaas # no tag present!
       imageStrategy:
         helm: {}
-
-
