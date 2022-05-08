@@ -1,3 +1,12 @@
+# Archiving notice
+
+This project has been temporarely put on ice (set as read-only). The repo's ownership has been transferred from the `bedag` profile to mine before archiving, so there are some problems such as resource groupversions which would need to be adjusted.
+
+Unfortunately for this project, I got a lot of (positive) things going on in my life that leave me out of time to properly maintain the operator in the short and medium-term. That being said, the code is there and with some degree of effort it should work just fine. 
+Someone even removed the stored procedures part and included the actual provisioning inside of the operator (something I wanted to do after delivering the operator to Bedag), but I could not find enough time to review the pull-request... still it shows that with some effort the operator can be very well adapted to the needs of your organization.
+I still wish to update and enhance this operator a few years down the line, but for now it will stay archieved. 
+Thank you for your interest and feel free to get in touch if you have any questions.
+
 # Kubernetes DBaaS
 ### *A unique Kubernetes Database-as-a-Service (DBaaS) Operator for declarative, self-service database provisioning in DBMS solutions.*
 
