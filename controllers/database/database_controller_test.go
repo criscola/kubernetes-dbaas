@@ -3,30 +3,32 @@ package controllers_test
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
+	"time"
+
 	databasev1 "github.com/bedag/kubernetes-dbaas/apis/database/v1"
 	. "github.com/bedag/kubernetes-dbaas/controllers/database"
 	. "github.com/bedag/kubernetes-dbaas/pkg/test"
 	"github.com/bedag/kubernetes-dbaas/pkg/typeutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"io/ioutil"
 	v1 "k8s.io/api/core/v1"
 	k8sError "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
-	"os"
-	"path"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"time"
 )
 
 const (
-	DbMariadbFilename   = "db-mariadb.yaml"
-	DbPostgresFilename  = "db-postgres.yaml"
-	DbSqlserverFilename = "db-sqlserver.yaml"
-	RotateAnnotation    = "dbaas.bedag.ch/rotate"
+	DbMariadbFilename        = "db-mariadb.yaml"
+	DbPostgresFilename       = "db-postgres.yaml"
+	DbPostgresDirectFilename = "db-postgres-direct.yaml"
+	DbSqlserverFilename      = "db-sqlserver.yaml"
+	RotateAnnotation         = "dbaas.bedag.ch/rotate"
 )
 
 var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
@@ -60,6 +62,9 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 		It("should handle its lifecycle correctly", func() {
 			testDatabaseLifecycleHappyPath(mariadbDatabaseRes, duration, timeout, interval)
 		})
+		It("should handle user mistakenly deleting a Secret by calling Rotate to regenerate it", func() {
+			testSecretDeletedMistakenly(mariadbDatabaseRes, duration, timeout, interval)
+		})
 	})
 	Context("when reconciling a SQLServer Database resource", func() {
 		var sqlserverDatabaseRes databasev1.Database
@@ -70,6 +75,23 @@ var _ = Describe(FormatTestDesc(E2e, "Database controller"), func() {
 		})
 		It("should handle its lifecycle correctly", func() {
 			testDatabaseLifecycleHappyPath(sqlserverDatabaseRes, duration, timeout, interval)
+		})
+		It("should handle user mistakenly deleting a Secret by calling Rotate to regenerate it", func() {
+			testSecretDeletedMistakenly(sqlserverDatabaseRes, duration, timeout, interval)
+		})
+	})
+	Context("when reconciling a PostgresSql Direct Database resource", func() {
+		var psqlDirectDatabaseRes databasev1.Database
+		var err error
+		BeforeEach(func() {
+			psqlDirectDatabaseRes, err = getDbFromTestdata(DbPostgresDirectFilename)
+			Expect(err).NotTo(HaveOccurred())
+		})
+		It("should handle its lifecycle correctly", func() {
+			testDatabaseLifecycleHappyPath(psqlDirectDatabaseRes, duration, timeout, interval)
+		})
+		It("should handle user mistakenly deleting a Secret by calling Rotate to regenerate it", func() {
+			testSecretDeletedMistakenly(psqlDirectDatabaseRes, duration, timeout, interval)
 		})
 	})
 })
@@ -103,7 +125,7 @@ func testDatabaseLifecycleHappyPath(db databasev1.Database, duration, timeout, i
 		Expect(secret.Data).To(HaveKey("password"))
 		Expect(secret.Data).To(HaveKey("dbName"))
 		Expect(secret.Data).To(HaveKey("port"))
-		Expect(secret.Data).To(HaveKey("server"))
+		Expect(secret.Data).To(Or(HaveKey("server"), HaveKey("fqdn")))
 		Expect(secret.Data).To(HaveKey("dsn"))
 		// It should also have a new entry to test if the Secret is well updated.
 		Expect(string(secret.Data["lastRotation"])).ToNot(Equal(""))
@@ -135,17 +157,27 @@ func testSecretDeletedMistakenly(db databasev1.Database, duration, timeout, inte
 			Name: FormatSecretName(&db)}, &oldSecret)
 		err := k8sClient.Delete(context.Background(), &oldSecret)
 		Expect(err).NotTo(HaveOccurred())
+
+		logf.Log.Info(fmt.Sprintf("olSecret : %+v || err : %+v", oldSecret, err))
+
+		err = k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
+			Name: FormatSecretName(&db)}, &oldSecret)
+
+		logf.Log.Info(fmt.Sprintf("olSecret : %+v || err : %+v", oldSecret, err))
+
 		// Eventually, the Secret will be recreated, its password must be different than before
 		Eventually(func() error {
 			return k8sClient.Get(context.Background(), client.ObjectKey{Namespace: db.Namespace,
 				Name: FormatSecretName(&db)}, &recreatedSecret)
 		}, timeout, interval).Should(BeNil())
+
+		logf.Log.Info(fmt.Sprintf("db : %+v", db.Namespace))
 		// Secret should be recreated correctly
 		Expect(recreatedSecret.Data).To(HaveKey("username"))
 		Expect(recreatedSecret.Data).To(HaveKey("password"))
 		Expect(recreatedSecret.Data).To(HaveKey("dbName"))
 		Expect(recreatedSecret.Data).To(HaveKey("port"))
-		Expect(recreatedSecret.Data).To(HaveKey("server"))
+		Expect(recreatedSecret.Data).To(Or(HaveKey("server"), HaveKey("fqdn")))
 		Expect(recreatedSecret.Data).To(HaveKey("dsn"))
 		// Password should be rotated
 		logf.Log.Info("password before: " + string(oldSecret.Data["password"]))
@@ -182,7 +214,7 @@ func assertSecretCreate(db databasev1.Database, timeout, interval interface{}) {
 			Name: FormatSecretName(&db)}, &secret)
 	}, timeout, interval).Should(Succeed())
 	// Taken from testdata/db-postgres.yaml
-	Expect(secret.Data).To(HaveKeyWithValue("password", []byte("testpassword")))
+	Expect(secret.Data).To(HaveKey("password"))
 }
 
 // performAndAssertDbDelete deletes a Database resource and asserts it has been deleted successfully. It also deletes

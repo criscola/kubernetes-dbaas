@@ -1,0 +1,24 @@
+apiVersion: databaseclass.dbaas.bedag.ch/v1
+kind: DatabaseClass
+metadata:
+  name: databaseclass-sample-psql
+spec:
+  driver: "postgres-direct"
+  operations:
+    create:
+      sqlTemplate: |- 
+        {{- .Files.Get "files/create.sql" | nindent 8}}
+      inputs:
+        {{- .Files.Get "files/inputs.yaml" | nindent 8}}
+    delete:
+      sqlTemplate: |-
+        {{- .Files.Get "files/delete.sql" | nindent 8}}
+      inputs:
+        {{- .Files.Get "files/inputs.yaml" | nindent 8}}
+    rotate:
+      sqlTemplate: |-
+        {{- .Files.Get "files/rotate.sql" | nindent 8}}
+      inputs:
+        {{- .Files.Get "files/inputs.yaml" | nindent 8}}
+  secretFormat:
+    {{- .Files.Get "files/secretFormat.yaml" | nindent 4}}

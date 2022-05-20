@@ -20,6 +20,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/bedag/kubernetes-dbaas/internal/logging"
 	"github.com/bedag/kubernetes-dbaas/pkg/database"
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
@@ -32,14 +35,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/client-go/tools/record"
-	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"strings"
 
 	databasev1 "github.com/bedag/kubernetes-dbaas/apis/database/v1"
 	databaseclassv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclass/v1"
@@ -257,6 +258,7 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError {
 	if err.IsNotEmpty() {
 		return err.With(loggingKv)
 	}
+
 	createOp, simpleErr := createOpTemplate.RenderOperation(opValues)
 	if simpleErr != nil {
 		return ReconcileError{
@@ -268,12 +270,17 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError {
 	}
 	loggingKv = append(loggingKv, EndpointName, obj.Spec.Endpoint)
 
+	r.logInfoEvent(obj, fmt.Sprintf("createOp : %+v", createOp), "debug")
+
 	// Execute operation on DBMS
 	// Check preconditions
 	var conn database.Driver
 	if conn, err = r.getDbmsConnectionByEndpointName(obj.Spec.Endpoint); err.IsNotEmpty() {
 		return err.With(loggingKv)
 	}
+
+	createOp.DSN = r.DbmsList.GetDatabaseDSNByEndpointName(obj.Spec.Endpoint)
+
 	output := conn.CreateDb(createOp)
 	if output.Err != nil {
 		return ReconcileError{
@@ -295,6 +302,20 @@ func (r *DatabaseReconciler) createDb(obj *databasev1.Database) ReconcileError {
 	}
 
 	return ReconcileError{}
+}
+
+func injectSecretInOp(r *DatabaseReconciler, databaseObj *databasev1.Database, operation *database.Operation) error {
+	var secret corev1.Secret
+	secretObjKey := client.ObjectKey{Namespace: databaseObj.Namespace, Name: FormatSecretName(databaseObj)}
+	if err := r.Client.Get(context.Background(), secretObjKey, &secret); err != nil {
+		return err
+	}
+
+	for k, v := range secret.Data {
+		operation.Secrets[k] = string(v)
+	}
+
+	return nil
 }
 
 // deleteDb deletes the database instance on the external provisioner.
@@ -347,6 +368,18 @@ func (r *DatabaseReconciler) deleteDb(obj *databasev1.Database) ReconcileError {
 			AdditionalInfo: loggingKv,
 		}
 	}
+
+	if err = injectSecretInOp(r, obj, &deleteOp); err != nil {
+		return ReconcileError{
+			Reason:         RsnSecretGetFail,
+			Message:        MsgSecretGetFail,
+			Err:            err,
+			AdditionalInfo: loggingKv,
+		}
+	}
+
+	deleteOp.DSN = r.DbmsList.GetDatabaseDSNByEndpointName(obj.Spec.Endpoint)
+
 	output := conn.DeleteDb(deleteOp)
 	if output.Err != nil {
 		return ReconcileError{
@@ -407,6 +440,9 @@ func (r *DatabaseReconciler) rotate(obj *databasev1.Database) ReconcileError {
 			AdditionalInfo: loggingKv,
 		}
 	}
+
+	rotateOp.DSN = r.DbmsList.GetDatabaseDSNByEndpointName(obj.Spec.Endpoint)
+
 	output := conn.Rotate(rotateOp)
 	if output.Err != nil {
 		return ReconcileError{
@@ -691,10 +727,12 @@ func (r *DatabaseReconciler) shouldRotate(obj *databasev1.Database) (bool, Recon
 				Err:     err.Err,
 			}
 		}
+		logger.V(TraceLevel).Info("No secret found, credentials should be rotated")
 		return true, ReconcileError{}
 	}
 	// secret is present, check if rotate annotation is present, if yes, rotate, else, just keep going
 	if isRotateAnnotationTrue(obj) {
+		logger.V(TraceLevel).Info("Rotate annotation is present, credentials should be rotated")
 		return true, ReconcileError{}
 	}
 	return false, ReconcileError{}
@@ -709,7 +747,16 @@ func (r *DatabaseReconciler) isSecretPresent(obj *databasev1.Database) (bool, Re
 
 	var secret corev1.Secret
 	secretObjKey := client.ObjectKey{Namespace: obj.Namespace, Name: FormatSecretName(obj)}
+
+	logger.V(TraceLevel).Info(
+		fmt.Sprintf("Secret Debug : %+v || secretName : %+v", secretObjKey, secretName),
+	)
+
 	if err := r.Client.Get(context.Background(), secretObjKey, &secret); err != nil {
+		logger.V(TraceLevel).Info(
+			fmt.Sprintf("Secret in  %+v", secret),
+		)
+
 		if k8sError.IsNotFound(err) {
 			// Secret for given object is not present
 			return false, ReconcileError{}
@@ -722,6 +769,10 @@ func (r *DatabaseReconciler) isSecretPresent(obj *databasev1.Database) (bool, Re
 			AdditionalInfo: loggingKv,
 		}
 	}
+
+	logger.V(TraceLevel).Info(
+		fmt.Sprintf("Secret out  %+v", secret),
+	)
 	return true, ReconcileError{}
 }
 

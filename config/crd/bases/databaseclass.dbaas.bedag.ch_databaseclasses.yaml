@@ -46,11 +46,19 @@ spec:
                     identified by name and containing a map of inputs and a map of
                     outputs.
                   properties:
+                    dsn:
+                      type: string
                     inputs:
                       additionalProperties:
                         type: string
                       type: object
                     name:
+                      type: string
+                    secrets:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    sqlTemplate:
                       type: string
                   type: object
                 type: object

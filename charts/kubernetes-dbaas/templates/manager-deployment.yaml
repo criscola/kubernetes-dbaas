@@ -17,6 +17,7 @@ spec:
       {{- end }}
       labels:
     {{- include "kubernetes-dbaas.selectorLabels" . | nindent 8 }}
+        control-plane: controller-manager
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

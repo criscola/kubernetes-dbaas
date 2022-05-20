@@ -18,6 +18,12 @@ package controllers_test
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
+	"path"
+	"path/filepath"
+	"testing"
+
 	operatorconfigv1 "github.com/bedag/kubernetes-dbaas/apis/config/v1"
 	databasev1 "github.com/bedag/kubernetes-dbaas/apis/database/v1"
 	databaseclassv1 "github.com/bedag/kubernetes-dbaas/apis/databaseclass/v1"
@@ -26,19 +32,14 @@ import (
 	"github.com/bedag/kubernetes-dbaas/pkg/pool"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"io/ioutil"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"os"
-	"path"
-	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"testing"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -56,9 +57,10 @@ var CfgFilepath = path.Join(TestdataPath, "config_testing.yaml")
 var ResourcesPath = path.Join(TestdataPath, "resources")
 
 const (
-	DbcPostgresFilename  = "dbclass-postgres.yaml"
-	DbcSqlserverFilename = "dbclass-sqlserver.yaml"
-	DbcMariadbFilename   = "dbclass-mariadb.yaml"
+	DbcPostgresFilename       = "dbclass-postgres.yaml"
+	DbcPostgresDirectFilename = "dbclass-postgres-direct.yaml"
+	DbcSqlserverFilename      = "dbclass-sqlserver.yaml"
+	DbcMariadbFilename        = "dbclass-mariadb.yaml"
 )
 
 func TestAPIs(t *testing.T) {
@@ -122,6 +124,11 @@ var _ = BeforeSuite(func() {
 			err = k8sClient.Create(context.Background(), &dbcPostgres)
 			Expect(err).ToNot(HaveOccurred())
 
+			dbcPostgresDirect, err := getPostgresDirectDbc()
+			Expect(err).ToNot(HaveOccurred())
+			err = k8sClient.Create(context.Background(), &dbcPostgresDirect)
+			Expect(err).ToNot(HaveOccurred())
+
 			dbcMariadb, err := getMariadbDbc()
 			Expect(err).ToNot(HaveOccurred())
 			err = k8sClient.Create(context.Background(), &dbcMariadb)
@@ -180,6 +187,10 @@ func getMariadbDbc() (databaseclassv1.DatabaseClass, error) {
 
 func getPostgresDbc() (databaseclassv1.DatabaseClass, error) {
 	return readDbcYaml(DbcPostgresFilename)
+}
+
+func getPostgresDirectDbc() (databaseclassv1.DatabaseClass, error) {
+	return readDbcYaml(DbcPostgresDirectFilename)
 }
 
 func readDbcYaml(filename string) (databaseclassv1.DatabaseClass, error) {

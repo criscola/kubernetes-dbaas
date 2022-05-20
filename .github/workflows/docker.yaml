@@ -22,7 +22,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3
         with:
-          images: bedag/kubernetes-dbaas
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/kubernetes-dbaas
           flavor: latest=false
           tags: |
             latest

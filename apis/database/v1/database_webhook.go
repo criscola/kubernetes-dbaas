@@ -17,11 +17,12 @@ limitations under the License.
 package v1
 
 import (
+	"reflect"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -63,6 +64,9 @@ func (r *Database) ValidateUpdate(old runtime.Object) error {
 	var allErrs field.ErrorList
 
 	rOld := old.(*Database)
+
+	databaselog.Info("validate update", "oldSpec", rOld.Spec)
+	databaselog.Info("validate update", "newSpec", r.Spec)
 
 	if !reflect.DeepEqual(r.Spec, rOld.Spec) {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec"), r.Spec, "update operations not allowed, please explicitly "+

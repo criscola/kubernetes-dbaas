@@ -19,6 +19,10 @@ dbms:
     endpoints:
       - name: "us-postgres-test"
         dsn: "postgres://postgres:stronG!Password@localhost:5432/postgres"
+  - databaseClassName: "databaseclass-sample-psql-direct"
+    endpoints:
+      - name: "us-postgres-direct-test"
+        dsn: "postgres://postgres:stronG!Password@localhost:5432/postgres"
   - databaseClassName: "databaseclass-sample-mariadb"
     endpoints:
       - name: "us-mariadb-test"

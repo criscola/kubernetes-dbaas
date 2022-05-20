@@ -11,6 +11,7 @@ import (
 const (
 	Sqlserver               = "sqlserver"
 	Postgres                = "postgres"
+	PostgresDirect          = "postgres-direct"
 	Mysql                   = "mysql"
 	Mariadb                 = "mariadb"
 	CreateMapKey            = "create"
@@ -40,8 +41,11 @@ type DbmsConn struct {
 // Operation represents an operation performed on a DBMS identified by name and containing a map of inputs and a map
 // of outputs.
 type Operation struct {
-	Name   string            `json:"name,omitempty"`
-	Inputs map[string]string `json:"inputs,omitempty"`
+	Name        string            `json:"name,omitempty"`
+	SqlTemplate string            `json:"sqlTemplate,omitempty"`
+	Inputs      map[string]string `json:"inputs,omitempty"`
+	Secrets     map[string]string `json:"secrets,omitempty"`
+	DSN         string            `json:"dsn,omitempty"`
 }
 
 // OpOutput represents the return values of an operation. If the operation generates an error, it must be set in the Err
@@ -115,6 +119,16 @@ func New(driver string, dsn Dsn) (*DbmsConn, error) {
 			return nil, err
 		}
 		dbmsConn = &DbmsConn{psqlConn}
+	case PostgresDirect:
+		parsedDsn, err := dsn.GenPostgres()
+		if err != nil {
+			return nil, formatDsnParseError(err)
+		}
+		psqlConn, err := NewPsqlDirectConn(parsedDsn)
+		if err != nil {
+			return nil, err
+		}
+		dbmsConn = &DbmsConn{psqlConn}
 	case Mysql, Mariadb:
 		parsedDsn, err := dsn.GenMysql()
 		if err != nil {
@@ -146,18 +160,23 @@ func (op Operation) RenderOperation(values OpValues) (Operation, error) {
 	if err != nil {
 		return Operation{}, err
 	}
+
 	renderedInputsString, err := RenderGoTemplate(string(operationTemplate), values, ErrorOnMissingKeyOption)
 	if err != nil {
 		return Operation{}, err
 	}
+
 	var renderedInputsMap map[string]string
 	err = json.Unmarshal([]byte(renderedInputsString), &renderedInputsMap)
 	if err != nil {
 		return Operation{}, err
 	}
+
 	renderedOp := Operation{
-		Name:   op.Name,
-		Inputs: renderedInputsMap,
+		Name:        op.Name,
+		SqlTemplate: op.SqlTemplate,
+		Inputs:      renderedInputsMap,
+		Secrets:     make(map[string]string),
 	}
 
 	return renderedOp, nil
@@ -169,6 +188,17 @@ func (c DbmsList) GetDatabaseClassNameByEndpointName(endpointName string) string
 	for _, dbms := range c {
 		if contains(dbms.Endpoints, endpointName) {
 			return dbms.DatabaseClassName
+		}
+	}
+	return ""
+}
+
+func (c DbmsList) GetDatabaseDSNByEndpointName(endpointName string) string {
+	for _, dbms := range c {
+		for _, endpoint := range dbms.Endpoints {
+			if endpoint.Name == endpointName {
+				return string(endpoint.Dsn)
+			}
 		}
 	}
 	return ""
@@ -191,6 +221,7 @@ func (s SecretFormat) RenderSecretFormat(createOpOutput OpOutput) (SecretFormat,
 	if err != nil {
 		return nil, err
 	}
+
 	renderedInputsString, err := RenderGoTemplate(string(stringInputs), createOpOutput, ErrorOnMissingKeyOption)
 	if err != nil {
 		return nil, err

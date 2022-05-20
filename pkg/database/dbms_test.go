@@ -55,6 +55,8 @@ var _ = Describe(FormatTestDesc(Unit, "RenderOperation"), func() {
 				"department": "development",
 				"assignee":   "John Doe",
 			},
+			Secrets: make(map[string]string),
+			DSN:     "",
 		}
 		// Execute tested behavior
 		renderedOperation, err = templatedOp.RenderOperation(opValues)

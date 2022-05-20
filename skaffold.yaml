@@ -1,0 +1,22 @@
+apiVersion: skaffold/v2beta26
+kind: Config
+build:
+  artifacts:
+  - image: docker.io/bedag/kubernetes-dbaas # must match in artifactOverrides
+    custom:
+      buildCommand: ./podman-build
+      dependencies:
+        dockerfile: 
+          path: Dockerfile
+deploy:
+  helm:
+    releases:
+    - name: kubernetes-dbaas
+      namespace: kubernetes-dbaas
+      chartPath: charts/kubernetes-dbaas
+      valuesFiles:
+        - charts/kubernetes-dbaas/values_sensible.yaml
+      artifactOverrides:
+        image: docker.io/bedag/kubernetes-dbaas # no tag present!
+      imageStrategy:
+        helm: {}
